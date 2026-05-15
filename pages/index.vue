@@ -1,15 +1,13 @@
 <template>
-  <NeumorphicMusicPlayer />
+  <LicheeApp />
 </template>
 
 <script lang="ts">
 import Vue from 'vue'
-import NeumorphicMusicPlayer from '~/components/NeumorphicMusicPlayer.vue'
+import LicheeApp from '~/components/LicheeApp.vue'
 
 export default Vue.extend({
   name: 'IndexPage',
-  components: {
-    NeumorphicMusicPlayer,
-  },
+  components: { LicheeApp },
 })
 </script>
