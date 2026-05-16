@@ -57,7 +57,7 @@
               </div>
               <div class="reconnect-hint">
                 <i class="fas fa-info-circle"></i>
-                Make sure the device is powered on and reachable at {{ deviceInfo.host }}
+                Make sure the Nano is powered on and the Ethernet cable is plugged in
               </div>
             </div>
 
@@ -70,7 +70,7 @@
               </button>
               <div class="offline-hint">
                 <i class="fas fa-lightbulb"></i>
-                <span>Check: Is the device powered on? Is the Ethernet cable connected? Can you ping {{ deviceInfo.host }}?</span>
+                <span>Check: Is the Nano powered on? Is the Ethernet cable plugged in at both ends? If you rebooted it, wait 30 seconds then retry.</span>
               </div>
             </div>
           </div>
@@ -266,13 +266,13 @@ export default Vue.extend({
       showKbdHelp: false,
 
       panels: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
-        { id: 'terminal', label: 'Terminal', icon: 'fas fa-terminal' },
-        { id: 'files', label: 'Files', icon: 'fas fa-folder-open' },
-        { id: 'processes', label: 'Processes', icon: 'fas fa-tasks' },
-        { id: 'network', label: 'Network', icon: 'fas fa-network-wired' },
-        { id: 'gpio', label: 'GPIO', icon: 'fas fa-plug' },
-        { id: 'picoclaw', label: 'PicoClaw AI', icon: 'fas fa-robot' },
+        { id: 'dashboard', label: 'Overview',     icon: 'fas fa-tachometer-alt' },
+        { id: 'terminal',  label: 'Terminal',      icon: 'fas fa-terminal' },
+        { id: 'files',     label: 'Files',         icon: 'fas fa-folder-open' },
+        { id: 'processes', label: 'Running Apps',  icon: 'fas fa-tasks' },
+        { id: 'network',   label: 'Network',       icon: 'fas fa-network-wired' },
+        { id: 'gpio',      label: 'GPIO Pins',     icon: 'fas fa-plug' },
+        { id: 'picoclaw',  label: 'PicoClaw AI',   icon: 'fas fa-robot' },
       ],
     }
   },
@@ -293,7 +293,7 @@ export default Vue.extend({
   mounted() {
     window.addEventListener('keydown', this.handleKeyDown)
     // Auto-connect to the fixed local device on startup
-    this.onConnect({ host: '192.168.68.63', port: 22, username: 'root', password: '' })
+    this.onConnect({ host: '192.168.68.63', port: 22, username: 'root', password: 'root' })
   },
 
   beforeDestroy() {
@@ -343,7 +343,9 @@ export default Vue.extend({
         }
 
         this.showToast(
-          wasReconnecting ? `Reconnected to ${creds.host}` : `Connected to ${creds.host}`,
+          wasReconnecting
+            ? `Back online — reconnected to your Nano at ${creds.host}`
+            : `Your LicheeRV Nano is online at ${creds.host}`,
           'success'
         )
       })
@@ -361,7 +363,7 @@ export default Vue.extend({
       socket.on('ssh:closed', () => {
         if (this.connState === 'connected') {
           this.connState = 'reconnecting'
-          this.showToast('Connection lost — reconnecting...', 'warning')
+          this.showToast('Device connection dropped — trying to reconnect...', 'warning')
         }
       })
 

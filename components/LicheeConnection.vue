@@ -27,31 +27,58 @@
 
       <div class="conn-header">
         <h1>LicheeRV <span>Nano</span></h1>
-        <p>Device Dashboard Interface</p>
+        <p>Your personal RISC-V device dashboard</p>
       </div>
 
-      <!-- Fixed device badge -->
-      <div class="device-target-badge">
-        <i class="fas fa-ethernet"></i>
-        <div class="device-target-info">
-          <span class="device-target-label">Local Device</span>
-          <span class="device-target-ip">{{ DEVICE_IP }}</span>
+      <!-- Status banner: either "ready to connect" or "couldn't connect" -->
+      <div v-if="!error" class="status-banner ready">
+        <div class="status-icon"><i class="fas fa-ethernet"></i></div>
+        <div class="status-text">
+          <strong>Ready to connect</strong>
+          <span>Connecting to your device at <code>{{ DEVICE_IP }}</code></span>
         </div>
-        <span class="device-target-status">
-          <span class="ping-dot"></span> Ethernet
-        </span>
+      </div>
+      <div v-else class="status-banner failed">
+        <div class="status-icon pulse-red"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="status-text">
+          <strong>Could not connect automatically</strong>
+          <span>{{ friendlyError }}</span>
+        </div>
       </div>
 
-      <div class="conn-card">
-        <div v-if="error" class="error-bar">
-          <i class="fas fa-exclamation-triangle"></i>
-          <div class="error-body">
-            <span class="error-msg">{{ error }}</span>
-            <span class="error-tip">{{ errorTip }}</span>
+      <!-- Checklist (always visible) -->
+      <div class="checklist-card">
+        <div class="checklist-title"><i class="fas fa-clipboard-check"></i> Make sure these are OK</div>
+        <div class="checklist-item">
+          <div class="check-bullet"><i class="fas fa-plug"></i></div>
+          <div class="check-text">
+            <strong>Ethernet cable is plugged in</strong>
+            <span>Between your Mac and the LicheeRV Nano</span>
           </div>
         </div>
+        <div class="checklist-item">
+          <div class="check-bullet"><i class="fas fa-power-off"></i></div>
+          <div class="check-text">
+            <strong>Device is powered on</strong>
+            <span>The green LED on the board should be lit</span>
+          </div>
+        </div>
+        <div class="checklist-item">
+          <div class="check-bullet"><i class="fas fa-network-wired"></i></div>
+          <div class="check-text">
+            <strong>Device IP is {{ DEVICE_IP }}</strong>
+            <span>Verify in your Mac terminal: <code>arp -a | grep 192.168</code></span>
+          </div>
+        </div>
+      </div>
 
-        <!-- Username row -->
+      <!-- Login form -->
+      <div class="conn-card">
+        <div class="conn-card-title">
+          <i class="fas fa-key"></i>
+          Sign in to your device
+        </div>
+
         <div class="form-row">
           <label>Username</label>
           <div class="input-wrap">
@@ -60,49 +87,43 @@
           </div>
         </div>
 
-        <!-- Password row -->
         <div class="form-row">
-          <label>
-            Password
-            <span class="optional-badge">optional</span>
-          </label>
+          <label>Password</label>
           <div class="input-wrap">
             <i class="fas fa-lock"></i>
             <input
+              ref="passInput"
               v-model="form.password"
               :type="showPass ? 'text' : 'password'"
-              placeholder="Leave empty if no password"
+              placeholder="root"
               :disabled="connecting"
               @keyup.enter="submit"
             />
-            <button type="button" class="pass-toggle" @click="showPass = !showPass" :title="showPass ? 'Hide' : 'Show'">
+            <button type="button" class="pass-toggle" @click="showPass = !showPass">
               <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
           </div>
-          <div class="field-hint">
+          <div class="field-hint" v-if="!error">
             <i class="fas fa-info-circle"></i>
-            Default for LicheeRV Nano: <code>root</code> / <code>root</code> — or leave blank for passwordless SSH
+            Default login: <code>root</code> / <code>root</code>
           </div>
         </div>
 
         <button class="connect-btn" :disabled="connecting" @click="submit">
           <span v-if="!connecting" class="btn-inner">
-            <i class="fas fa-bolt"></i> Connect to {{ DEVICE_IP }}
+            <i class="fas fa-bolt"></i>
+            {{ error ? 'Try Again' : 'Connect to My Device' }}
           </span>
-          <span v-else class="btn-inner"><span class="spinner"></span> Connecting...</span>
+          <span v-else class="btn-inner">
+            <span class="spinner"></span> Connecting...
+          </span>
         </button>
       </div>
 
-      <!-- Quick help -->
-      <details class="help-section">
-        <summary><i class="fas fa-question-circle"></i> Having trouble connecting?</summary>
-        <div class="help-body">
-          <div class="help-item"><i class="fas fa-check-circle"></i> Plug the Ethernet cable between your Mac and the Nano</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> Device must be at <code>{{ DEVICE_IP }}</code> — check with <code>arp -a</code> on your Mac</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> Default credentials: <code>root</code> / <code>root</code> (or try leaving password blank)</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> If wrong IP, update the constant in <code>LicheeApp.vue</code> and <code>LicheeConnection.vue</code></div>
-        </div>
-      </details>
+      <div class="footer-note">
+        <i class="fas fa-lock-open"></i>
+        Connecting locally to <strong>{{ DEVICE_IP }}</strong> — nothing is sent to the internet
+      </div>
 
       <div class="specs-row">
         <span class="spec-chip"><i class="fas fa-microchip"></i> SG2002</span>
@@ -120,6 +141,17 @@ import Vue from 'vue'
 
 const DEVICE_IP = '192.168.68.63'
 
+const FRIENDLY_ERRORS: Array<{ match: string; msg: string }> = [
+  { match: 'auth', msg: 'Wrong password. The default password is "root" — try that below.' },
+  { match: 'password', msg: 'Wrong password. Try "root" as the password below.' },
+  { match: 'refused', msg: 'Device rejected the connection. SSH may not be running — try rebooting the Nano.' },
+  { match: 'timeout', msg: 'Device not responding. Check the Ethernet cable and that the device is powered on.' },
+  { match: 'etimedout', msg: 'Timed out. The device may be starting up — wait 30 seconds and try again.' },
+  { match: 'timed out', msg: 'Timed out. The device may be starting up — wait 30 seconds and try again.' },
+  { match: 'unreachable', msg: 'Cannot reach the device. Is the Ethernet cable plugged in on both ends?' },
+  { match: 'network', msg: 'Network problem. Try unplugging and re-plugging the Ethernet cable.' },
+]
+
 export default Vue.extend({
   name: 'LicheeConnection',
   props: {
@@ -130,24 +162,25 @@ export default Vue.extend({
     return {
       DEVICE_IP,
       showPass: false,
-      form: { host: DEVICE_IP, username: 'root', password: '' },
+      form: { username: 'root', password: 'root' },
     }
   },
   computed: {
-    errorTip(): string {
+    friendlyError(): string {
       const e = this.error.toLowerCase()
-      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH is not running on the device — try rebooting the Nano'
-      if (e.includes('timeout') || e.includes('etimedout') || e.includes('timed out')) return 'Device unreachable — is the Ethernet cable plugged in? Can you ping 192.168.68.63?'
-      if (e.includes('auth') || e.includes('password') || e.includes('permission') || e.includes('authentication')) return 'Try entering "root" as password, or leave it blank for passwordless SSH'
-      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Hostname not found — using a fixed IP, this should not happen'
-      if (e.includes('enetunreach') || e.includes('network')) return 'Network unreachable — check Ethernet cable and Mac network settings'
-      return 'Check device power, Ethernet cable, and credentials above'
+      const match = FRIENDLY_ERRORS.find(f => e.includes(f.match))
+      return match ? match.msg : 'Connection failed. Check the steps above and try again.'
     },
   },
   methods: {
     submit() {
       if (this.connecting) return
-      this.$emit('connect', { host: DEVICE_IP, port: 22, username: this.form.username, password: this.form.password })
+      this.$emit('connect', {
+        host: DEVICE_IP,
+        port: 22,
+        username: this.form.username,
+        password: this.form.password,
+      })
     },
   },
 })
@@ -157,26 +190,27 @@ export default Vue.extend({
 .conn-root {
   width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg); position: relative; overflow: hidden;
+  background: var(--bg); position: relative; overflow: hidden; overflow-y: auto;
 }
 
 .bg-grid {
-  position: absolute; inset: 0;
-  background-image: linear-gradient(rgba(255,140,66,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,140,66,0.04) 1px, transparent 1px);
+  position: fixed; inset: 0;
+  background-image: linear-gradient(rgba(255,140,66,0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,140,66,0.04) 1px, transparent 1px);
   background-size: 40px 40px; pointer-events: none;
 }
 .bg-glow {
-  position: absolute; width: 700px; height: 700px; border-radius: 50%;
+  position: fixed; width: 700px; height: 700px; border-radius: 50%;
   background: radial-gradient(circle, rgba(255,140,66,0.07) 0%, transparent 70%);
   top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
 }
 
 .conn-wrap {
   display: flex; flex-direction: column; align-items: center; gap: 16px;
-  width: 100%; max-width: 420px; padding: 16px; position: relative; z-index: 1;
+  width: 100%; max-width: 460px; padding: 24px 16px; position: relative; z-index: 1;
 }
 
-/* Chip art */
+/* ── Chip art ── */
 .chip-art { display: flex; align-items: center; justify-content: center; }
 .chip-body { display: flex; flex-direction: column; align-items: center; }
 .chip-pins { display: flex; gap: 5px; padding: 0 10px; }
@@ -204,33 +238,63 @@ export default Vue.extend({
 .conn-header h1 span { color: var(--accent); }
 .conn-header p { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
-/* Fixed device badge */
-.device-target-badge {
-  width: 100%; display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px; background: var(--accent-dim); border: 1px solid rgba(255,140,66,0.25); border-radius: var(--radius-sm);
+/* ── Status banners ── */
+.status-banner {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid;
 }
-.device-target-badge > i { color: var(--accent); font-size: 16px; flex-shrink: 0; }
-.device-target-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-.device-target-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-faint); }
-.device-target-ip { font-size: 14px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
-.device-target-status { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
-.ping-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-ping 2s ease infinite; }
-@keyframes pulse-ping { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.status-banner.ready {
+  background: var(--green-dim); border-color: rgba(94,234,212,0.2);
+}
+.status-banner.failed {
+  background: var(--red-dim); border-color: rgba(248,113,113,0.25);
+}
+.status-icon {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.status-banner.ready .status-icon { background: rgba(94,234,212,0.15); color: var(--green); }
+.status-banner.failed .status-icon { background: rgba(248,113,113,0.15); color: var(--red); }
+.pulse-red { animation: pulse-red 1.2s ease infinite; }
+@keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.status-text { display: flex; flex-direction: column; gap: 3px; }
+.status-text strong { font-size: 13px; font-weight: 600; }
+.status-banner.ready .status-text strong { color: var(--green); }
+.status-banner.failed .status-text strong { color: var(--red); }
+.status-text span { font-size: 12px; color: var(--text-dim); }
+.status-text code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--border); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
 
-/* Form card */
+/* ── Checklist ── */
+.checklist-card {
+  width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+.checklist-title {
+  font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px;
+  display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.checklist-title i { color: var(--accent); }
+.checklist-item { display: flex; align-items: flex-start; gap: 12px; }
+.check-bullet {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--card2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--accent); flex-shrink: 0;
+}
+.check-text { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
+.check-text strong { font-size: 12px; font-weight: 600; color: var(--text); }
+.check-text span { font-size: 11px; color: var(--text-dim); }
+.check-text code { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: var(--border); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+
+/* ── Form card ── */
 .conn-card {
   width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 22px; display: flex; flex-direction: column; gap: 14px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
-.error-bar {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 13px; background: var(--red-dim); border: 1px solid rgba(248,113,113,0.22); border-radius: var(--radius-sm);
+.conn-card-title {
+  font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border);
 }
-.error-bar > i { color: var(--red); flex-shrink: 0; margin-top: 2px; }
-.error-body { display: flex; flex-direction: column; gap: 2px; }
-.error-msg { font-size: 12px; color: var(--red); font-weight: 500; }
-.error-tip { font-size: 11px; color: var(--text-dim); }
+.conn-card-title i { color: var(--accent); }
 
 .form-row { display: flex; flex-direction: column; gap: 5px; }
 .form-row label { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; }
@@ -238,57 +302,43 @@ export default Vue.extend({
 .input-wrap { position: relative; display: flex; align-items: center; }
 .input-wrap > i { position: absolute; left: 11px; font-size: 11px; color: var(--text-faint); pointer-events: none; }
 .input-wrap input {
-  width: 100%; padding: 9px 11px 9px 32px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; font-family: 'Inter', sans-serif;
+  width: 100%; padding: 10px 11px 10px 32px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 14px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; font-family: 'Inter', sans-serif;
 }
 .input-wrap input::placeholder { color: var(--text-faint); }
 .input-wrap input:focus { border-color: rgba(255,140,66,0.4); box-shadow: 0 0 0 3px rgba(255,140,66,0.08); }
 .input-wrap input:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.pass-toggle { position: absolute; right: 9px; background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 11px; padding: 4px; transition: color 0.15s; }
+.pass-toggle { position: absolute; right: 9px; background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 12px; padding: 6px; transition: color 0.15s; }
 .pass-toggle:hover { color: var(--text-dim); }
 
-.optional-badge {
-  display: inline-block; margin-left: 6px;
-  font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-  background: var(--border); color: var(--text-faint); padding: 1px 5px; border-radius: 4px;
-}
-
-.field-hint {
-  display: flex; align-items: flex-start; gap: 5px;
-  font-size: 11px; color: var(--text-faint); margin-top: 4px;
-}
+.field-hint { display: flex; align-items: flex-start; gap: 5px; font-size: 11px; color: var(--text-faint); margin-top: 4px; }
 .field-hint i { color: var(--blue); font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 .field-hint code { background: var(--border); padding: 1px 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
 
 .connect-btn {
-  width: 100%; padding: 12px; background: linear-gradient(135deg, #FF8C42, #E07530); border: none; border-radius: var(--radius-sm);
-  color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-  box-shadow: 0 4px 18px rgba(255,140,66,0.35); margin-top: 2px;
+  width: 100%; padding: 14px; background: linear-gradient(135deg, #FF8C42, #E07530); border: none; border-radius: var(--radius-sm);
+  color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  box-shadow: 0 4px 18px rgba(255,140,66,0.35); margin-top: 4px;
 }
 .connect-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,140,66,0.45); }
+.connect-btn:active:not(:disabled) { transform: translateY(0); }
 .connect-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .btn-inner { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner {
-  width: 13px; height: 13px; border-radius: 50%;
+  width: 14px; height: 14px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
   animation: spin 0.7s linear infinite; display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Help section */
-.help-section { width: 100%; font-size: 12px; }
-.help-section summary {
-  cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 6px;
-  padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  list-style: none; transition: background 0.15s;
+/* ── Footer ── */
+.footer-note {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-faint);
 }
-.help-section summary:hover { background: var(--card2); }
-.help-section summary i { color: var(--accent); font-size: 11px; }
-.help-body { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); display: flex; flex-direction: column; gap: 7px; }
-.help-item { display: flex; align-items: flex-start; gap: 7px; color: var(--text-dim); font-size: 11px; }
-.help-item i { color: var(--green); font-size: 10px; margin-top: 1px; flex-shrink: 0; }
-.help-item code { background: var(--border); padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+.footer-note i { color: var(--green); font-size: 10px; }
+.footer-note strong { color: var(--text-dim); }
 
 .specs-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .spec-chip { display: flex; align-items: center; gap: 4px; padding: 3px 9px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; font-size: 10px; color: var(--text-dim); }

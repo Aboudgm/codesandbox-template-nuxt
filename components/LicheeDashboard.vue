@@ -218,7 +218,7 @@
 
       <!-- Quick commands -->
       <div class="quick-card">
-        <div class="card-title"><i class="fas fa-terminal"></i> Quick Run</div>
+        <div class="card-title"><i class="fas fa-terminal"></i> Quick Info</div>
         <div class="cmd-grid">
           <button
             v-for="cmd in quickCmds"
@@ -241,6 +241,45 @@
             <pre class="cmd-pre">{{ cmdOutput }}</pre>
           </div>
         </transition>
+      </div>
+    </div>
+
+    <!-- Device Controls -->
+    <div class="controls-row">
+      <div class="ctrl-card">
+        <div class="card-title"><i class="fas fa-power-off"></i> Device Controls</div>
+        <div class="ctrl-btns">
+          <!-- Reboot -->
+          <div class="ctrl-action">
+            <button
+              class="ctrl-btn reboot-btn"
+              :disabled="deviceActionRunning"
+              @click="runDeviceAction('reboot')"
+            >
+              <i class="fas fa-sync-alt"></i>
+              <span>{{ confirmAction === 'reboot' ? 'Tap again to confirm' : 'Reboot Device' }}</span>
+            </button>
+            <p class="ctrl-hint">Safely restart the Nano — it will come back online in ~30 seconds</p>
+          </div>
+          <!-- Shutdown -->
+          <div class="ctrl-action">
+            <button
+              class="ctrl-btn shutdown-btn"
+              :disabled="deviceActionRunning"
+              @click="runDeviceAction('shutdown')"
+            >
+              <i class="fas fa-power-off"></i>
+              <span>{{ confirmAction === 'shutdown' ? 'Tap again to confirm' : 'Shutdown Device' }}</span>
+            </button>
+            <p class="ctrl-hint">Power off the Nano safely — unplug power to turn it back on</p>
+          </div>
+          <!-- Cancel confirm -->
+          <transition name="fade-ctrl">
+            <button v-if="confirmAction" class="ctrl-cancel" @click="confirmAction = null">
+              <i class="fas fa-times"></i> Cancel
+            </button>
+          </transition>
+        </div>
       </div>
     </div>
 
@@ -330,15 +369,19 @@ export default Vue.extend({
       lastCmd: '',
       runningCmd: '',
       quickCmds: [
-        { label: 'dmesg', icon: 'fas fa-scroll', cmd: 'dmesg | tail -20' },
-        { label: 'df -h', icon: 'fas fa-hdd', cmd: 'df -h' },
-        { label: 'free -h', icon: 'fas fa-memory', cmd: 'free -h' },
-        { label: 'ip addr', icon: 'fas fa-network-wired', cmd: 'ip addr' },
-        { label: 'ps aux', icon: 'fas fa-tasks', cmd: 'ps aux | head -15' },
-        { label: 'uname -a', icon: 'fas fa-info-circle', cmd: 'uname -a' },
-        { label: 'lscpu', icon: 'fas fa-microchip', cmd: 'lscpu 2>/dev/null || cat /proc/cpuinfo | head -20' },
-        { label: 'uptime', icon: 'fas fa-clock', cmd: 'uptime && cat /proc/loadavg' },
+        { label: 'Disk Space',    icon: 'fas fa-hdd',           cmd: 'df -h' },
+        { label: 'Memory Info',   icon: 'fas fa-memory',        cmd: 'free -h' },
+        { label: 'Network Info',  icon: 'fas fa-network-wired', cmd: 'ip addr' },
+        { label: 'Running Apps',  icon: 'fas fa-tasks',         cmd: 'ps aux | head -20' },
+        { label: 'System Info',   icon: 'fas fa-info-circle',   cmd: 'uname -a && cat /etc/os-release 2>/dev/null | head -6' },
+        { label: 'CPU Details',   icon: 'fas fa-microchip',     cmd: 'lscpu 2>/dev/null || cat /proc/cpuinfo | head -20' },
+        { label: 'Uptime',        icon: 'fas fa-clock',         cmd: 'uptime' },
+        { label: 'System Logs',   icon: 'fas fa-scroll',        cmd: 'dmesg | tail -20' },
       ],
+
+      // Device control
+      confirmAction: null as string | null,
+      deviceActionRunning: false,
     }
   },
   computed: {
@@ -505,6 +548,23 @@ export default Vue.extend({
       this.runningCmd = ''
     },
 
+    async runDeviceAction(action: string) {
+      if (this.confirmAction !== action) {
+        this.confirmAction = action
+        return
+      }
+      this.confirmAction = null
+      this.deviceActionRunning = true
+      try {
+        const cmd = action === 'reboot' ? 'reboot' : 'halt'
+        await this.$axios.$post('/api/exec', { command: cmd }, { headers: { 'x-socket-id': this.socketId } })
+        ;(this as any).$toast(action === 'reboot' ? 'Device is rebooting…' : 'Device is shutting down…', 'info')
+      } catch (_) {
+        ;(this as any).$toast('Command sent — device may take a moment to respond', 'info')
+      }
+      this.deviceActionRunning = false
+    },
+
     log(type: string, msg: string) {
       const now = new Date()
       const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`
@@ -668,4 +728,34 @@ export default Vue.extend({
 
 .log-entry-enter-active { animation: log-in 0.25s ease; }
 @keyframes log-in { from { opacity: 0; transform: translateX(-8px); } }
+
+/* ---- DEVICE CONTROLS ---- */
+.controls-row { display: flex; }
+.ctrl-card {
+  flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.ctrl-btns { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.ctrl-action { display: flex; flex-direction: column; gap: 5px; }
+.ctrl-btn {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 20px; border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.ctrl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.reboot-btn  { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(124,176,232,0.2); }
+.shutdown-btn { background: var(--red-dim);   color: var(--red);    border: 1px solid rgba(248,113,113,0.2); }
+.reboot-btn:hover:not(:disabled)   { background: rgba(124,176,232,0.2); }
+.shutdown-btn:hover:not(:disabled) { background: rgba(248,113,113,0.2); }
+.ctrl-hint { font-size: 10px; color: var(--text-faint); max-width: 220px; line-height: 1.4; }
+.ctrl-cancel {
+  align-self: flex-start; display: flex; align-items: center; gap: 5px;
+  padding: 9px 14px; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  color: var(--text-dim); font-size: 12px; cursor: pointer; transition: all 0.15s; margin-left: auto;
+}
+.ctrl-cancel:hover { background: var(--card2); }
+.fade-ctrl-enter-active { animation: fade-in-quick 0.15s ease; }
+.fade-ctrl-leave-active { animation: fade-out-quick 0.15s ease forwards; }
+@keyframes fade-in-quick { from { opacity: 0; } }
+@keyframes fade-out-quick { to { opacity: 0; } }
 </style>
