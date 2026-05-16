@@ -30,11 +30,16 @@
         <p>Device Dashboard Interface</p>
       </div>
 
-      <!-- Saved connection notice -->
-      <div v-if="hasSaved" class="saved-banner" @click="loadSaved">
-        <i class="fas fa-history"></i>
-        <span>Resume last session: <strong>{{ savedHost }}</strong></span>
-        <span class="load-hint">Click to load</span>
+      <!-- Fixed device badge -->
+      <div class="device-target-badge">
+        <i class="fas fa-ethernet"></i>
+        <div class="device-target-info">
+          <span class="device-target-label">Local Device</span>
+          <span class="device-target-ip">{{ DEVICE_IP }}</span>
+        </div>
+        <span class="device-target-status">
+          <span class="ping-dot"></span> Ethernet
+        </span>
       </div>
 
       <div class="conn-card">
@@ -46,31 +51,16 @@
           </div>
         </div>
 
+        <!-- Username row -->
         <div class="form-row">
-          <label>IP Address</label>
+          <label>Username</label>
           <div class="input-wrap">
-            <i class="fas fa-network-wired"></i>
-            <input v-model="form.host" type="text" placeholder="192.168.x.x" :disabled="connecting" @keyup.enter="submit" />
+            <i class="fas fa-user"></i>
+            <input v-model="form.username" type="text" placeholder="root" :disabled="connecting" @keyup.enter="submit" />
           </div>
         </div>
 
-        <div class="form-row-group">
-          <div class="form-row">
-            <label>Username</label>
-            <div class="input-wrap">
-              <i class="fas fa-user"></i>
-              <input v-model="form.username" type="text" placeholder="root" :disabled="connecting" @keyup.enter="submit" />
-            </div>
-          </div>
-          <div class="form-row">
-            <label>Port</label>
-            <div class="input-wrap">
-              <i class="fas fa-hashtag"></i>
-              <input v-model="form.port" type="number" placeholder="22" :disabled="connecting" @keyup.enter="submit" />
-            </div>
-          </div>
-        </div>
-
+        <!-- Password row -->
         <div class="form-row">
           <label>
             Password
@@ -91,18 +81,15 @@
           </div>
           <div class="field-hint">
             <i class="fas fa-info-circle"></i>
-            Default for LicheeRV Nano: <code>root</code> — or leave blank if passwordless SSH is configured
+            Default for LicheeRV Nano: <code>root</code> / <code>root</code> — or leave blank for passwordless SSH
           </div>
         </div>
 
-        <label class="remember-row">
-          <input type="checkbox" v-model="rememberMe" />
-          <span>Remember this connection</span>
-        </label>
-
-        <button class="connect-btn" :disabled="!form.host.trim() || connecting" @click="submit">
-          <span v-if="!connecting" class="btn-inner"><i class="fas fa-bolt"></i> Connect to Device</span>
-          <span v-else class="btn-inner"><span class="spinner"></span> Establishing SSH...</span>
+        <button class="connect-btn" :disabled="connecting" @click="submit">
+          <span v-if="!connecting" class="btn-inner">
+            <i class="fas fa-bolt"></i> Connect to {{ DEVICE_IP }}
+          </span>
+          <span v-else class="btn-inner"><span class="spinner"></span> Connecting...</span>
         </button>
       </div>
 
@@ -110,10 +97,10 @@
       <details class="help-section">
         <summary><i class="fas fa-question-circle"></i> Having trouble connecting?</summary>
         <div class="help-body">
-          <div class="help-item"><i class="fas fa-check-circle"></i> Make sure Ethernet is connected between your Mac and the Nano</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> Default credentials: <code>root</code> / <code>root</code> (or <code>cvitek</code>)</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> Find the IP with: <code>arp -a</code> on your Mac</div>
-          <div class="help-item"><i class="fas fa-check-circle"></i> Or check the device serial console at 115200 baud</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Plug the Ethernet cable between your Mac and the Nano</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Device must be at <code>{{ DEVICE_IP }}</code> — check with <code>arp -a</code> on your Mac</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Default credentials: <code>root</code> / <code>root</code> (or try leaving password blank)</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> If wrong IP, update the constant in <code>LicheeApp.vue</code> and <code>LicheeConnection.vue</code></div>
         </div>
       </details>
 
@@ -131,7 +118,7 @@
 <script lang="ts">
 import Vue from 'vue'
 
-const STORAGE_KEY = 'lichee_last_conn'
+const DEVICE_IP = '192.168.68.63'
 
 export default Vue.extend({
   name: 'LicheeConnection',
@@ -141,61 +128,26 @@ export default Vue.extend({
   },
   data() {
     return {
+      DEVICE_IP,
       showPass: false,
-      rememberMe: true,
-      hasSaved: false,
-      savedHost: '',
-      form: { host: '', port: 22, username: 'root', password: '' },
+      form: { host: DEVICE_IP, username: 'root', password: '' },
     }
   },
   computed: {
     errorTip(): string {
       const e = this.error.toLowerCase()
-      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH is not running on the device — try rebooting it'
-      if (e.includes('timeout') || e.includes('etimedout') || e.includes('timed out')) return 'Device unreachable — check Ethernet cable and IP address'
-      if (e.includes('auth') || e.includes('password') || e.includes('permission') || e.includes('authentication')) return 'Try the password "root" or leave it empty for passwordless SSH'
-      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Use an IP address like 192.168.x.x instead of a hostname'
-      if (e.includes('enetunreach') || e.includes('network')) return 'Network unreachable — is the Ethernet cable connected?'
-      return 'Check device power, Ethernet cable, and that the IP is correct'
+      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH is not running on the device — try rebooting the Nano'
+      if (e.includes('timeout') || e.includes('etimedout') || e.includes('timed out')) return 'Device unreachable — is the Ethernet cable plugged in? Can you ping 192.168.68.63?'
+      if (e.includes('auth') || e.includes('password') || e.includes('permission') || e.includes('authentication')) return 'Try entering "root" as password, or leave it blank for passwordless SSH'
+      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Hostname not found — using a fixed IP, this should not happen'
+      if (e.includes('enetunreach') || e.includes('network')) return 'Network unreachable — check Ethernet cable and Mac network settings'
+      return 'Check device power, Ethernet cable, and credentials above'
     },
-  },
-  mounted() {
-    this.loadSavedIfExists()
   },
   methods: {
-    loadSavedIfExists() {
-      try {
-        const saved = sessionStorage.getItem(STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (parsed.host) {
-            this.hasSaved = true
-            this.savedHost = parsed.host
-          }
-        }
-      } catch (_) {}
-    },
-    loadSaved() {
-      try {
-        const saved = sessionStorage.getItem(STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          this.form = { ...this.form, ...parsed }
-        }
-      } catch (_) {}
-    },
     submit() {
-      if (!this.form.host || this.connecting) return
-      if (this.rememberMe) {
-        try {
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-            host: this.form.host,
-            port: this.form.port,
-            username: this.form.username,
-          }))
-        } catch (_) {}
-      }
-      this.$emit('connect', { ...this.form })
+      if (this.connecting) return
+      this.$emit('connect', { host: DEVICE_IP, port: 22, username: this.form.username, password: this.form.password })
     },
   },
 })
@@ -220,7 +172,7 @@ export default Vue.extend({
 }
 
 .conn-wrap {
-  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
   width: 100%; max-width: 420px; padding: 16px; position: relative; z-index: 1;
 }
 
@@ -252,16 +204,18 @@ export default Vue.extend({
 .conn-header h1 span { color: var(--accent); }
 .conn-header p { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
-/* Saved banner */
-.saved-banner {
-  width: 100%; display: flex; align-items: center; gap: 8px;
-  padding: 9px 14px; background: var(--accent-dim); border: 1px solid rgba(255,140,66,0.2); border-radius: var(--radius-sm);
-  font-size: 12px; color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+/* Fixed device badge */
+.device-target-badge {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; background: var(--accent-dim); border: 1px solid rgba(255,140,66,0.25); border-radius: var(--radius-sm);
 }
-.saved-banner:hover { background: rgba(255,140,66,0.2); }
-.saved-banner i { color: var(--accent); flex-shrink: 0; }
-.saved-banner strong { color: var(--accent); }
-.load-hint { margin-left: auto; font-size: 10px; color: var(--accent); opacity: 0.7; }
+.device-target-badge > i { color: var(--accent); font-size: 16px; flex-shrink: 0; }
+.device-target-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.device-target-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-faint); }
+.device-target-ip { font-size: 14px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+.device-target-status { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
+.ping-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-ping 2s ease infinite; }
+@keyframes pulse-ping { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 /* Form card */
 .conn-card {
@@ -279,7 +233,6 @@ export default Vue.extend({
 .error-tip { font-size: 11px; color: var(--text-dim); }
 
 .form-row { display: flex; flex-direction: column; gap: 5px; }
-.form-row-group { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
 .form-row label { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; }
 
 .input-wrap { position: relative; display: flex; align-items: center; }
@@ -308,9 +261,6 @@ export default Vue.extend({
 .field-hint i { color: var(--blue); font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 .field-hint code { background: var(--border); padding: 1px 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
 
-.remember-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
-.remember-row input { accent-color: var(--accent); }
-
 .connect-btn {
   width: 100%; padding: 12px; background: linear-gradient(135deg, #FF8C42, #E07530); border: none; border-radius: var(--radius-sm);
   color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
@@ -327,9 +277,7 @@ export default Vue.extend({
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Help section */
-.help-section {
-  width: 100%; font-size: 12px;
-}
+.help-section { width: 100%; font-size: 12px; }
 .help-section summary {
   cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 6px;
   padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);

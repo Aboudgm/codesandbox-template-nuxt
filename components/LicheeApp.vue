@@ -292,6 +292,8 @@ export default Vue.extend({
 
   mounted() {
     window.addEventListener('keydown', this.handleKeyDown)
+    // Auto-connect to the fixed local device on startup
+    this.onConnect({ host: '192.168.68.63', port: 22, username: 'root', password: '' })
   },
 
   beforeDestroy() {
