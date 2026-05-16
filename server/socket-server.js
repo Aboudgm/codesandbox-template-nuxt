@@ -18,6 +18,7 @@ function attach(httpServer) {
       }
 
       const conn = new Client()
+      const pass = password || ''
 
       conn.on('ready', () => {
         conn.shell(
@@ -48,11 +49,37 @@ function attach(httpServer) {
         )
       })
 
-      conn.on('error', (err) => {
-        socket.emit('ssh:error', err.message)
+      // Handle keyboard-interactive auth (common on embedded Linux / no-password setups)
+      conn.on('keyboard-interactive', (_name, _instructions, _lang, prompts, finish) => {
+        // Respond to every prompt with the password (or empty string if none given)
+        const responses = prompts.map(() => pass)
+        finish(responses)
       })
 
-      conn.connect({ host, port: Number(port), username, password, readyTimeout: 10000 })
+      conn.on('error', (err) => {
+        // Give a friendlier message for auth failures
+        if (err.message.includes('All configured authentication methods failed')) {
+          socket.emit('ssh:error', 'Authentication failed — wrong password, or the device requires a specific auth method')
+        } else {
+          socket.emit('ssh:error', err.message)
+        }
+      })
+
+      const connectOptions = {
+        host,
+        port: Number(port),
+        username,
+        readyTimeout: 12000,
+        // Always try keyboard-interactive so no-password devices work
+        tryKeyboard: true,
+      }
+
+      // Only add password field if one was provided
+      if (pass) {
+        connectOptions.password = pass
+      }
+
+      conn.connect(connectOptions)
     })
 
     socket.on('ssh:input', (data) => {

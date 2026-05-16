@@ -72,13 +72,26 @@
         </div>
 
         <div class="form-row">
-          <label>Password</label>
+          <label>
+            Password
+            <span class="optional-badge">optional</span>
+          </label>
           <div class="input-wrap">
             <i class="fas fa-lock"></i>
-            <input v-model="form.password" :type="showPass ? 'text' : 'password'" placeholder="••••••••" :disabled="connecting" @keyup.enter="submit" />
-            <button type="button" class="pass-toggle" @click="showPass = !showPass">
+            <input
+              v-model="form.password"
+              :type="showPass ? 'text' : 'password'"
+              placeholder="Leave empty if no password"
+              :disabled="connecting"
+              @keyup.enter="submit"
+            />
+            <button type="button" class="pass-toggle" @click="showPass = !showPass" :title="showPass ? 'Hide' : 'Show'">
               <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
+          </div>
+          <div class="field-hint">
+            <i class="fas fa-info-circle"></i>
+            Default for LicheeRV Nano: <code>root</code> — or leave blank if passwordless SSH is configured
           </div>
         </div>
 
@@ -87,7 +100,7 @@
           <span>Remember this connection</span>
         </label>
 
-        <button class="connect-btn" :disabled="!form.host || connecting" @click="submit">
+        <button class="connect-btn" :disabled="!form.host.trim() || connecting" @click="submit">
           <span v-if="!connecting" class="btn-inner"><i class="fas fa-bolt"></i> Connect to Device</span>
           <span v-else class="btn-inner"><span class="spinner"></span> Establishing SSH...</span>
         </button>
@@ -138,11 +151,12 @@ export default Vue.extend({
   computed: {
     errorTip(): string {
       const e = this.error.toLowerCase()
-      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH service may not be running on the device'
-      if (e.includes('timeout') || e.includes('etimedout')) return 'Check your Ethernet connection and IP address'
-      if (e.includes('auth') || e.includes('password') || e.includes('permission')) return 'Wrong username or password'
-      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Hostname not found — use an IP address instead'
-      return 'Check device power, Ethernet cable, and IP address'
+      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH is not running on the device — try rebooting it'
+      if (e.includes('timeout') || e.includes('etimedout') || e.includes('timed out')) return 'Device unreachable — check Ethernet cable and IP address'
+      if (e.includes('auth') || e.includes('password') || e.includes('permission') || e.includes('authentication')) return 'Try the password "root" or leave it empty for passwordless SSH'
+      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Use an IP address like 192.168.x.x instead of a hostname'
+      if (e.includes('enetunreach') || e.includes('network')) return 'Network unreachable — is the Ethernet cable connected?'
+      return 'Check device power, Ethernet cable, and that the IP is correct'
     },
   },
   mounted() {
@@ -280,6 +294,19 @@ export default Vue.extend({
 
 .pass-toggle { position: absolute; right: 9px; background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 11px; padding: 4px; transition: color 0.15s; }
 .pass-toggle:hover { color: var(--text-dim); }
+
+.optional-badge {
+  display: inline-block; margin-left: 6px;
+  font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--border); color: var(--text-faint); padding: 1px 5px; border-radius: 4px;
+}
+
+.field-hint {
+  display: flex; align-items: flex-start; gap: 5px;
+  font-size: 11px; color: var(--text-faint); margin-top: 4px;
+}
+.field-hint i { color: var(--blue); font-size: 10px; flex-shrink: 0; margin-top: 1px; }
+.field-hint code { background: var(--border); padding: 1px 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
 
 .remember-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
 .remember-row input { accent-color: var(--accent); }
