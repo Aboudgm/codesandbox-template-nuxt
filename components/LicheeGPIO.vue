@@ -129,6 +129,7 @@ const PINOUT = [
 
 export default Vue.extend({
   name: 'LicheeGPIO',
+  inject: ['$toast'],
   props: { socketId: { type: String, required: true } },
   data() {
     return {

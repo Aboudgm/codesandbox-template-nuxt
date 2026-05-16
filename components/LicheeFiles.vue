@@ -28,7 +28,11 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="files-error"><i class="fas fa-exclamation-triangle"></i> {{ error }}</div>
+    <div v-if="error" class="files-error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ error }}</span>
+      <button class="err-retry-btn" @click="refresh"><i class="fas fa-redo"></i> Retry</button>
+    </div>
 
     <!-- File list -->
     <div class="files-list">
@@ -105,6 +109,7 @@ const EXT_ICONS: Record<string, string> = {
 
 export default Vue.extend({
   name: 'LicheeFiles',
+  inject: ['$toast'],
   props: { socketId: { type: String, required: true } },
   data() {
     return {
@@ -243,6 +248,12 @@ export default Vue.extend({
   border: 1px solid rgba(248,113,113,0.2); border-radius: var(--radius-sm);
   font-size: 12px; color: var(--red); display: flex; align-items: center; gap: 8px;
 }
+.err-retry-btn {
+  margin-left: auto; background: var(--red-dim); border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 5px; color: var(--red); font-size: 11px; padding: 3px 10px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: background 0.15s; flex-shrink: 0;
+}
+.err-retry-btn:hover { background: rgba(248,113,113,0.2); }
 
 .files-list {
   flex: 1; background: var(--card); border: 1px solid var(--border);

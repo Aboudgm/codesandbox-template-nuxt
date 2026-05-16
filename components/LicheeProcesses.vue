@@ -88,6 +88,7 @@ import Vue from 'vue'
 
 export default Vue.extend({
   name: 'LicheeProcesses',
+  inject: ['$toast'],
   props: { socketId: { type: String, required: true } },
   data() {
     return {

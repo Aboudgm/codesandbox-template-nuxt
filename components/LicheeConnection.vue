@@ -1,127 +1,115 @@
 <template>
   <div class="conn-root">
-    <!-- Animated background grid -->
     <div class="bg-grid"></div>
     <div class="bg-glow"></div>
 
     <div class="conn-wrap">
-      <!-- Chip illustration -->
+      <!-- Animated chip art -->
       <div class="chip-art">
         <div class="chip-body">
-          <div class="chip-pins chip-pins-top">
-            <span v-for="i in 14" :key="'t'+i" class="chip-pin" :style="{ animationDelay: (i * 0.08) + 's' }"></span>
+          <div class="chip-pins top">
+            <span v-for="i in 14" :key="'t'+i" class="chip-pin" :style="{ animationDelay: (i * 0.07) + 's' }"></span>
           </div>
           <div class="chip-core">
-            <div class="chip-label">SG2002</div>
-            <div class="chip-sublabel">RISC-V · ARM · NPU</div>
-            <div class="chip-icon"><i class="fas fa-microchip"></i></div>
-            <div class="chip-specs">
+            <div class="core-label">SG2002</div>
+            <div class="core-sub">RISC-V · ARM · 1 TOPS NPU</div>
+            <div class="core-icon"><i class="fas fa-microchip"></i></div>
+            <div class="core-specs">
               <span>256MB DDR3</span>
-              <span>1 TOPS</span>
+              <span>22×35mm</span>
             </div>
           </div>
-          <div class="chip-pins chip-pins-bottom">
-            <span v-for="i in 14" :key="'b'+i" class="chip-pin" :style="{ animationDelay: (i * 0.06 + 0.5) + 's' }"></span>
+          <div class="chip-pins bottom">
+            <span v-for="i in 14" :key="'b'+i" class="chip-pin" :style="{ animationDelay: (i * 0.06 + 0.6) + 's' }"></span>
           </div>
         </div>
       </div>
 
-      <!-- Title -->
       <div class="conn-header">
-        <h1 class="conn-title">LicheeRV <span>Nano</span></h1>
-        <p class="conn-subtitle">Device Dashboard Interface</p>
+        <h1>LicheeRV <span>Nano</span></h1>
+        <p>Device Dashboard Interface</p>
       </div>
 
-      <!-- Form card -->
+      <!-- Saved connection notice -->
+      <div v-if="hasSaved" class="saved-banner" @click="loadSaved">
+        <i class="fas fa-history"></i>
+        <span>Resume last session: <strong>{{ savedHost }}</strong></span>
+        <span class="load-hint">Click to load</span>
+      </div>
+
       <div class="conn-card">
         <div v-if="error" class="error-bar">
           <i class="fas fa-exclamation-triangle"></i>
-          {{ error }}
+          <div class="error-body">
+            <span class="error-msg">{{ error }}</span>
+            <span class="error-tip">{{ errorTip }}</span>
+          </div>
         </div>
 
         <div class="form-row">
-          <label class="form-label">IP Address</label>
+          <label>IP Address</label>
           <div class="input-wrap">
-            <i class="fas fa-network-wired input-icon"></i>
-            <input
-              v-model="form.host"
-              class="form-input"
-              type="text"
-              placeholder="192.168.1.x"
-              :disabled="connecting"
-              @keyup.enter="submit"
-            />
+            <i class="fas fa-network-wired"></i>
+            <input v-model="form.host" type="text" placeholder="192.168.x.x" :disabled="connecting" @keyup.enter="submit" />
           </div>
         </div>
 
         <div class="form-row-group">
           <div class="form-row">
-            <label class="form-label">Username</label>
+            <label>Username</label>
             <div class="input-wrap">
-              <i class="fas fa-user input-icon"></i>
-              <input
-                v-model="form.username"
-                class="form-input"
-                type="text"
-                placeholder="root"
-                :disabled="connecting"
-                @keyup.enter="submit"
-              />
+              <i class="fas fa-user"></i>
+              <input v-model="form.username" type="text" placeholder="root" :disabled="connecting" @keyup.enter="submit" />
             </div>
           </div>
           <div class="form-row">
-            <label class="form-label">Port</label>
+            <label>Port</label>
             <div class="input-wrap">
-              <i class="fas fa-hashtag input-icon"></i>
-              <input
-                v-model="form.port"
-                class="form-input"
-                type="number"
-                placeholder="22"
-                :disabled="connecting"
-                @keyup.enter="submit"
-              />
+              <i class="fas fa-hashtag"></i>
+              <input v-model="form.port" type="number" placeholder="22" :disabled="connecting" @keyup.enter="submit" />
             </div>
           </div>
         </div>
 
         <div class="form-row">
-          <label class="form-label">Password</label>
+          <label>Password</label>
           <div class="input-wrap">
-            <i class="fas fa-lock input-icon"></i>
-            <input
-              v-model="form.password"
-              class="form-input"
-              :type="showPass ? 'text' : 'password'"
-              placeholder="••••••••"
-              :disabled="connecting"
-              @keyup.enter="submit"
-            />
-            <button class="pass-toggle" type="button" @click="showPass = !showPass">
+            <i class="fas fa-lock"></i>
+            <input v-model="form.password" :type="showPass ? 'text' : 'password'" placeholder="••••••••" :disabled="connecting" @keyup.enter="submit" />
+            <button type="button" class="pass-toggle" @click="showPass = !showPass">
               <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
           </div>
         </div>
 
-        <button class="connect-btn" :disabled="connecting || !form.host" @click="submit">
-          <span v-if="!connecting" class="btn-content">
-            <i class="fas fa-bolt"></i>
-            Connect to Device
-          </span>
-          <span v-else class="btn-content">
-            <span class="spinner"></span>
-            Connecting...
-          </span>
+        <label class="remember-row">
+          <input type="checkbox" v-model="rememberMe" />
+          <span>Remember this connection</span>
+        </label>
+
+        <button class="connect-btn" :disabled="!form.host || connecting" @click="submit">
+          <span v-if="!connecting" class="btn-inner"><i class="fas fa-bolt"></i> Connect to Device</span>
+          <span v-else class="btn-inner"><span class="spinner"></span> Establishing SSH...</span>
         </button>
       </div>
 
-      <!-- Specs footer -->
+      <!-- Quick help -->
+      <details class="help-section">
+        <summary><i class="fas fa-question-circle"></i> Having trouble connecting?</summary>
+        <div class="help-body">
+          <div class="help-item"><i class="fas fa-check-circle"></i> Make sure Ethernet is connected between your Mac and the Nano</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Default credentials: <code>root</code> / <code>root</code> (or <code>cvitek</code>)</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Find the IP with: <code>arp -a</code> on your Mac</div>
+          <div class="help-item"><i class="fas fa-check-circle"></i> Or check the device serial console at 115200 baud</div>
+        </div>
+      </details>
+
       <div class="specs-row">
-        <span class="spec-tag"><i class="fas fa-microchip"></i> SG2002</span>
-        <span class="spec-tag"><i class="fas fa-memory"></i> 256MB DDR3</span>
-        <span class="spec-tag"><i class="fas fa-ethernet"></i> 100 Mbps</span>
-        <span class="spec-tag"><i class="fas fa-brain"></i> 1 TOPS NPU</span>
-        <span class="spec-tag"><i class="fab fa-linux"></i> Linux</span>
+        <span class="spec-chip"><i class="fas fa-microchip"></i> SG2002</span>
+        <span class="spec-chip"><i class="fas fa-memory"></i> 256MB DDR3</span>
+        <span class="spec-chip"><i class="fas fa-ethernet"></i> 100 Mbps</span>
+        <span class="spec-chip"><i class="fas fa-brain"></i> 1 TOPS NPU</span>
+        <span class="spec-chip"><i class="fab fa-linux"></i> Linux</span>
       </div>
     </div>
   </div>
@@ -129,6 +117,8 @@
 
 <script lang="ts">
 import Vue from 'vue'
+
+const STORAGE_KEY = 'lichee_last_conn'
 
 export default Vue.extend({
   name: 'LicheeConnection',
@@ -139,17 +129,58 @@ export default Vue.extend({
   data() {
     return {
       showPass: false,
-      form: {
-        host: '',
-        port: 22,
-        username: 'root',
-        password: '',
-      },
+      rememberMe: true,
+      hasSaved: false,
+      savedHost: '',
+      form: { host: '', port: 22, username: 'root', password: '' },
     }
   },
+  computed: {
+    errorTip(): string {
+      const e = this.error.toLowerCase()
+      if (e.includes('econnrefused') || e.includes('refused')) return 'SSH service may not be running on the device'
+      if (e.includes('timeout') || e.includes('etimedout')) return 'Check your Ethernet connection and IP address'
+      if (e.includes('auth') || e.includes('password') || e.includes('permission')) return 'Wrong username or password'
+      if (e.includes('enotfound') || e.includes('getaddrinfo')) return 'Hostname not found — use an IP address instead'
+      return 'Check device power, Ethernet cable, and IP address'
+    },
+  },
+  mounted() {
+    this.loadSavedIfExists()
+  },
   methods: {
+    loadSavedIfExists() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed.host) {
+            this.hasSaved = true
+            this.savedHost = parsed.host
+          }
+        }
+      } catch (_) {}
+    },
+    loadSaved() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          this.form = { ...this.form, ...parsed }
+        }
+      } catch (_) {}
+    },
     submit() {
       if (!this.form.host || this.connecting) return
+      if (this.rememberMe) {
+        try {
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+            host: this.form.host,
+            port: this.form.port,
+            username: this.form.username,
+          }))
+        } catch (_) {}
+      }
       this.$emit('connect', { ...this.form })
     },
   },
@@ -160,160 +191,131 @@ export default Vue.extend({
 .conn-root {
   width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
-  position: relative; overflow: hidden;
+  background: var(--bg); position: relative; overflow: hidden;
 }
 
-/* Background effects */
 .bg-grid {
   position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,140,66,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,140,66,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+  background-image: linear-gradient(rgba(255,140,66,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,140,66,0.04) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none;
 }
 .bg-glow {
-  position: absolute;
-  width: 600px; height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,140,66,0.08) 0%, transparent 70%);
-  top: 50%; left: 50%; transform: translate(-50%,-50%);
-  pointer-events: none;
+  position: absolute; width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,140,66,0.07) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
 }
 
 .conn-wrap {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 20px; width: 100%; max-width: 420px;
-  padding: 20px;
-  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  width: 100%; max-width: 420px; padding: 16px; position: relative; z-index: 1;
 }
 
 /* Chip art */
 .chip-art { display: flex; align-items: center; justify-content: center; }
-.chip-body {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 0;
-}
-.chip-pins {
-  display: flex; gap: 6px; padding: 0 12px;
-}
+.chip-body { display: flex; flex-direction: column; align-items: center; }
+.chip-pins { display: flex; gap: 5px; padding: 0 10px; }
 .chip-pin {
-  width: 8px; height: 14px;
-  background: var(--accent);
-  border-radius: 2px;
-  opacity: 0;
-  animation: pin-appear 0.4s ease forwards, pin-pulse 3s ease-in-out infinite;
+  width: 8px; height: 14px; background: var(--accent); border-radius: 2px;
+  opacity: 0; animation: pin-appear 0.5s ease forwards, pin-glow 3s ease-in-out infinite;
 }
-@keyframes pin-appear {
-  to { opacity: 0.7; }
-}
-@keyframes pin-pulse {
-  0%, 100% { opacity: 0.6; background: var(--accent); }
-  50% { opacity: 1; background: var(--accent-hover); box-shadow: 0 0 4px var(--accent-glow); }
-}
+@keyframes pin-appear { to { opacity: 0.65; } }
+@keyframes pin-glow { 0%,100% { opacity: 0.55; } 50% { opacity: 1; box-shadow: 0 0 6px var(--accent-glow); } }
+
 .chip-core {
-  background: linear-gradient(135deg, var(--card2) 0%, var(--card) 100%);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 16px 32px;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 4px; min-width: 220px;
-  box-shadow: 0 0 30px rgba(255,140,66,0.12), inset 0 1px 0 rgba(255,255,255,0.05);
+  background: linear-gradient(135deg, var(--card2), var(--card));
+  border: 1px solid var(--border2); border-radius: 8px;
+  padding: 14px 36px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 230px;
+  box-shadow: 0 0 30px rgba(255,140,66,0.1), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.chip-label { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: 2px; }
-.chip-sublabel { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
-.chip-icon { font-size: 22px; color: var(--accent); margin: 6px 0; text-shadow: 0 0 12px var(--accent-glow); }
-.chip-specs { display: flex; gap: 12px; }
-.chip-specs span { font-size: 9px; color: var(--text-faint); letter-spacing: 0.5px; background: var(--border); padding: 2px 6px; border-radius: 4px; }
+.core-label { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: 2px; }
+.core-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+.core-icon { font-size: 22px; color: var(--accent); margin: 6px 0; text-shadow: 0 0 12px var(--accent-glow); }
+.core-specs { display: flex; gap: 10px; }
+.core-specs span { font-size: 9px; color: var(--text-faint); background: var(--border); padding: 2px 6px; border-radius: 4px; }
 
-/* Title */
 .conn-header { text-align: center; }
-.conn-title { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
-.conn-title span { color: var(--accent); }
-.conn-subtitle { font-size: 12px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.5px; }
+.conn-header h1 { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+.conn-header h1 span { color: var(--accent); }
+.conn-header p { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
-/* Form */
+/* Saved banner */
+.saved-banner {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; background: var(--accent-dim); border: 1px solid rgba(255,140,66,0.2); border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+}
+.saved-banner:hover { background: rgba(255,140,66,0.2); }
+.saved-banner i { color: var(--accent); flex-shrink: 0; }
+.saved-banner strong { color: var(--accent); }
+.load-hint { margin-left: auto; font-size: 10px; color: var(--accent); opacity: 0.7; }
+
+/* Form card */
 .conn-card {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex; flex-direction: column; gap: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,140,66,0.05);
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
-
 .error-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px;
-  background: var(--red-dim);
-  border: 1px solid rgba(248,113,113,0.25);
-  border-radius: var(--radius-sm);
-  font-size: 13px; color: var(--red);
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 13px; background: var(--red-dim); border: 1px solid rgba(248,113,113,0.22); border-radius: var(--radius-sm);
 }
+.error-bar > i { color: var(--red); flex-shrink: 0; margin-top: 2px; }
+.error-body { display: flex; flex-direction: column; gap: 2px; }
+.error-msg { font-size: 12px; color: var(--red); font-weight: 500; }
+.error-tip { font-size: 11px; color: var(--text-dim); }
 
-.form-row { display: flex; flex-direction: column; gap: 6px; }
-.form-row-group { display: grid; grid-template-columns: 1fr 100px; gap: 12px; }
-.form-label { font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; }
+.form-row { display: flex; flex-direction: column; gap: 5px; }
+.form-row-group { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+.form-row label { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; }
 
 .input-wrap { position: relative; display: flex; align-items: center; }
-.input-icon {
-  position: absolute; left: 12px; font-size: 12px; color: var(--text-faint); pointer-events: none;
+.input-wrap > i { position: absolute; left: 11px; font-size: 11px; color: var(--text-faint); pointer-events: none; }
+.input-wrap input {
+  width: 100%; padding: 9px 11px 9px 32px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; font-family: 'Inter', sans-serif;
 }
-.form-input {
-  width: 100%; padding: 10px 12px 10px 34px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 13px; font-family: 'Inter', sans-serif;
-  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
-}
-.form-input::placeholder { color: var(--text-faint); }
-.form-input:focus { border-color: rgba(255,140,66,0.4); box-shadow: 0 0 0 3px rgba(255,140,66,0.08); }
-.form-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.input-wrap input::placeholder { color: var(--text-faint); }
+.input-wrap input:focus { border-color: rgba(255,140,66,0.4); box-shadow: 0 0 0 3px rgba(255,140,66,0.08); }
+.input-wrap input:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.pass-toggle {
-  position: absolute; right: 10px;
-  background: none; border: none; cursor: pointer;
-  color: var(--text-faint); font-size: 12px;
-  padding: 4px; transition: color 0.15s;
-}
+.pass-toggle { position: absolute; right: 9px; background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 11px; padding: 4px; transition: color 0.15s; }
 .pass-toggle:hover { color: var(--text-dim); }
 
+.remember-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+.remember-row input { accent-color: var(--accent); }
+
 .connect-btn {
-  width: 100%; padding: 13px;
-  background: linear-gradient(135deg, var(--accent) 0%, #E07530 100%);
-  border: none; border-radius: var(--radius-sm);
-  color: #fff; font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
-  box-shadow: 0 4px 20px rgba(255,140,66,0.35);
-  margin-top: 4px;
+  width: 100%; padding: 12px; background: linear-gradient(135deg, #FF8C42, #E07530); border: none; border-radius: var(--radius-sm);
+  color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  box-shadow: 0 4px 18px rgba(255,140,66,0.35); margin-top: 2px;
 }
 .connect-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,140,66,0.45); }
-.connect-btn:active:not(:disabled) { transform: translateY(0); }
-.connect-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-content { display: flex; align-items: center; justify-content: center; gap: 8px; }
-
+.connect-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-inner { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner {
-  width: 14px; height: 14px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  animation: spin 0.7s linear infinite; display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Specs */
-.specs-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.spec-tag {
-  display: flex; align-items: center; gap: 5px;
-  padding: 4px 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 10px; color: var(--text-dim);
+/* Help section */
+.help-section {
+  width: 100%; font-size: 12px;
 }
-.spec-tag i { font-size: 9px; color: var(--accent); }
+.help-section summary {
+  cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  list-style: none; transition: background 0.15s;
+}
+.help-section summary:hover { background: var(--card2); }
+.help-section summary i { color: var(--accent); font-size: 11px; }
+.help-body { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); display: flex; flex-direction: column; gap: 7px; }
+.help-item { display: flex; align-items: flex-start; gap: 7px; color: var(--text-dim); font-size: 11px; }
+.help-item i { color: var(--green); font-size: 10px; margin-top: 1px; flex-shrink: 0; }
+.help-item code { background: var(--border); padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+
+.specs-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.spec-chip { display: flex; align-items: center; gap: 4px; padding: 3px 9px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; font-size: 10px; color: var(--text-dim); }
+.spec-chip i { font-size: 9px; color: var(--accent); }
 </style>

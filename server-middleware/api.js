@@ -10,64 +10,96 @@ function getSession(req) {
 
 function exec(conn, cmd) {
   return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(''), 8000)
     conn.exec(cmd, (err, stream) => {
-      if (err) return resolve('')
+      if (err) { clearTimeout(timeout); return resolve('') }
       let out = ''
       stream.on('data', (d) => { out += d })
       stream.stderr.on('data', (d) => { out += d })
-      stream.on('close', () => resolve(out.trim()))
+      stream.on('close', () => { clearTimeout(timeout); resolve(out.trim()) })
     })
   })
 }
 
 app.get('/ping', (req, res) => {
   const s = getSession(req)
-  res.json({ connected: !!s, host: s?.host || null })
+  res.json({ connected: !!s, host: s?.host || null, ts: Date.now() })
 })
 
 app.get('/stats', async (req, res) => {
   const s = getSession(req)
   if (!s) return res.status(401).json({ error: 'Not connected' })
 
-  const [cpuRaw, memRaw, diskRaw, uptimeRaw, tempRaw, loadRaw, hostnameRaw, kernelRaw, archRaw] =
+  const [cpuRaw, memRaw, diskRaw, uptimeRaw, tempRaw, loadRaw, hostnameRaw, kernelRaw, archRaw, netRaw, cpuFreqRaw] =
     await Promise.all([
-      exec(s.conn, "top -bn1 2>/dev/null | grep -i 'cpu\\|%Cpu' | head -1 | awk '{for(i=1;i<=NF;i++) if($i~/[0-9]/ && $(i+1)~/us|id/) {print $i; exit}}' || cat /proc/loadavg | awk '{printf \"%.0f\", $1*10}'"),
-      exec(s.conn, "free -m 2>/dev/null | awk 'NR==2{printf \"%d %d\", $3, $2}'"),
+      exec(s.conn, "cat /proc/stat | head -1 | awk '{idle=$5; total=0; for(i=2;i<=NF;i++) total+=$i; printf \"%.1f\", (1-idle/total)*100}'"),
+      exec(s.conn, "cat /proc/meminfo | awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf \"%d %d\", (t-a)/1024, t/1024}'"),
       exec(s.conn, "df -h / 2>/dev/null | awk 'NR==2{printf \"%s %s %s\", $3, $2, $5}'"),
       exec(s.conn, "uptime 2>/dev/null | sed 's/.*up //' | sed 's/,.*//'"),
-      exec(s.conn, "cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo 0"),
+      exec(s.conn, "cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || cat /sys/class/thermal/thermal_zone1/temp 2>/dev/null || echo 0"),
       exec(s.conn, "cat /proc/loadavg 2>/dev/null"),
       exec(s.conn, "hostname 2>/dev/null"),
       exec(s.conn, "uname -r 2>/dev/null"),
       exec(s.conn, "uname -m 2>/dev/null"),
+      exec(s.conn, "cat /proc/net/dev 2>/dev/null | tail -n +3"),
+      exec(s.conn, "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0"),
     ])
 
+  // Memory
   const memParts = memRaw.split(' ')
   const memUsed = parseInt(memParts[0]) || 0
   const memTotal = parseInt(memParts[1]) || 256
   const memPct = memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0
 
+  // Disk
   const diskParts = diskRaw.split(' ')
   const diskPct = parseInt((diskParts[2] || '0%').replace('%', '')) || 0
 
-  const tempC = Math.round(parseInt(tempRaw || '0') / 1000) || 0
-  const actualTemp = tempC > 1 ? tempC : parseInt(tempRaw || '0')
+  // Temperature
+  const rawTemp = parseInt(tempRaw || '0') || 0
+  const tempC = rawTemp > 1000 ? Math.round(rawTemp / 1000) : rawTemp
 
+  // Load average
   const loadParts = loadRaw.split(' ')
 
+  // CPU from /proc/stat (better than top)
   let cpuPct = parseFloat(cpuRaw) || 0
-  if (cpuPct > 100) cpuPct = Math.min(100, cpuPct)
+  if (cpuPct < 0) cpuPct = 0
+  if (cpuPct > 100) cpuPct = 100
+
+  // CPU frequency
+  const freqRaw = parseInt(cpuFreqRaw || '0') || 0
+  const freqMhz = freqRaw > 1000 ? Math.round(freqRaw / 1000) : freqRaw
+
+  // Network bytes from /proc/net/dev
+  const netStats = {}
+  for (const line of netRaw.split('\n').filter(Boolean)) {
+    const m = line.trim().match(/^(\S+):\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
+    if (m) {
+      const iface = m[1].replace(':', '')
+      const rxB = parseInt(m[2])
+      const txB = parseInt(m[3])
+      netStats[iface] = {
+        rxBytes: rxB,
+        txBytes: txB,
+        rx: formatBytes(rxB),
+        tx: formatBytes(txB),
+      }
+    }
+  }
 
   res.json({
-    cpu: { pct: Math.round(cpuPct), load: loadParts[0] || '0.00' },
+    cpu: { pct: Math.round(cpuPct), load: loadParts[0] || '0.00', freqMhz },
     memory: { used: memUsed, total: memTotal, pct: memPct },
     disk: { used: diskParts[0] || '?', total: diskParts[1] || '?', pct: diskPct },
-    temperature: actualTemp,
+    temperature: tempC,
     uptime: uptimeRaw || 'unknown',
     load: { one: loadParts[0] || '0', five: loadParts[1] || '0', fifteen: loadParts[2] || '0' },
     hostname: hostnameRaw || 'licheerv',
     kernel: kernelRaw || 'unknown',
     arch: archRaw || 'riscv64',
+    netStats,
+    ts: Date.now(),
   })
 })
 
@@ -77,7 +109,7 @@ app.get('/processes', async (req, res) => {
 
   const raw = await exec(
     s.conn,
-    "ps aux 2>/dev/null | sort -rn -k3 | head -20 || ps -eo pid,comm,pcpu,pmem,stat 2>/dev/null | head -20"
+    "ps aux 2>/dev/null | sort -rn -k3 | head -25 || ps -eo pid,comm,pcpu,pmem,stat 2>/dev/null | head -25"
   )
 
   const lines = raw.split('\n').filter(Boolean)
@@ -94,17 +126,10 @@ app.get('/processes', async (req, res) => {
         cmd: parts.slice(10).join(' ') || parts[parts.length - 1] || '',
       }
     }
-    return {
-      user: '',
-      pid: parts[0] || '',
-      cpu: parts[2] || '0',
-      mem: parts[3] || '0',
-      stat: parts[4] || '',
-      cmd: parts[1] || '',
-    }
+    return { user: '', pid: parts[0] || '', cpu: parts[2] || '0', mem: parts[3] || '0', stat: parts[4] || '', cmd: parts[1] || '' }
   })
 
-  res.json({ processes: procs })
+  res.json({ processes: procs, ts: Date.now() })
 })
 
 app.get('/files', async (req, res) => {
@@ -113,27 +138,22 @@ app.get('/files', async (req, res) => {
 
   const path = (req.query.path || '/').replace(/[;&|`$]/g, '')
   const raw = await exec(s.conn, `ls -la --time-style=+"%Y-%m-%d %H:%M" "${path}" 2>&1`)
-  const lines = raw.split('\n').filter(Boolean)
 
+  if (raw.includes('Permission denied') || raw.includes('No such file')) {
+    return res.status(400).json({ error: raw.split('\n')[0] })
+  }
+
+  const lines = raw.split('\n').filter(Boolean)
   const entries = []
   for (const line of lines) {
     if (line.startsWith('total') || line.startsWith('ls:')) continue
     const m = line.match(/^([drwxlstST\-]{10})\s+\d+\s+(\S+)\s+\S+\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s+(.+)$/)
     if (m) {
-      entries.push({
-        perms: m[1],
-        owner: m[2],
-        size: m[3],
-        date: m[4],
-        time: m[5],
-        name: m[6],
-        isDir: m[1].startsWith('d'),
-        isLink: m[1].startsWith('l'),
-      })
+      entries.push({ perms: m[1], owner: m[2], size: m[3], date: m[4], time: m[5], name: m[6], isDir: m[1].startsWith('d'), isLink: m[1].startsWith('l') })
     }
   }
 
-  res.json({ path, entries })
+  res.json({ path, entries, ts: Date.now() })
 })
 
 app.get('/network', async (req, res) => {
@@ -155,27 +175,19 @@ app.get('/network', async (req, res) => {
     const ipMatch = block.match(/inet\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/)
     const macMatch = block.match(/link\/ether\s+([0-9a-f:]+)/i)
     const stateMatch = block.match(/state\s+(\S+)/i)
-    ifaceList.push({
-      name,
-      ip: ipMatch ? `${ipMatch[1]}/${ipMatch[2]}` : null,
-      mac: macMatch ? macMatch[1] : null,
-      state: stateMatch ? stateMatch[1] : 'UNKNOWN',
-      up: block.includes('UP'),
-    })
+    ifaceList.push({ name, ip: ipMatch ? `${ipMatch[1]}/${ipMatch[2]}` : null, mac: macMatch ? macMatch[1] : null, state: stateMatch ? stateMatch[1] : 'UNKNOWN', up: block.includes('UP') })
   }
 
   const netStats = {}
   for (const line of rxTx.split('\n')) {
     const m = line.trim().match(/^(\S+):\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
     if (m) {
-      netStats[m[1].replace(':', '')] = {
-        rx: formatBytes(parseInt(m[2])),
-        tx: formatBytes(parseInt(m[3])),
-      }
+      const rxB = parseInt(m[2]); const txB = parseInt(m[3])
+      netStats[m[1].replace(':', '')] = { rx: formatBytes(rxB), tx: formatBytes(txB), rxBytes: rxB, txBytes: txB }
     }
   }
 
-  res.json({ interfaces: ifaceList, routes: routes.trim(), stats: netStats })
+  res.json({ interfaces: ifaceList, routes: routes.trim(), stats: netStats, ts: Date.now() })
 })
 
 app.get('/gpio', async (req, res) => {
@@ -193,7 +205,7 @@ app.get('/gpio', async (req, res) => {
     pins.push({ num, name: pin, direction: dir || 'in', value: parseInt(val) || 0 })
   }
 
-  res.json({ pins })
+  res.json({ pins, ts: Date.now() })
 })
 
 app.post('/gpio/export', async (req, res) => {
@@ -219,12 +231,12 @@ app.post('/exec', async (req, res) => {
   if (!s) return res.status(401).json({ error: 'Not connected' })
   const { command } = req.body
   if (!command || typeof command !== 'string') return res.status(400).json({ error: 'No command' })
-  const safe = command.slice(0, 512)
-  const output = await exec(s.conn, safe)
-  res.json({ output })
+  const output = await exec(s.conn, command.slice(0, 512))
+  res.json({ output, ts: Date.now() })
 })
 
 function formatBytes(bytes) {
+  if (!bytes || bytes < 0) return '0 B'
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB'
