@@ -206,6 +206,12 @@
               :socket-id="socketId"
               @updated="updateTimestamp"
             />
+            <LicheePicoClaw
+              v-else-if="activePanel === 'picoclaw'"
+              :key="'picoclaw'"
+              :socket-id="socketId"
+              :host="deviceInfo.host"
+            />
           </transition>
         </div>
       </main>
@@ -266,6 +272,7 @@ export default Vue.extend({
         { id: 'processes', label: 'Processes', icon: 'fas fa-tasks' },
         { id: 'network', label: 'Network', icon: 'fas fa-network-wired' },
         { id: 'gpio', label: 'GPIO', icon: 'fas fa-plug' },
+        { id: 'picoclaw', label: 'PicoClaw AI', icon: 'fas fa-robot' },
       ],
     }
   },
@@ -463,7 +470,7 @@ export default Vue.extend({
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
 
-      if (e.key >= '1' && e.key <= '6') {
+      if (e.key >= '1' && e.key <= '7') {
         const idx = parseInt(e.key) - 1
         if (this.panels[idx]) { this.activePanel = this.panels[idx].id; e.preventDefault() }
       }
