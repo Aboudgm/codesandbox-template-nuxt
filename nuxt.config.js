@@ -4,7 +4,7 @@ export default {
 
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
-    title: 'Neumorphic Music Player',
+    title: 'Multi-Agent City Builder',
     htmlAttrs: {
       lang: 'en',
     },
