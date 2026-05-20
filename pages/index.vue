@@ -1,15 +1,13 @@
 <template>
-  <NeumorphicMusicPlayer />
+  <CityBuilder />
 </template>
 
 <script lang="ts">
 import Vue from 'vue'
-import NeumorphicMusicPlayer from '~/components/NeumorphicMusicPlayer.vue'
+import CityBuilder from '~/components/CityBuilder.vue'
 
 export default Vue.extend({
   name: 'IndexPage',
-  components: {
-    NeumorphicMusicPlayer,
-  },
+  components: { CityBuilder },
 })
 </script>
