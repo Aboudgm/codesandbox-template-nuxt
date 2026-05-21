@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-ai-v2'
+const CACHE_NAME = 'nexus-ai-v3'
 const STATIC_ASSETS = ['/', '/index.html']
 
 // Install: cache app shell

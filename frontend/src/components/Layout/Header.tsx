@@ -20,7 +20,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
 export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
   const navigate = useNavigate()
   const { isConnected, tasks } = useAppStore()
-  const [notifEnabled, setNotifEnabled] = useState(Notification.permission === 'granted')
+  const [notifEnabled, setNotifEnabled] = useState(
+    typeof Notification !== 'undefined' && Notification.permission === 'granted'
+  )
   const [showInstall, setShowInstall] = useState(false)
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
 
@@ -57,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
   }, [])
 
   const handleNotifToggle = useCallback(async () => {
-    if (notifEnabled) return
+    if (notifEnabled || typeof Notification === 'undefined') return
     const perm = await Notification.requestPermission()
     setNotifEnabled(perm === 'granted')
   }, [notifEnabled])
