@@ -41,6 +41,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Episodic memory init failed (non-fatal): %s", exc)
 
+    try:
+        from app.memory.task_store import get_task_store
+        get_task_store()
+        from app.api.routes.tasks import load_tasks_from_db
+        await load_tasks_from_db()
+        logger.info("Task store initialized")
+    except Exception as exc:
+        logger.warning("Task store init failed (non-fatal): %s", exc)
+
     logger.info("NEXUS AI backend ready ✓")
     yield
     logger.info("Shutting down NEXUS AI backend…")
@@ -91,6 +100,23 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str) -> None:
             await manager.send_personal(websocket, {"type": "pong", "data": data})
     except WebSocketDisconnect:
         manager.disconnect(websocket, task_id)
+
+
+# ─── Stats ───────────────────────────────────────────────────────────────────
+@app.get("/api/stats", tags=["system"])
+async def get_stats() -> dict:
+    from app.api.routes.tasks import _tasks
+    total_tasks = len(_tasks)
+    try:
+        from app.memory.vector_store import get_vector_store
+        memories_stored = await get_vector_store().collection_count("default")
+    except Exception:
+        memories_stored = 0
+    return {
+        "total_tasks": total_tasks,
+        "memories_stored": memories_stored,
+        "agents_available": 5,
+    }
 
 
 # ─── Health check ────────────────────────────────────────────────────────────

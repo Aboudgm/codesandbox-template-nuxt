@@ -190,6 +190,22 @@ class VectorStore:
             logger.error("delete_memory failed: %s", exc)
             return False
 
+    async def clear_all(self, collection: str = "default") -> None:
+        """Delete all documents from a collection."""
+        try:
+            col = self._get_collection(collection)
+            all_items = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: col.get()
+            )
+            ids = all_items.get("ids", [])
+            if ids:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: col.delete(ids=ids)
+                )
+        except Exception as exc:
+            logger.error("clear_all failed: %s", exc)
+            raise
+
     async def collection_count(self, collection: str = "default") -> int:
         """Return number of documents in a collection."""
         try:

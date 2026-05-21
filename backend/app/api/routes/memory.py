@@ -14,7 +14,6 @@ async def search_memory(q: str = Query(..., description="Search query")) -> list
     """Semantic search over the vector store."""
     try:
         from app.memory.vector_store import get_vector_store
-
         vs = get_vector_store()
         results = await vs.search_memory(q)
         return results
@@ -28,7 +27,6 @@ async def get_recent_memories() -> list[dict]:
     """Return the 10 most recent episodic task records."""
     try:
         from app.memory.episodic import get_episodic_memory
-
         em = get_episodic_memory()
         return await em.get_recent_tasks(10)
     except Exception as exc:
@@ -51,21 +49,32 @@ async def get_memory_stats() -> dict:
 
         return {
             "episodic": episodic_stats,
-            "vector": {
-                "default_collection_count": vector_count,
-            },
+            "vector": {"default_collection_count": vector_count},
         }
     except Exception as exc:
         logger.warning("Stats failed: %s", exc)
         return {"episodic": {}, "vector": {"default_collection_count": 0}}
 
 
-@router.delete("/{memory_id}", status_code=204)
-async def delete_memory(memory_id: str) -> None:
-    """Delete a memory entry from the vector store."""
+# NOTE: /all must be declared before /{memory_id} so FastAPI doesn't
+# interpret "all" as a memory_id parameter.
+@router.delete("/all", status_code=204)
+async def clear_all_memories() -> None:
+    """Delete all entries from the vector store."""
     try:
         from app.memory.vector_store import get_vector_store
+        vs = get_vector_store()
+        await vs.clear_all()
+    except Exception as exc:
+        logger.error("clear_all_memories failed: %s", exc)
+        raise HTTPException(500, detail=str(exc))
 
+
+@router.delete("/{memory_id}", status_code=204)
+async def delete_memory(memory_id: str) -> None:
+    """Delete a specific memory entry from the vector store."""
+    try:
+        from app.memory.vector_store import get_vector_store
         vs = get_vector_store()
         deleted = await vs.delete_memory(memory_id)
         if not deleted:

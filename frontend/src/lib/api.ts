@@ -98,8 +98,14 @@ export async function updateConfig(config: Partial<Config>): Promise<Config> {
   return data
 }
 
-export async function testConnection(provider: 'anthropic' | 'openai' | 'gemini'): Promise<{ success: boolean; message: string }> {
-  const { data } = await api.post<{ success: boolean; message: string }>(`/config/test/${provider}`)
+export async function testConnection(
+  provider: 'anthropic' | 'openai' | 'gemini',
+  key?: string,
+): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.post<{ success: boolean; message: string }>(
+    `/config/test/${provider}`,
+    key ? { key } : {},
+  )
   return data
 }
 

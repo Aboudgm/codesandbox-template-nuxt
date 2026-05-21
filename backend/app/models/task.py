@@ -12,11 +12,11 @@ from pydantic import BaseModel, Field
 
 
 class TaskStatus(str, Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    PAUSED = "PAUSED"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+    PENDING = "pending"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class AgentType(str, Enum):

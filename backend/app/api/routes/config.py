@@ -2,107 +2,162 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+import yaml
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 logger = logging.getLogger(__name__)
 
+# Always write to /data — it's the persistent volume even in Docker where
+# /app/config.yaml is mounted read-only.
+_WRITE_CONFIG = Path("/data/config.yaml")
+_INITIAL_CONFIG = Path(os.environ.get("CONFIG_FILE", "/data/config.yaml"))
+
+
+def _read_config_raw() -> dict:
+    """Read the most current config: user-saved /data copy takes priority."""
+    for path in (_WRITE_CONFIG, _INITIAL_CONFIG):
+        if path.exists():
+            try:
+                with open(path) as f:
+                    return yaml.safe_load(f) or {}
+            except Exception:
+                continue
+    return {}
+
+
+def _write_config(data: dict) -> None:
+    try:
+        _WRITE_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+        with open(_WRITE_CONFIG, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+        logger.info("Config saved to %s", _WRITE_CONFIG)
+    except Exception as exc:
+        logger.error("Failed to write config: %s", exc)
+
 
 class ConfigUpdate(BaseModel):
-    anthropic_key: str | None = None
-    openai_key: str | None = None
-    google_gemini_key: str | None = None
-    default_model: str | None = None
-    temperature: float | None = None
-    max_tokens: int | None = None
+    # Field names match the frontend Config type exactly
+    anthropic_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    default_model: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    memory_enabled: Optional[bool] = None
+    code_execution_enabled: Optional[bool] = None
+    max_concurrent_agents: Optional[int] = None
+
+
+class TestPayload(BaseModel):
+    key: Optional[str] = None
 
 
 @router.get("")
 async def get_config() -> dict:
     from app.config import settings
+    masked = settings.masked_api_keys()
     return {
-        "api_keys": settings.masked_api_keys(),
-        "models": {
-            "default": settings.models.anthropic_model,
-            "fast": settings.models.openai_model,
-            "temperature": settings.models.temperature,
-            "max_tokens": settings.models.max_tokens,
-        },
-        "memory": {
-            "enabled": True,
-            "max_memories": settings.memory.max_memories,
-        },
-        "sandbox": {
-            "enabled": True,
-            "timeout": settings.sandbox.execution_timeout,
-            "languages": settings.sandbox.allowed_languages,
-        },
-        "server": {
-            "debug": settings.debug,
-            "log_level": settings.log_level,
-        },
+        "anthropic_api_key": masked["anthropic"],
+        "openai_api_key": masked["openai"],
+        "gemini_api_key": masked["google_gemini"],
+        "default_model": settings.models.anthropic_model,
+        "temperature": settings.models.temperature,
+        "max_tokens": settings.models.max_tokens,
+        "memory_enabled": True,
+        "code_execution_enabled": True,
+        "max_concurrent_agents": 3,
     }
 
 
 @router.put("")
 async def update_config(payload: ConfigUpdate) -> dict:
-    """Update API keys at runtime without restart."""
+    """Update API keys and model settings, persist to config.yaml."""
     from app.config import settings
-    if payload.anthropic_key is not None:
-        settings.api_keys.anthropic = payload.anthropic_key or None
-    if payload.openai_key is not None:
-        settings.api_keys.openai = payload.openai_key or None
-    if payload.google_gemini_key is not None:
-        settings.api_keys.google_gemini = payload.google_gemini_key or None
+
+    # Update in-memory settings
+    if payload.anthropic_api_key is not None:
+        settings.api_keys.anthropic = payload.anthropic_api_key or None
+    if payload.openai_api_key is not None:
+        settings.api_keys.openai = payload.openai_api_key or None
+    if payload.gemini_api_key is not None:
+        settings.api_keys.google_gemini = payload.gemini_api_key or None
     if payload.default_model is not None:
         settings.models.anthropic_model = payload.default_model
     if payload.temperature is not None:
         settings.models.temperature = payload.temperature
     if payload.max_tokens is not None:
         settings.models.max_tokens = payload.max_tokens
-    return {"status": "updated"}
+
+    # Persist non-empty keys to disk
+    raw = _read_config_raw()
+    raw.setdefault("api_keys", {})
+    raw.setdefault("models", {})
+
+    if payload.anthropic_api_key:
+        raw["api_keys"]["anthropic"] = payload.anthropic_api_key
+    if payload.openai_api_key:
+        raw["api_keys"]["openai"] = payload.openai_api_key
+    if payload.gemini_api_key:
+        raw["api_keys"]["google_gemini"] = payload.gemini_api_key
+    if payload.default_model is not None:
+        raw["models"]["anthropic_model"] = payload.default_model
+    if payload.temperature is not None:
+        raw["models"]["temperature"] = payload.temperature
+    if payload.max_tokens is not None:
+        raw["models"]["max_tokens"] = payload.max_tokens
+
+    _write_config(raw)
+    return {"status": "saved"}
 
 
-@router.post("/test")
-async def test_connection(provider: str) -> dict:
-    """Test connectivity to an LLM provider."""
+@router.post("/test/{provider}")
+async def test_connection(provider: str, body: TestPayload = TestPayload()) -> dict:
+    """Test connectivity to an LLM provider. Optionally accepts a key in the body
+    so the user can test a key before saving it."""
     from app.config import settings
     try:
         if provider == "anthropic":
-            if not settings.api_keys.anthropic:
-                return {"ok": False, "error": "No Anthropic key configured"}
+            key = body.key or settings.api_keys.anthropic
+            if not key:
+                return {"success": False, "message": "No Anthropic key — enter a key and try again"}
             import anthropic
-            client = anthropic.AsyncAnthropic(api_key=settings.api_keys.anthropic)
+            client = anthropic.AsyncAnthropic(api_key=key)
             await client.messages.create(
                 model=settings.models.anthropic_model,
                 max_tokens=10,
                 messages=[{"role": "user", "content": "ping"}],
             )
-            return {"ok": True, "provider": "anthropic"}
+            return {"success": True, "message": "Anthropic connected successfully"}
 
         elif provider == "openai":
-            if not settings.api_keys.openai:
-                return {"ok": False, "error": "No OpenAI key configured"}
+            key = body.key or settings.api_keys.openai
+            if not key:
+                return {"success": False, "message": "No OpenAI key — enter a key and try again"}
             from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=settings.api_keys.openai)
+            client = AsyncOpenAI(api_key=key)
             await client.chat.completions.create(
                 model=settings.models.openai_model,
                 max_tokens=10,
                 messages=[{"role": "user", "content": "ping"}],
             )
-            return {"ok": True, "provider": "openai"}
+            return {"success": True, "message": "OpenAI connected successfully"}
 
         elif provider == "gemini":
-            if not settings.api_keys.google_gemini:
-                return {"ok": False, "error": "No Gemini key configured"}
+            key = body.key or settings.api_keys.google_gemini
+            if not key:
+                return {"success": False, "message": "No Gemini key — enter a key and try again"}
             import google.generativeai as genai
-            genai.configure(api_key=settings.api_keys.google_gemini)
+            genai.configure(api_key=key)
             model = genai.GenerativeModel(settings.models.gemini_model)
             model.generate_content("ping")
-            return {"ok": True, "provider": "gemini"}
+            return {"success": True, "message": "Gemini connected successfully"}
 
-        return {"ok": False, "error": f"Unknown provider: {provider}"}
+        return {"success": False, "message": f"Unknown provider: {provider}"}
     except Exception as exc:
-        return {"ok": False, "error": str(exc)}
+        return {"success": False, "message": str(exc)}

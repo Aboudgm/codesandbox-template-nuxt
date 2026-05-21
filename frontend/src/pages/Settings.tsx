@@ -182,16 +182,22 @@ export const Settings: React.FC = () => {
   }
 
   const handleTest = async (provider: 'anthropic' | 'openai' | 'gemini') => {
+    const keyMap: Record<string, string> = {
+      anthropic: anthropicKey,
+      openai: openaiKey,
+      gemini: geminiKey,
+    }
+    const currentKey = keyMap[provider]
     setTestStatus((s) => ({ ...s, [provider]: 'testing' }))
     try {
-      const result = await testConnection(provider)
+      const result = await testConnection(provider, currentKey || undefined)
       const ok = result.success
       setTestStatus((s) => ({ ...s, [provider]: ok ? 'ok' : 'fail' }))
       if (ok) toast.success(`${provider} connected!`)
       else toast.error(result.message || 'Connection failed')
     } catch {
       setTestStatus((s) => ({ ...s, [provider]: 'fail' }))
-      toast.error('Test failed')
+      toast.error('Test failed — check that the backend is running')
     }
     setTimeout(() => setTestStatus((s) => ({ ...s, [provider]: 'idle' })), 4000)
   }

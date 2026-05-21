@@ -18,11 +18,15 @@ FALLBACK_CONFIG = Path(__file__).parent.parent / "config.yaml"
 
 
 def _load_yaml() -> dict:
-    """Load YAML config file, trying /data first then local fallback."""
-    for path in (CONFIG_FILE, FALLBACK_CONFIG):
+    """Load YAML config. Priority: /data/config.yaml (user-saved) > CONFIG_FILE > local fallback."""
+    data_config = Path("/data/config.yaml")
+    for path in (data_config, CONFIG_FILE, FALLBACK_CONFIG):
         if path.exists():
-            with open(path) as f:
-                return yaml.safe_load(f) or {}
+            try:
+                with open(path) as f:
+                    return yaml.safe_load(f) or {}
+            except Exception:
+                continue
     return {}
 
 
