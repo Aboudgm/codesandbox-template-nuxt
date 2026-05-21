@@ -13,14 +13,12 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/config", tags=["config"])
 logger = logging.getLogger(__name__)
 
-# Always write to /data — it's the persistent volume even in Docker where
-# /app/config.yaml is mounted read-only.
+# Always write to /data — persistent volume (Docker mounts /app read-only).
 _WRITE_CONFIG = Path("/data/config.yaml")
 _INITIAL_CONFIG = Path(os.environ.get("CONFIG_FILE", "/data/config.yaml"))
 
 
 def _read_config_raw() -> dict:
-    """Read the most current config: user-saved /data copy takes priority."""
     for path in (_WRITE_CONFIG, _INITIAL_CONFIG):
         if path.exists():
             try:
@@ -41,8 +39,25 @@ def _write_config(data: dict) -> None:
         logger.error("Failed to write config: %s", exc)
 
 
+def _friendly_error(exc: Exception, provider: str) -> str:
+    """Translate raw SDK exceptions into user-friendly messages."""
+    s = str(exc)
+    sl = s.lower()
+    if any(k in sl for k in ("api key", "invalid", "unauthorized", "401", "api_key_invalid")):
+        return f"Invalid API key for {provider}. Double-check the key and try again."
+    if any(k in sl for k in ("quota", "billing", "insufficient_quota")):
+        return f"Quota exceeded for {provider}. Check your billing or usage limits."
+    if any(k in sl for k in ("rate", "429", "too many")):
+        return f"Rate limit hit for {provider}. Wait a moment and retry."
+    if any(k in sl for k in ("not found", "404", "model")):
+        return f"Model not found on {provider}. The model name may have changed."
+    if any(k in sl for k in ("timeout", "connect", "network", "unreachable")):
+        return f"Network error reaching {provider}. Check your internet connection."
+    # Return the raw error but truncated
+    return s[:300]
+
+
 class ConfigUpdate(BaseModel):
-    # Field names match the frontend Config type exactly
     anthropic_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
@@ -68,21 +83,20 @@ async def get_config() -> dict:
         "openai_api_key": masked["openai"],
         "gemini_api_key": masked["google_gemini"],
         "xai_api_key": masked.get("xai", ""),
-        "default_model": settings.models.anthropic_model,
+        "default_model": settings.models.gemini_model,
         "temperature": settings.models.temperature,
         "max_tokens": settings.models.max_tokens,
         "memory_enabled": True,
         "code_execution_enabled": True,
         "max_concurrent_agents": 3,
+        "active_provider": settings.get_active_llm_provider(),
     }
 
 
 @router.put("")
 async def update_config(payload: ConfigUpdate) -> dict:
-    """Update API keys and model settings, persist to config.yaml."""
     from app.config import settings
 
-    # Update in-memory settings
     if payload.anthropic_api_key is not None:
         settings.api_keys.anthropic = payload.anthropic_api_key or None
     if payload.openai_api_key is not None:
@@ -92,13 +106,12 @@ async def update_config(payload: ConfigUpdate) -> dict:
     if payload.xai_api_key is not None:
         settings.api_keys.xai = payload.xai_api_key or None
     if payload.default_model is not None:
-        settings.models.anthropic_model = payload.default_model
+        settings.models.gemini_model = payload.default_model
     if payload.temperature is not None:
         settings.models.temperature = payload.temperature
     if payload.max_tokens is not None:
         settings.models.max_tokens = payload.max_tokens
 
-    # Persist non-empty keys to disk
     raw = _read_config_raw()
     raw.setdefault("api_keys", {})
     raw.setdefault("models", {})
@@ -112,71 +125,115 @@ async def update_config(payload: ConfigUpdate) -> dict:
     if payload.xai_api_key:
         raw["api_keys"]["xai"] = payload.xai_api_key
     if payload.default_model is not None:
-        raw["models"]["anthropic_model"] = payload.default_model
+        raw["models"]["gemini_model"] = payload.default_model
     if payload.temperature is not None:
         raw["models"]["temperature"] = payload.temperature
     if payload.max_tokens is not None:
         raw["models"]["max_tokens"] = payload.max_tokens
 
     _write_config(raw)
-    return {"status": "saved"}
+    return {"status": "saved", "active_provider": settings.get_active_llm_provider()}
 
 
 @router.post("/test/{provider}")
 async def test_connection(provider: str, body: TestPayload = TestPayload()) -> dict:
-    """Test connectivity to an LLM provider. Optionally accepts a key in the body
-    so the user can test a key before saving it."""
+    """
+    Test connectivity to an LLM provider.
+    Accepts an optional key in the body so users can test before saving.
+    Returns {success, message, model} for clear feedback.
+    """
     from app.config import settings
+
+    provider = provider.lower().strip()
+
     try:
-        if provider == "anthropic":
+        # ── Gemini ───────────────────────────────────────────────────────
+        if provider == "gemini":
+            key = body.key or settings.api_keys.google_gemini
+            if not key:
+                return {
+                    "success": False,
+                    "message": (
+                        "No Gemini API key provided. "
+                        "Get a free key at https://aistudio.google.com/apikey"
+                    ),
+                }
+            from google import genai
+            from google.genai import types as gtypes
+
+            client = genai.Client(api_key=key)
+            model_name = settings.models.gemini_model
+            response = await client.aio.models.generate_content(
+                model=model_name,
+                contents="Reply with exactly the word: OK",
+                config=gtypes.GenerateContentConfig(
+                    max_output_tokens=8,
+                    temperature=0.0,
+                ),
+            )
+            preview = (response.text or "").strip()[:40]
+            return {
+                "success": True,
+                "message": f"Gemini connected ({model_name}). Response: {preview}",
+                "model": model_name,
+            }
+
+        # ── Anthropic ────────────────────────────────────────────────────
+        elif provider == "anthropic":
             key = body.key or settings.api_keys.anthropic
             if not key:
-                return {"success": False, "message": "No Anthropic key — enter a key and try again"}
+                return {"success": False, "message": "No Anthropic key — enter a key and try again."}
             import anthropic
-            client = anthropic.AsyncAnthropic(api_key=key)
-            await client.messages.create(
-                model=settings.models.anthropic_model,
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}],
-            )
-            return {"success": True, "message": "Anthropic connected successfully"}
 
+            client = anthropic.AsyncAnthropic(api_key=key)
+            model_name = settings.models.anthropic_fast_model
+            msg = await client.messages.create(
+                model=model_name,
+                max_tokens=8,
+                messages=[{"role": "user", "content": "Say OK"}],
+            )
+            return {
+                "success": True,
+                "message": f"Anthropic connected ({model_name}).",
+                "model": model_name,
+            }
+
+        # ── OpenAI ────────────────────────────────────────────────────────
         elif provider == "openai":
             key = body.key or settings.api_keys.openai
             if not key:
-                return {"success": False, "message": "No OpenAI key — enter a key and try again"}
+                return {"success": False, "message": "No OpenAI key — enter a key and try again."}
             from openai import AsyncOpenAI
+
             client = AsyncOpenAI(api_key=key)
+            model_name = settings.models.openai_fast_model
             await client.chat.completions.create(
-                model=settings.models.openai_model,
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}],
+                model=model_name,
+                max_tokens=8,
+                messages=[{"role": "user", "content": "Say OK"}],
             )
-            return {"success": True, "message": "OpenAI connected successfully"}
+            return {
+                "success": True,
+                "message": f"OpenAI connected ({model_name}).",
+                "model": model_name,
+            }
 
-        elif provider == "gemini":
-            key = body.key or settings.api_keys.google_gemini
-            if not key:
-                return {"success": False, "message": "No Gemini key — enter a key and try again"}
-            import google.generativeai as genai
-            genai.configure(api_key=key)
-            model = genai.GenerativeModel(settings.models.gemini_model)
-            model.generate_content("ping")
-            return {"success": True, "message": "Gemini connected successfully"}
-
+        # ── xAI ────────────────────────────────────────────────────────
         elif provider == "xai":
             key = body.key or settings.api_keys.xai
             if not key:
-                return {"success": False, "message": "No xAI key — enter a key and try again"}
+                return {"success": False, "message": "No xAI key — enter a key and try again."}
             from openai import AsyncOpenAI
+
             client = AsyncOpenAI(api_key=key, base_url="https://api.x.ai/v1")
             await client.chat.completions.create(
                 model="grok-3-mini",
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=8,
+                messages=[{"role": "user", "content": "Say OK"}],
             )
-            return {"success": True, "message": "xAI Grok connected successfully"}
+            return {"success": True, "message": "xAI Grok connected (grok-3-mini).", "model": "grok-3-mini"}
 
-        return {"success": False, "message": f"Unknown provider: {provider}"}
+        return {"success": False, "message": f"Unknown provider '{provider}'. Use: gemini, anthropic, openai, xai"}
+
     except Exception as exc:
-        return {"success": False, "message": str(exc)}
+        return {"success": False, "message": _friendly_error(exc, provider)}

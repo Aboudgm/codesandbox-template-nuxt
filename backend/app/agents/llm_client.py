@@ -1,22 +1,62 @@
 """
-Shared LLM client helper.
-Cascade: Anthropic → OpenAI → Gemini → xAI (fallback).
-Supports fast=True to select smaller/cheaper models.
-Includes exponential-backoff retry on rate-limit errors (up to 3 attempts).
+LLM client — Gemini-primary cascade with structured error handling.
+
+Provider order: Gemini → Anthropic → OpenAI → xAI
+- Rate-limit and network errors trigger exponential backoff retry.
+- Auth/quota errors skip immediately to the next provider.
+- Surfaces actionable error messages (key invalid, quota hit, etc.).
+- All providers use proper async calls (no run_in_executor).
 """
 from __future__ import annotations
 
 import asyncio
 import logging
-import time
-from typing import Optional
+from dataclasses import dataclass
+from enum import Enum
+from typing import Callable, Coroutine, Optional
 
 logger = logging.getLogger(__name__)
 
-# Maximum retry attempts on rate-limit / transient errors
 _MAX_RETRIES = 3
-# Base delay in seconds for exponential backoff
 _BACKOFF_BASE = 1.0
+
+
+class ErrorKind(str, Enum):
+    INVALID_KEY   = "invalid_key"
+    QUOTA         = "quota_exceeded"
+    RATE_LIMIT    = "rate_limit"
+    CONTENT_BLOCK = "content_blocked"
+    NETWORK       = "network"
+    UNKNOWN       = "unknown"
+
+
+@dataclass
+class LLMError:
+    provider: str
+    kind: ErrorKind
+    detail: str
+
+    def __str__(self) -> str:
+        return f"[{self.provider}/{self.kind}] {self.detail}"
+
+    @property
+    def retryable(self) -> bool:
+        return self.kind in (ErrorKind.RATE_LIMIT, ErrorKind.NETWORK)
+
+
+def _classify(exc: Exception, provider: str) -> LLMError:
+    s = str(exc).lower()
+    if any(k in s for k in ("api key", "invalid", "unauthorized", "401", "api_key_invalid", "permission")):
+        return LLMError(provider, ErrorKind.INVALID_KEY, str(exc)[:250])
+    if any(k in s for k in ("quota", "billing", "payment", "exceeded your", "insufficient_quota")):
+        return LLMError(provider, ErrorKind.QUOTA, str(exc)[:250])
+    if any(k in s for k in ("rate", "429", "too many", "ratelimit", "throttle")):
+        return LLMError(provider, ErrorKind.RATE_LIMIT, str(exc)[:250])
+    if any(k in s for k in ("safety", "blocked", "finish_reason", "harm", "policy", "recitation")):
+        return LLMError(provider, ErrorKind.CONTENT_BLOCK, str(exc)[:250])
+    if any(k in s for k in ("timeout", "connect", "network", "unreachable", "ssl", "eof", "reset")):
+        return LLMError(provider, ErrorKind.NETWORK, str(exc)[:250])
+    return LLMError(provider, ErrorKind.UNKNOWN, str(exc)[:250])
 
 
 async def llm_complete(
@@ -27,129 +67,152 @@ async def llm_complete(
     fast: bool = False,
 ) -> str:
     """
-    Call the configured LLM and return the text response.
+    Call the best available LLM and return text.
 
-    Tries Anthropic → OpenAI → Gemini → xAI based on available API keys.
-    When fast=True, uses smaller/cheaper models for each provider.
-    Applies exponential-backoff retry (up to 3 attempts) on rate-limit errors.
-
-    Raises RuntimeError if no provider is available.
+    Cascade: Gemini → Anthropic → OpenAI → xAI.
+    fast=True selects lighter/faster models per provider.
+    Raises RuntimeError if all providers fail.
     """
     from app.config import settings
 
-    # Build ordered provider list based on configured keys
-    providers: list[tuple[str, callable]] = []
-
-    if settings.api_keys.anthropic:
-        model = (
-            settings.models.anthropic_fast_model
-            if fast
-            else settings.models.anthropic_model
-        )
-        providers.append(
-            (
-                "anthropic",
-                lambda p=prompt, s=system, mt=max_tokens, t=temperature, k=settings.api_keys.anthropic, m=model: _anthropic(
-                    p, s, mt, t, k, m
-                ),
-            )
-        )
-
-    if settings.api_keys.openai:
-        model = (
-            settings.models.openai_fast_model
-            if fast
-            else settings.models.openai_model
-        )
-        providers.append(
-            (
-                "openai",
-                lambda p=prompt, s=system, mt=max_tokens, t=temperature, k=settings.api_keys.openai, m=model: _openai(
-                    p, s, mt, t, k, m
-                ),
-            )
-        )
-
-    if settings.api_keys.google_gemini:
-        providers.append(
-            (
-                "gemini",
-                lambda p=prompt, s=system, mt=max_tokens, t=temperature, k=settings.api_keys.google_gemini, m=settings.models.gemini_model: _gemini(
-                    p, s, mt, t, k, m
-                ),
-            )
-        )
-
-    if settings.api_keys.xai:
-        providers.append(
-            (
-                "xai",
-                lambda p=prompt, s=system, mt=max_tokens, t=temperature, k=settings.api_keys.xai: _xai(
-                    p, s, mt, t, k
-                ),
-            )
-        )
+    providers = _build_providers(settings, prompt, system, max_tokens, temperature, fast)
 
     if not providers:
-        logger.warning("No LLM API keys configured. Returning placeholder response.")
         return (
-            "# LLM Response Unavailable\n\n"
-            "No API keys are configured for any LLM provider "
-            "(Anthropic, OpenAI, Google Gemini, or xAI). "
-            "Please add API keys to config.yaml or set the appropriate environment variables."
+            "# No API Keys Configured\n\n"
+            "Please add at least one LLM API key in **Settings**.\n\n"
+            "**Recommended:** Get a free Gemini key at "
+            "[Google AI Studio](https://aistudio.google.com/apikey) — "
+            "generous free tier, no credit card required."
         )
 
-    # Try each provider in cascade order, with retry on rate-limit errors
-    last_exc: Optional[Exception] = None
-    for provider_name, caller in providers:
+    errors: list[LLMError] = []
+
+    for name, call in providers:
         for attempt in range(1, _MAX_RETRIES + 1):
             try:
-                result = await caller()
-                return result
-            except Exception as exc:
-                exc_str = str(exc).lower()
-                is_rate_limit = any(
-                    kw in exc_str
-                    for kw in ("rate limit", "rate_limit", "429", "too many requests", "ratelimit")
-                )
-                if is_rate_limit and attempt < _MAX_RETRIES:
-                    delay = _BACKOFF_BASE * (2 ** (attempt - 1))
+                text = await call()
+                if errors:
+                    logger.info("Succeeded with %s after %d provider failure(s)", name, len(errors))
+                return text
+            except Exception as raw:
+                err = _classify(raw, name)
+                errors.append(err)
+
+                if err.retryable and attempt < _MAX_RETRIES:
+                    wait = _BACKOFF_BASE * (2 ** (attempt - 1))
                     logger.warning(
-                        "Rate limit hit on %s (attempt %d/%d). Retrying in %.1fs…",
-                        provider_name, attempt, _MAX_RETRIES, delay,
+                        "%s — retrying in %.1fs (attempt %d/%d)", err, wait, attempt, _MAX_RETRIES
                     )
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(wait)
                     continue
-                # Non-rate-limit error or final retry — move to next provider
-                logger.warning(
-                    "Provider %s failed (attempt %d): %s", provider_name, attempt, exc
-                )
-                last_exc = exc
+
+                # Non-retryable or final attempt — move to next provider
+                logger.warning("Skipping %s: %s", name, err)
                 break
 
+    # Surface the most actionable error message
+    for priority_kind in (ErrorKind.INVALID_KEY, ErrorKind.QUOTA, ErrorKind.CONTENT_BLOCK):
+        first = next((e for e in errors if e.kind == priority_kind), None)
+        if first:
+            raise RuntimeError(
+                f"{first.provider} error ({first.kind}): {first.detail}"
+            )
+
     raise RuntimeError(
-        f"All LLM providers failed. Last error: {last_exc}"
+        f"All {len(providers)} provider(s) failed "
+        f"({', '.join(e.provider for e in errors)}). "
+        f"Last: {errors[-1].detail}"
     )
 
 
 # ---------------------------------------------------------------------------
-# Provider implementations
+# Provider builder
 # ---------------------------------------------------------------------------
 
-async def _anthropic(
+def _build_providers(
+    settings,
     prompt: str,
     system: str,
     max_tokens: int,
     temperature: float,
-    api_key: str,
-    model: str,
-) -> str:
-    import anthropic
+    fast: bool,
+) -> list[tuple[str, Callable[[], Coroutine]]]:
+    pairs: list[tuple[str, Callable[[], Coroutine]]] = []
+    keys = settings.api_keys
+    models = settings.models
 
-    client = anthropic.Anthropic(api_key=api_key)
+    # ── Gemini (primary) ──────────────────────────────────────────────────
+    if keys.google_gemini:
+        m = models.gemini_fast_model if fast else models.gemini_model
+        pairs.append((
+            "gemini",
+            _make_gemini(prompt, system, max_tokens, temperature, keys.google_gemini, m),
+        ))
 
-    def _call() -> str:
-        msg = client.messages.create(
+    # ── Anthropic ─────────────────────────────────────────────────────────
+    if keys.anthropic:
+        m = models.anthropic_fast_model if fast else models.anthropic_model
+        pairs.append((
+            "anthropic",
+            _make_anthropic(prompt, system, max_tokens, temperature, keys.anthropic, m),
+        ))
+
+    # ── OpenAI ────────────────────────────────────────────────────────────
+    if keys.openai:
+        m = models.openai_fast_model if fast else models.openai_model
+        pairs.append((
+            "openai",
+            _make_openai(prompt, system, max_tokens, temperature, keys.openai, m),
+        ))
+
+    # ── xAI Grok ──────────────────────────────────────────────────────────
+    if keys.xai:
+        pairs.append((
+            "xai",
+            _make_xai(prompt, system, max_tokens, temperature, keys.xai),
+        ))
+
+    return pairs
+
+
+# ---------------------------------------------------------------------------
+# Provider factories (return coroutine callables to avoid lambda capture bugs)
+# ---------------------------------------------------------------------------
+
+def _make_gemini(
+    prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
+) -> Callable[[], Coroutine]:
+    async def _call() -> str:
+        from google import genai
+        from google.genai import types as gtypes
+
+        client = genai.Client(api_key=api_key)
+        response = await client.aio.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=gtypes.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=max_tokens,
+                temperature=temperature,
+            ),
+        )
+        if not response.text:
+            finish = getattr(response.candidates[0], "finish_reason", "unknown") if response.candidates else "unknown"
+            raise ValueError(f"Empty Gemini response (finish_reason={finish})")
+        return response.text
+
+    return _call
+
+
+def _make_anthropic(
+    prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
+) -> Callable[[], Coroutine]:
+    async def _call() -> str:
+        import anthropic
+
+        client = anthropic.AsyncAnthropic(api_key=api_key)
+        msg = await client.messages.create(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -158,23 +221,17 @@ async def _anthropic(
         )
         return msg.content[0].text
 
-    return await asyncio.get_event_loop().run_in_executor(None, _call)
+    return _call
 
 
-async def _openai(
-    prompt: str,
-    system: str,
-    max_tokens: int,
-    temperature: float,
-    api_key: str,
-    model: str,
-) -> str:
-    from openai import OpenAI
+def _make_openai(
+    prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
+) -> Callable[[], Coroutine]:
+    async def _call() -> str:
+        from openai import AsyncOpenAI
 
-    client = OpenAI(api_key=api_key)
-
-    def _call() -> str:
-        resp = client.chat.completions.create(
+        client = AsyncOpenAI(api_key=api_key)
+        resp = await client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -185,51 +242,17 @@ async def _openai(
         )
         return resp.choices[0].message.content or ""
 
-    return await asyncio.get_event_loop().run_in_executor(None, _call)
+    return _call
 
 
-async def _gemini(
-    prompt: str,
-    system: str,
-    max_tokens: int,
-    temperature: float,
-    api_key: str,
-    model: str,
-) -> str:
-    import google.generativeai as genai
+def _make_xai(
+    prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str = "grok-3"
+) -> Callable[[], Coroutine]:
+    async def _call() -> str:
+        from openai import AsyncOpenAI
 
-    genai.configure(api_key=api_key)
-
-    def _call() -> str:
-        gen_model = genai.GenerativeModel(
-            model_name=model,
-            system_instruction=system,
-            generation_config=genai.GenerationConfig(
-                max_output_tokens=max_tokens,
-                temperature=temperature,
-            ),
-        )
-        response = gen_model.generate_content(prompt)
-        return response.text
-
-    return await asyncio.get_event_loop().run_in_executor(None, _call)
-
-
-async def _xai(
-    prompt: str,
-    system: str,
-    max_tokens: int,
-    temperature: float,
-    api_key: str,
-    model: str = "grok-3",
-) -> str:
-    """xAI Grok via OpenAI-compatible API."""
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
-
-    def _call() -> str:
-        resp = client.chat.completions.create(
+        client = AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+        resp = await client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -240,4 +263,4 @@ async def _xai(
         )
         return resp.choices[0].message.content or ""
 
-    return await asyncio.get_event_loop().run_in_executor(None, _call)
+    return _call

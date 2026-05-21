@@ -54,30 +54,25 @@ class ModelSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MODEL_", extra="ignore")
 
     default_provider: str = Field(
-        default=_yaml_data.get("models", {}).get("default_provider", "anthropic")
+        default=_yaml_data.get("models", {}).get("default_provider", "gemini")
     )
     anthropic_model: str = Field(
-        default=_yaml_data.get("models", {}).get(
-            "anthropic_model", "claude-sonnet-4-6"
-        )
+        default=_yaml_data.get("models", {}).get("anthropic_model", "claude-sonnet-4-6")
     )
     openai_model: str = Field(
         default=_yaml_data.get("models", {}).get("openai_model", "gpt-4.1")
     )
     gemini_model: str = Field(
-        default=_yaml_data.get("models", {}).get(
-            "gemini_model", "gemini-3-flash"
-        )
+        default=_yaml_data.get("models", {}).get("gemini_model", "gemini-2.5-flash")
+    )
+    gemini_fast_model: str = Field(
+        default=_yaml_data.get("models", {}).get("gemini_fast_model", "gemini-2.5-flash")
     )
     anthropic_fast_model: str = Field(
-        default=_yaml_data.get("models", {}).get(
-            "anthropic_fast_model", "claude-haiku-4-5-20251001"
-        )
+        default=_yaml_data.get("models", {}).get("anthropic_fast_model", "claude-haiku-4-5-20251001")
     )
     openai_fast_model: str = Field(
-        default=_yaml_data.get("models", {}).get(
-            "openai_fast_model", "gpt-4.1-mini"
-        )
+        default=_yaml_data.get("models", {}).get("openai_fast_model", "gpt-4.1-mini")
     )
     max_tokens: int = Field(
         default=_yaml_data.get("models", {}).get("max_tokens", 4096)
@@ -162,13 +157,13 @@ class Settings(BaseSettings):
         return v
 
     def get_active_llm_provider(self) -> str:
-        """Return the first available LLM provider based on API keys."""
+        """Return the first available LLM provider based on API keys. Gemini is preferred."""
+        if self.api_keys.google_gemini:
+            return "gemini"
         if self.api_keys.anthropic:
             return "anthropic"
         if self.api_keys.openai:
             return "openai"
-        if self.api_keys.google_gemini:
-            return "gemini"
         if self.api_keys.xai:
             return "xai"
         return self.models.default_provider

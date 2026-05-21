@@ -128,10 +128,10 @@ export async function updateConfig(config: Partial<Config>): Promise<Config> {
 }
 
 export async function testConnection(
-  provider: 'anthropic' | 'openai' | 'gemini',
+  provider: 'gemini' | 'anthropic' | 'openai' | 'xai',
   key?: string,
-): Promise<{ success: boolean; message: string }> {
-  const { data } = await api.post<{ success: boolean; message: string }>(
+): Promise<{ success: boolean; message: string; model?: string }> {
+  const { data } = await api.post<{ success: boolean; message: string; model?: string }>(
     `/config/test/${provider}`,
     key ? { key } : {},
   )

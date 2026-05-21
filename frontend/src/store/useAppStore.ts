@@ -24,6 +24,8 @@ interface AppStore {
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
+  showNewTask: boolean
+  setShowNewTask: (open: boolean) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -62,4 +64,6 @@ export const useAppStore = create<AppStore>((set) => ({
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  showNewTask: false,
+  setShowNewTask: (open) => set({ showNewTask: open }),
 }))
