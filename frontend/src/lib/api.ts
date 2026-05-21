@@ -10,7 +10,15 @@ const api = axios.create({
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Guard: if Netlify (or any proxy) returns HTML instead of JSON, reject it
+    // so react-query treats it as an error rather than returning HTML as data.
+    const ct = String(response.headers?.['content-type'] ?? '')
+    if (ct.includes('text/html') && typeof response.data === 'string') {
+      return Promise.reject(new Error('Backend unavailable (received HTML instead of JSON)'))
+    }
+    return response
+  },
   (error) => {
     console.error('API Error:', error.response?.data || error.message)
     return Promise.reject(error)

@@ -9,15 +9,57 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,
       staleTime: 30000,
       refetchOnWindowFocus: false,
     },
   },
 })
 
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: '#0A0A14', color: '#F0F0F8', padding: '2rem', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+          <h2 style={{ color: '#EF5350', marginBottom: '0.5rem' }}>Something went wrong</h2>
+          <p style={{ color: '#9096B8', fontSize: '0.875rem', maxWidth: '400px', marginBottom: '1.5rem' }}>
+            {this.state.error.message}
+          </p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.reload() }}
+            style={{
+              background: 'linear-gradient(135deg, #D97757, #7C71F0)', color: '#fff',
+              border: 'none', borderRadius: '12px', padding: '0.75rem 1.5rem',
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem',
+            }}
+          >
+            Reload app
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
@@ -43,5 +85,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         />
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 )
