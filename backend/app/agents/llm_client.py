@@ -2,10 +2,19 @@
 LLM client — Gemini-primary cascade with structured error handling.
 
 Provider order: Gemini → Anthropic → OpenAI → xAI
-- Rate-limit and network errors trigger exponential backoff retry.
-- Auth/quota errors skip immediately to the next provider.
-- Surfaces actionable error messages (key invalid, quota hit, etc.).
-- All providers use proper async calls (no run_in_executor).
+
+Gemini is called via direct httpx REST (no google-genai SDK) — this eliminates
+all SDK version conflicts that plagued starlette/pydantic/httpx compatibility.
+
+Error kinds:
+  INVALID_KEY   — bad or revoked API key (skip provider immediately)
+  QUOTA         — billing quota exhausted (skip immediately)
+  RATE_LIMIT    — too many requests (retry with backoff)
+  CONTENT_BLOCK — safety filter triggered (skip immediately)
+  NETWORK       — connection/timeout error (retry with backoff)
+  UNKNOWN       — catch-all (skip immediately after one attempt)
+
+Retry: up to _MAX_RETRIES per provider, exponential backoff on retryable kinds.
 """
 from __future__ import annotations
 
@@ -19,6 +28,9 @@ logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
 _BACKOFF_BASE = 1.0
+
+# Gemini REST endpoint
+_GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
 class ErrorKind(str, Enum):
@@ -46,17 +58,17 @@ class LLMError:
 
 def _classify(exc: Exception, provider: str) -> LLMError:
     s = str(exc).lower()
-    if any(k in s for k in ("api key", "invalid", "unauthorized", "401", "api_key_invalid", "permission")):
-        return LLMError(provider, ErrorKind.INVALID_KEY, str(exc)[:250])
-    if any(k in s for k in ("quota", "billing", "payment", "exceeded your", "insufficient_quota")):
-        return LLMError(provider, ErrorKind.QUOTA, str(exc)[:250])
-    if any(k in s for k in ("rate", "429", "too many", "ratelimit", "throttle")):
-        return LLMError(provider, ErrorKind.RATE_LIMIT, str(exc)[:250])
-    if any(k in s for k in ("safety", "blocked", "finish_reason", "harm", "policy", "recitation")):
-        return LLMError(provider, ErrorKind.CONTENT_BLOCK, str(exc)[:250])
-    if any(k in s for k in ("timeout", "connect", "network", "unreachable", "ssl", "eof", "reset")):
-        return LLMError(provider, ErrorKind.NETWORK, str(exc)[:250])
-    return LLMError(provider, ErrorKind.UNKNOWN, str(exc)[:250])
+    if any(k in s for k in ("api key", "invalid", "unauthorized", "401", "403", "api_key_invalid", "permission denied")):
+        return LLMError(provider, ErrorKind.INVALID_KEY, str(exc)[:300])
+    if any(k in s for k in ("quota", "billing", "payment", "insufficient_quota", "resource_exhausted")):
+        return LLMError(provider, ErrorKind.QUOTA, str(exc)[:300])
+    if any(k in s for k in ("rate", "429", "too many", "ratelimit", "throttle", "quota_exceeded")):
+        return LLMError(provider, ErrorKind.RATE_LIMIT, str(exc)[:300])
+    if any(k in s for k in ("safety", "blocked", "harm", "policy", "recitation", "finish_reason: safety")):
+        return LLMError(provider, ErrorKind.CONTENT_BLOCK, str(exc)[:300])
+    if any(k in s for k in ("timeout", "connect", "network", "unreachable", "ssl", "eof", "reset", "connection")):
+        return LLMError(provider, ErrorKind.NETWORK, str(exc)[:300])
+    return LLMError(provider, ErrorKind.UNKNOWN, str(exc)[:300])
 
 
 async def llm_complete(
@@ -69,9 +81,9 @@ async def llm_complete(
     """
     Call the best available LLM and return text.
 
-    Cascade: Gemini → Anthropic → OpenAI → xAI.
-    fast=True selects lighter/faster models per provider.
-    Raises RuntimeError if all providers fail.
+    Cascade: Gemini (REST) → Anthropic → OpenAI → xAI.
+    fast=True selects lighter/faster model per provider.
+    Raises RuntimeError with an actionable message if all providers fail.
     """
     from app.config import settings
 
@@ -83,7 +95,7 @@ async def llm_complete(
             "Please add at least one LLM API key in **Settings**.\n\n"
             "**Recommended:** Get a free Gemini key at "
             "[Google AI Studio](https://aistudio.google.com/apikey) — "
-            "generous free tier, no credit card required."
+            "no credit card required, generous free tier."
         )
 
     errors: list[LLMError] = []
@@ -101,23 +113,18 @@ async def llm_complete(
 
                 if err.retryable and attempt < _MAX_RETRIES:
                     wait = _BACKOFF_BASE * (2 ** (attempt - 1))
-                    logger.warning(
-                        "%s — retrying in %.1fs (attempt %d/%d)", err, wait, attempt, _MAX_RETRIES
-                    )
+                    logger.warning("%s — retry in %.1fs (%d/%d)", err, wait, attempt, _MAX_RETRIES)
                     await asyncio.sleep(wait)
                     continue
 
-                # Non-retryable or final attempt — move to next provider
                 logger.warning("Skipping %s: %s", name, err)
                 break
 
-    # Surface the most actionable error message
+    # Surface the most actionable error
     for priority_kind in (ErrorKind.INVALID_KEY, ErrorKind.QUOTA, ErrorKind.CONTENT_BLOCK):
         first = next((e for e in errors if e.kind == priority_kind), None)
         if first:
-            raise RuntimeError(
-                f"{first.provider} error ({first.kind}): {first.detail}"
-            )
+            raise RuntimeError(f"{first.provider} error ({first.kind}): {first.detail}")
 
     raise RuntimeError(
         f"All {len(providers)} provider(s) failed "
@@ -142,68 +149,99 @@ def _build_providers(
     keys = settings.api_keys
     models = settings.models
 
-    # ── Gemini (primary) ──────────────────────────────────────────────────
+    # ── Gemini via REST (primary — no SDK dependency) ─────────────────
     if keys.google_gemini:
         m = models.gemini_fast_model if fast else models.gemini_model
-        pairs.append((
-            "gemini",
-            _make_gemini(prompt, system, max_tokens, temperature, keys.google_gemini, m),
-        ))
+        pairs.append(("gemini", _make_gemini(prompt, system, max_tokens, temperature, keys.google_gemini, m)))
 
-    # ── Anthropic ─────────────────────────────────────────────────────────
+    # ── Anthropic (Claude) ────────────────────────────────────────────
     if keys.anthropic:
         m = models.anthropic_fast_model if fast else models.anthropic_model
-        pairs.append((
-            "anthropic",
-            _make_anthropic(prompt, system, max_tokens, temperature, keys.anthropic, m),
-        ))
+        pairs.append(("anthropic", _make_anthropic(prompt, system, max_tokens, temperature, keys.anthropic, m)))
 
-    # ── OpenAI ────────────────────────────────────────────────────────────
+    # ── OpenAI ────────────────────────────────────────────────────────
     if keys.openai:
         m = models.openai_fast_model if fast else models.openai_model
-        pairs.append((
-            "openai",
-            _make_openai(prompt, system, max_tokens, temperature, keys.openai, m),
-        ))
+        pairs.append(("openai", _make_openai(prompt, system, max_tokens, temperature, keys.openai, m)))
 
-    # ── xAI Grok ──────────────────────────────────────────────────────────
+    # ── xAI Grok ──────────────────────────────────────────────────────
     if keys.xai:
-        pairs.append((
-            "xai",
-            _make_xai(prompt, system, max_tokens, temperature, keys.xai),
-        ))
+        pairs.append(("xai", _make_xai(prompt, system, max_tokens, temperature, keys.xai)))
 
     return pairs
 
 
 # ---------------------------------------------------------------------------
-# Provider factories (return coroutine callables to avoid lambda capture bugs)
+# Gemini via httpx REST — no SDK, no version conflicts
 # ---------------------------------------------------------------------------
 
 def _make_gemini(
     prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
 ) -> Callable[[], Coroutine]:
     async def _call() -> str:
-        from google import genai
-        from google.genai import types as gtypes
+        import httpx
 
-        client = genai.Client(api_key=api_key)
-        response = await client.aio.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=gtypes.GenerateContentConfig(
-                system_instruction=system,
-                max_output_tokens=max_tokens,
-                temperature=temperature,
-            ),
-        )
-        if not response.text:
-            finish = getattr(response.candidates[0], "finish_reason", "unknown") if response.candidates else "unknown"
-            raise ValueError(f"Empty Gemini response (finish_reason={finish})")
-        return response.text
+        url = _GEMINI_URL.format(model=model)
+        payload: dict = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": max_tokens,
+                "temperature": temperature,
+            },
+        }
+        if system:
+            payload["systemInstruction"] = {"parts": [{"text": system}]}
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(url, json=payload, params={"key": api_key})
+
+        # Map HTTP errors to actionable exceptions
+        if resp.status_code in (400, 401, 403):
+            try:
+                err_body = resp.json()
+                msg = err_body.get("error", {}).get("message", resp.text[:200])
+            except Exception:
+                msg = resp.text[:200]
+            status = resp.status_code
+            if status in (401, 403) or "api key" in msg.lower() or "invalid" in msg.lower():
+                raise PermissionError(f"Invalid Gemini API key (HTTP {status}): {msg}")
+            raise ValueError(f"Gemini API error (HTTP {status}): {msg}")
+
+        if resp.status_code == 429:
+            raise RuntimeError("Gemini rate limit exceeded (429) — backing off")
+
+        if resp.status_code >= 500:
+            raise ConnectionError(f"Gemini server error (HTTP {resp.status_code})")
+
+        resp.raise_for_status()
+        data = resp.json()
+
+        candidates = data.get("candidates", [])
+        if not candidates:
+            # Could be a prompt_feedback block
+            feedback = data.get("promptFeedback", {})
+            block_reason = feedback.get("blockReason", "UNKNOWN")
+            raise ValueError(f"Gemini returned no candidates (blockReason={block_reason})")
+
+        candidate = candidates[0]
+        finish_reason = candidate.get("finishReason", "")
+        if finish_reason == "SAFETY":
+            raise ValueError("Gemini content blocked by safety filter (SAFETY finish_reason)")
+
+        parts = candidate.get("content", {}).get("parts", [])
+        text = "".join(p.get("text", "") for p in parts).strip()
+
+        if not text:
+            raise ValueError(f"Gemini returned empty text (finishReason={finish_reason})")
+
+        return text
 
     return _call
 
+
+# ---------------------------------------------------------------------------
+# Anthropic (Claude) — async SDK
+# ---------------------------------------------------------------------------
 
 def _make_anthropic(
     prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
@@ -223,6 +261,10 @@ def _make_anthropic(
 
     return _call
 
+
+# ---------------------------------------------------------------------------
+# OpenAI — async SDK
+# ---------------------------------------------------------------------------
 
 def _make_openai(
     prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str
@@ -244,6 +286,10 @@ def _make_openai(
 
     return _call
 
+
+# ---------------------------------------------------------------------------
+# xAI Grok — OpenAI-compatible async
+# ---------------------------------------------------------------------------
 
 def _make_xai(
     prompt: str, system: str, max_tokens: int, temperature: float, api_key: str, model: str = "grok-3"

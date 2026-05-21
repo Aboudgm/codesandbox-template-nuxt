@@ -85,7 +85,7 @@ async def get_task(task_id: str) -> Task:
     return task
 
 
-@router.delete("/{task_id}", status_code=204)
+@router.delete("/{task_id}", status_code=204, response_model=None)
 async def delete_task(task_id: str) -> None:
     if task_id not in _tasks:
         raise HTTPException(404, detail="Task not found")

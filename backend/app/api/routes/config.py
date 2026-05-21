@@ -147,31 +147,50 @@ async def test_connection(provider: str, body: TestPayload = TestPayload()) -> d
     provider = provider.lower().strip()
 
     try:
-        # ── Gemini ───────────────────────────────────────────────────────
+        # ── Gemini (via httpx REST — no SDK) ─────────────────────────────
         if provider == "gemini":
             key = body.key or settings.api_keys.google_gemini
             if not key:
                 return {
                     "success": False,
                     "message": (
-                        "No Gemini API key provided. "
+                        "No Gemini API key. "
                         "Get a free key at https://aistudio.google.com/apikey"
                     ),
                 }
-            from google import genai
-            from google.genai import types as gtypes
+            import httpx
 
-            client = genai.Client(api_key=key)
             model_name = settings.models.gemini_model
-            response = await client.aio.models.generate_content(
-                model=model_name,
-                contents="Reply with exactly the word: OK",
-                config=gtypes.GenerateContentConfig(
-                    max_output_tokens=8,
-                    temperature=0.0,
-                ),
-            )
-            preview = (response.text or "").strip()[:40]
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+            payload = {
+                "contents": [{"parts": [{"text": "Reply with exactly one word: OK"}]}],
+                "generationConfig": {"maxOutputTokens": 8, "temperature": 0.0},
+            }
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(url, json=payload, params={"key": key})
+
+            if resp.status_code in (401, 403):
+                return {"success": False, "message": "Invalid Gemini API key — check it at aistudio.google.com"}
+            if resp.status_code == 400:
+                try:
+                    msg = resp.json().get("error", {}).get("message", resp.text[:200])
+                except Exception:
+                    msg = resp.text[:200]
+                return {"success": False, "message": f"Gemini error: {msg}"}
+            if resp.status_code == 429:
+                return {"success": False, "message": "Gemini rate limit hit — wait a moment and retry"}
+            if resp.status_code >= 500:
+                return {"success": False, "message": f"Gemini server error (HTTP {resp.status_code}) — try again"}
+            resp.raise_for_status()
+
+            data = resp.json()
+            candidates = data.get("candidates", [])
+            if not candidates:
+                block = data.get("promptFeedback", {}).get("blockReason", "unknown")
+                return {"success": False, "message": f"Gemini returned no response (blockReason={block})"}
+
+            parts = candidates[0].get("content", {}).get("parts", [])
+            preview = "".join(p.get("text", "") for p in parts).strip()[:40]
             return {
                 "success": True,
                 "message": f"Gemini connected ({model_name}). Response: {preview}",

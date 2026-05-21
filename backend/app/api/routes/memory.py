@@ -58,7 +58,7 @@ async def get_memory_stats() -> dict:
 
 # NOTE: /all must be declared before /{memory_id} so FastAPI doesn't
 # interpret "all" as a memory_id parameter.
-@router.delete("/all", status_code=204)
+@router.delete("/all", status_code=204, response_model=None)
 async def clear_all_memories() -> None:
     """Delete all entries from the vector store."""
     try:
@@ -70,7 +70,7 @@ async def clear_all_memories() -> None:
         raise HTTPException(500, detail=str(exc))
 
 
-@router.delete("/{memory_id}", status_code=204)
+@router.delete("/{memory_id}", status_code=204, response_model=None)
 async def delete_memory(memory_id: str) -> None:
     """Delete a specific memory entry from the vector store."""
     try:

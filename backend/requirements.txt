@@ -1,5 +1,7 @@
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
+# Pin starlette — google-genai pulls starlette 1.0.0 which breaks FastAPI 0.111.0
+starlette>=0.37.2,<0.38.0
 websockets==12.0
 pydantic==2.7.1
 pydantic-settings==2.2.1
@@ -12,7 +14,7 @@ chromadb==0.5.0
 sentence-transformers==3.0.1
 openai==1.30.5
 anthropic==0.28.0
-google-genai>=1.0.0
+# Gemini is called via httpx REST — no SDK needed (avoids all version conflicts)
 duckduckgo-search==6.1.7
 beautifulsoup4==4.12.3
 aiohttp==3.9.5

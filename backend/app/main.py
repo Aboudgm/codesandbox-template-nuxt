@@ -123,13 +123,16 @@ async def get_stats() -> dict:
 @app.get("/health", tags=["system"])
 async def health_check() -> JSONResponse:
     from app.config import settings
+    active = settings.get_active_llm_provider()
     return JSONResponse({
         "status": "ok",
-        "version": "1.0.0",
+        "version": "2.0.0",
+        "active_provider": active,
         "providers_configured": {
+            "gemini":    bool(settings.api_keys.google_gemini),
             "anthropic": bool(settings.api_keys.anthropic),
-            "openai": bool(settings.api_keys.openai),
-            "gemini": bool(settings.api_keys.google_gemini),
+            "openai":    bool(settings.api_keys.openai),
+            "xai":       bool(settings.api_keys.xai),
         },
     })
 
