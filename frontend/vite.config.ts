@@ -22,5 +22,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'motion': ['framer-motion'],
+          'markdown': ['react-markdown', 'remark-gfm', 'react-syntax-highlighter'],
+          'query': ['@tanstack/react-query', 'zustand', 'axios'],
+        },
+      },
+    },
   },
 })

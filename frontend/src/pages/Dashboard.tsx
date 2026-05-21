@@ -193,7 +193,7 @@ export const Dashboard: React.FC = () => {
           <StatCard
             icon={Users}
             label="Agents"
-            value={stats?.agents_available ?? agents.length || 5}
+            value={stats?.agents_available ?? (agents.length || 5)}
             color="#4FC3F7"
             delay={0.2}
           />

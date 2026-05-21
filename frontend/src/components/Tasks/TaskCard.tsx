@@ -76,22 +76,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDelete }) => {
 
       {/* Card */}
       <motion.div
-        style={{ x, opacity: cardOpacity }}
+        style={{ x, opacity: cardOpacity, background: 'rgba(26,26,46,0.85)', border: '1px solid rgba(42,45,74,0.6)' }}
         drag="x"
         dragDirectionLock
         dragConstraints={{ right: 0 }}
         dragElastic={{ left: 0.2, right: 0 }}
         onDragEnd={handleDragEnd}
         onClick={handleCardClick}
-        className="relative cursor-pointer rounded-2xl overflow-hidden"
-        style={{
-          x,
-          opacity: cardOpacity,
-          background: 'rgba(26,26,46,0.85)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(42,45,74,0.6)',
-        }}
+        className="relative cursor-pointer rounded-2xl overflow-hidden backdrop-blur-md"
         whileTap={{ scale: 0.99 }}
       >
         {/* Running progress bar */}

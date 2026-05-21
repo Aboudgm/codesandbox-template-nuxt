@@ -70,9 +70,9 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         <div
           className={`
             absolute ${sizes.badge} rounded-full border-2 border-surface
-            ${state === 'done' || state === 'completed' ? 'bg-success' : ''}
+            ${state === 'done' ? 'bg-success' : ''}
             ${state === 'error' ? 'bg-error' : ''}
-            ${state === 'thinking' || state === 'acting' || state === 'running' ? 'bg-primary animate-pulse' : ''}
+            ${state === 'thinking' || state === 'acting' ? 'bg-primary animate-pulse' : ''}
             ${state === 'waiting' ? 'bg-warning' : ''}
             ${state === 'idle' ? 'bg-text-muted' : ''}
           `}
