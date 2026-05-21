@@ -1,0 +1,129 @@
+# ============================================================
+# NEXUS AI — Multi-Agent Framework Configuration
+# ============================================================
+# Add your API keys below, then restart the containers.
+# All keys are optional — the system uses whichever are set.
+# Run: docker-compose up --build
+# ============================================================
+
+# ─── API Keys ───────────────────────────────────────────────
+api_keys:
+  # Anthropic (Claude) — https://console.anthropic.com/
+  anthropic: "YOUR_ANTHROPIC_API_KEY_HERE"
+
+  # OpenAI (GPT-4o, o1) — https://platform.openai.com/
+  openai: "YOUR_OPENAI_API_KEY_HERE"
+
+  # Google Gemini — https://aistudio.google.com/
+  google_gemini: "YOUR_GOOGLE_GEMINI_API_KEY_HERE"
+
+  # Serper (Google Search API) — https://serper.dev/ [optional]
+  serper: ""
+
+  # Tavily Search — https://tavily.com/ [optional]
+  tavily: ""
+
+# ─── Model Settings ─────────────────────────────────────────
+models:
+  # Primary orchestration model
+  # Options: claude-3-5-sonnet-20241022 | claude-3-opus-20240229 | gpt-4o | gemini-1.5-pro
+  default: "claude-3-5-sonnet-20241022"
+
+  # Fast model for lightweight tasks
+  # Options: claude-3-5-haiku-20241022 | gpt-4o-mini | gemini-1.5-flash
+  fast: "claude-3-5-haiku-20241022"
+
+  # Embedding model for vector memory
+  embedding: "all-MiniLM-L6-v2"
+
+  # Model parameters
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 0.95
+
+# ─── Agent Settings ─────────────────────────────────────────
+agents:
+  # Maximum number of agents running concurrently
+  max_concurrent: 5
+
+  # Timeout for each agent in seconds
+  timeout_seconds: 300
+
+  # Maximum tool calls per agent per task
+  max_tool_calls: 20
+
+  # Enable web search (requires Serper or uses DuckDuckGo fallback)
+  web_search_enabled: true
+
+  # Maximum search results per query
+  max_search_results: 5
+
+  # Enable code execution sandbox
+  code_execution_enabled: true
+
+  # Code execution timeout in seconds
+  code_timeout_seconds: 30
+
+# ─── Memory Settings ────────────────────────────────────────
+memory:
+  # Enable persistent vector memory
+  enabled: true
+
+  # ChromaDB connection
+  chromadb_host: "chromadb"
+  chromadb_port: 8000
+
+  # Default number of memory results to retrieve
+  default_results: 5
+
+  # Maximum memories to store per collection
+  max_memories: 10000
+
+  # Automatic memory summarization threshold
+  summary_threshold: 100
+
+# ─── Storage Settings ───────────────────────────────────────
+storage:
+  # Base directory for all data
+  data_dir: "/data"
+
+  # Workspace for agent-created files
+  workspace_dir: "/data/workspace"
+
+  # Reports output directory
+  reports_dir: "/data/workspace/reports"
+
+  # SQLite database path
+  db_path: "/data/nexus.db"
+
+# ─── Redis Settings ─────────────────────────────────────────
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+  url: "redis://redis:6379/0"
+
+# ─── Server Settings ────────────────────────────────────────
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  log_level: "info"
+
+  # CORS allowed origins (use ["*"] for development)
+  cors_origins:
+    - "*"
+
+  # WebSocket ping interval in seconds
+  ws_ping_interval: 30
+
+# ─── Security Settings ──────────────────────────────────────
+security:
+  # Secret key for JWT (change this in production!)
+  secret_key: "change-this-in-production-super-secret-key-12345"
+
+  # API authentication (set to true to require API key)
+  require_auth: false
+
+  # Your access key (used if require_auth is true)
+  access_key: "your-access-key-here"
