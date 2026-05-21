@@ -1,5 +1,6 @@
 """
-MemoryAgent – retrieves relevant past experience from vector and episodic stores.
+MemoryAgent (CHRONICLE) – institutional memory keeper.
+Worker tier: retrieves relevant past experience from vector and episodic stores.
 """
 from __future__ import annotations
 
@@ -18,8 +19,10 @@ logger = logging.getLogger(__name__)
 
 class MemoryAgent(BaseAgent):
     """
-    Searches vector store and episodic memory for context relevant to the
-    current task goal.  Returns a structured summary string.
+    CHRONICLE: Searches vector store and episodic memory for context relevant to
+    the current task goal. Returns a structured summary string.
+    Worker-tier agent — the institutional memory keeper.
+    Personality: organized, associative, draws unexpected connections.
     """
 
     def __init__(self, ws_manager: Optional["ConnectionManager"] = None):
@@ -36,8 +39,9 @@ class MemoryAgent(BaseAgent):
         self.set_task(task_id)
 
         self.send_message(
-            f"Searching memory for context related to: {goal[:100]}",
+            f"CHRONICLE scanning institutional memory for: {goal[:100]}",
             task_id=task_id,
+            metadata={"tier": "worker", "personality": "CHRONICLE", "role": "Memory"},
         )
 
         sections: list[str] = []
@@ -52,8 +56,9 @@ class MemoryAgent(BaseAgent):
 
             if vector_results:
                 self.send_message(
-                    f"Found {len(vector_results)} relevant memories in vector store.",
+                    f"Found {len(vector_results)} relevant memories — connecting the dots…",
                     task_id=task_id,
+                    metadata={"tier": "worker", "personality": "CHRONICLE", "role": "Memory"},
                 )
                 items = []
                 for r in vector_results:
@@ -76,8 +81,9 @@ class MemoryAgent(BaseAgent):
 
             if episodic_results:
                 self.send_message(
-                    f"Found {len(episodic_results)} related past tasks.",
+                    f"Surfaced {len(episodic_results)} related past tasks — patterns emerging…",
                     task_id=task_id,
+                    metadata={"tier": "worker", "personality": "CHRONICLE", "role": "Memory"},
                 )
                 items = []
                 for r in episodic_results[:5]:
@@ -95,5 +101,9 @@ class MemoryAgent(BaseAgent):
 
         result = "\n\n".join(sections)
         self.set_state(AgentState.DONE)
-        self.send_message("Memory retrieval complete.", task_id=task_id)
+        self.send_message(
+            "Memory retrieval complete. Context delivered.",
+            task_id=task_id,
+            metadata={"tier": "worker", "personality": "CHRONICLE", "role": "Memory"},
+        )
         return result

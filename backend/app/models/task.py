@@ -25,6 +25,11 @@ class AgentType(str, Enum):
     CODER = "CODER"
     WRITER = "WRITER"
     MEMORY = "MEMORY"
+    # Tier-aware types
+    STRATEGIST = "STRATEGIST"
+    TECH_LEAD = "TECH_LEAD"
+    RESEARCH_MANAGER = "RESEARCH_MANAGER"
+    CONTENT_DIRECTOR = "CONTENT_DIRECTOR"
 
 
 class AgentMessage(BaseModel):
@@ -33,6 +38,7 @@ class AgentMessage(BaseModel):
     content: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    tier: Optional[str] = None  # "boss" | "manager" | "worker"
 
     model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
 

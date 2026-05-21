@@ -57,6 +57,13 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+// Register service worker for PWA / background processing
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

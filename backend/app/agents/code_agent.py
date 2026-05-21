@@ -1,5 +1,6 @@
 """
-CodeAgent – uses an LLM to write and execute code, retrying on errors.
+CodeAgent (NEXUS Code) – elite software architect.
+Worker tier: writes and executes code, retrying on errors.
 """
 from __future__ import annotations
 
@@ -19,11 +20,19 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_NEXUS_CODE_PERSONA = (
+    "You are NEXUS Code — an elite software architect. "
+    "Pragmatic, clean, efficient. You write code like poetry — clear, purposeful, maintainable. "
+    "Your tone: precise technical expert who explains 'why' not just 'what'."
+)
+
 _CODE_SYSTEM = (
-    "You are an expert software engineer. When asked to solve a problem with code, "
-    "output ONLY the code inside a single fenced code block (```python ... ``` or "
-    "```javascript ... ``` or ```bash ... ```). Do not include explanations outside "
-    "the code block. The code should be complete and runnable."
+    _NEXUS_CODE_PERSONA + "\n\n"
+    "When asked to solve a problem with code, output ONLY the code inside a single fenced "
+    "code block (```python ... ``` or ```javascript ... ``` or ```bash ... ```). "
+    "Do not include explanations outside the code block. "
+    "The code should be complete and runnable. "
+    "Choose the cleanest, most maintainable approach — comment 'why', not 'what'."
 )
 
 _MAX_ATTEMPTS = 3
@@ -31,7 +40,8 @@ _MAX_ATTEMPTS = 3
 
 class CodeAgent(BaseAgent):
     """
-    Generates code with an LLM, executes it, and iterates on errors.
+    NEXUS Code: Generates code with an LLM, executes it, and iterates on errors.
+    Worker-tier agent.
     """
 
     def __init__(self, ws_manager: Optional["ConnectionManager"] = None):
@@ -48,7 +58,11 @@ class CodeAgent(BaseAgent):
         task_id: Optional[str] = getattr(task, "id", None)
         self.set_task(task_id)
 
-        self.send_message(f"Starting coding task: {goal[:120]}", task_id=task_id)
+        self.send_message(
+            f"NEXUS Code online. Architecting solution for: {goal[:120]}",
+            task_id=task_id,
+            metadata={"tier": "worker", "personality": "NEXUS Code", "role": "Engineering"},
+        )
 
         research_context = context.get("research", "")
         language = context.get("language", "python")
@@ -60,8 +74,9 @@ class CodeAgent(BaseAgent):
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             self.set_state(AgentState.THINKING)
             self.send_message(
-                f"Generating code (attempt {attempt}/{_MAX_ATTEMPTS})…",
+                f"Designing implementation (attempt {attempt}/{_MAX_ATTEMPTS})…",
                 task_id=task_id,
+                metadata={"tier": "worker", "personality": "NEXUS Code", "role": "Engineering"},
             )
 
             prompt = self._build_prompt(
@@ -81,7 +96,11 @@ class CodeAgent(BaseAgent):
 
             code, detected_lang = self._extract_code(llm_response, language)
             if not code:
-                self.send_message("LLM returned no code block.", task_id=task_id)
+                self.send_message(
+                    "No code block returned from LLM.",
+                    task_id=task_id,
+                    metadata={"tier": "worker", "personality": "NEXUS Code", "role": "Engineering"},
+                )
                 continue
 
             last_code = code
@@ -89,6 +108,7 @@ class CodeAgent(BaseAgent):
             self.send_message(
                 f"Executing {detected_lang} code ({len(code)} chars)…",
                 task_id=task_id,
+                metadata={"tier": "worker", "personality": "NEXUS Code", "role": "Engineering"},
             )
 
             result = await self._executor.execute(code, language=detected_lang)
@@ -98,11 +118,15 @@ class CodeAgent(BaseAgent):
 
             if exit_code == 0 and not last_error:
                 self.send_message(
-                    f"Code executed successfully.\nOutput:\n{last_output[:500]}",
+                    f"Build successful.\nOutput:\n{last_output[:500]}",
                     task_id=task_id,
-                    metadata={"exit_code": exit_code},
+                    metadata={
+                        "tier": "worker",
+                        "personality": "NEXUS Code",
+                        "role": "Engineering",
+                        "exit_code": exit_code,
+                    },
                 )
-                # Save to workspace
                 filename = await self._save_code(code, detected_lang, task_id)
                 self.set_state(AgentState.DONE)
                 return self._format_result(code, last_output, filename, attempt)
@@ -110,14 +134,21 @@ class CodeAgent(BaseAgent):
             self.send_message(
                 f"Execution error (attempt {attempt}): {last_error[:300]}",
                 task_id=task_id,
-                metadata={"exit_code": exit_code, "error": last_error},
+                metadata={
+                    "tier": "worker",
+                    "personality": "NEXUS Code",
+                    "role": "Engineering",
+                    "exit_code": exit_code,
+                    "error": last_error,
+                },
             )
 
         # All attempts failed
         self.set_state(AgentState.ERROR)
         self.send_message(
-            f"All {_MAX_ATTEMPTS} attempts failed. Last error: {last_error[:300]}",
+            f"All {_MAX_ATTEMPTS} attempts exhausted. Last error: {last_error[:300]}",
             task_id=task_id,
+            metadata={"tier": "worker", "personality": "NEXUS Code", "role": "Engineering"},
         )
         return (
             f"Code execution failed after {_MAX_ATTEMPTS} attempts.\n\n"
@@ -146,7 +177,7 @@ class CodeAgent(BaseAgent):
                 f"\nPrevious attempt failed.\n"
                 f"Code:\n```{language}\n{prev_code}\n```\n"
                 f"Error:\n```\n{prev_error}\n```\n"
-                "Please fix the issue and provide a corrected version."
+                "Identify the root cause and provide a corrected, improved version."
             )
         else:
             parts.append(f"\nWrite {language} code to accomplish this task.")
@@ -159,13 +190,11 @@ class CodeAgent(BaseAgent):
         match = pattern.search(text)
         if match:
             lang = (match.group(1) or default_lang).lower()
-            # Normalize language names
             if lang in ("js", "node"):
                 lang = "javascript"
             elif lang in ("sh", "shell", "zsh"):
                 lang = "bash"
             return match.group(2).strip(), lang
-        # No code block – return the whole text as-is
         return text.strip(), default_lang
 
     async def _save_code(

@@ -1,13 +1,42 @@
 import axios from 'axios'
 import type { Task, AgentInfo, Memory, Config } from '../types'
 
+const getBaseURL = (): string => {
+  const customUrl = localStorage.getItem('nexus_backend_url')
+  return customUrl ? `${customUrl.replace(/\/$/, '')}/api` : '/api'
+}
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
+  baseURL: getBaseURL(),
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
+
+export function setBackendUrl(url: string): void {
+  if (url) {
+    localStorage.setItem('nexus_backend_url', url)
+  } else {
+    localStorage.removeItem('nexus_backend_url')
+  }
+  api.defaults.baseURL = getBaseURL()
+}
+
+export function getBackendUrl(): string {
+  return localStorage.getItem('nexus_backend_url') || ''
+}
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const baseUrl = localStorage.getItem('nexus_backend_url') || ''
+    const url = baseUrl ? `${baseUrl.replace(/\/$/, '')}/health` : '/health'
+    const { data } = await axios.get(url, { timeout: 5000 })
+    return data?.status === 'ok'
+  } catch {
+    return false
+  }
+}
 
 api.interceptors.response.use(
   (response) => {

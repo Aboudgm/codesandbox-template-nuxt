@@ -42,12 +42,14 @@ export interface Config {
   anthropic_api_key?: string
   openai_api_key?: string
   gemini_api_key?: string
+  xai_api_key?: string
   default_model?: string
   temperature?: number
   max_tokens?: number
   memory_enabled?: boolean
   code_execution_enabled?: boolean
   max_concurrent_agents?: number
+  backend_url?: string
 }
 
 export interface Stats {

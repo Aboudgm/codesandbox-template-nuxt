@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, CheckCircle, XCircle, Loader2, Trash2, AlertTriangle, Info, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, XCircle, Loader2, Trash2, AlertTriangle, Info, ToggleLeft, ToggleRight, Bell, Globe, Wifi, WifiOff } from 'lucide-react'
 import { GlassCard } from '../components/UI/GlassCard'
-import { getConfig, updateConfig, testConnection, clearMemories } from '../lib/api'
+import { getConfig, updateConfig, testConnection, clearMemories, setBackendUrl, getBackendUrl, checkBackendHealth } from '../lib/api'
+import { requestNotificationPermission } from '../lib/notifications'
 import type { Config } from '../types'
 import toast from 'react-hot-toast'
 
@@ -16,13 +17,24 @@ interface KeyInputProps {
   placeholder?: string
   onTest: () => void
   testStatus: 'idle' | 'testing' | 'ok' | 'fail'
+  hasSavedKey?: boolean
 }
 
-const KeyInput: React.FC<KeyInputProps> = ({ label, value, onChange, placeholder, onTest, testStatus }) => {
+const KeyInput: React.FC<KeyInputProps> = ({ label, value, onChange, placeholder, onTest, testStatus, hasSavedKey }) => {
   const [show, setShow] = useState(false)
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-text-secondary">{label}</label>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-text-secondary">{label}</label>
+        {hasSavedKey && !value && (
+          <span
+            className="text-xs px-1.5 py-0.5 rounded-md font-medium"
+            style={{ background: 'rgba(78,204,163,0.12)', color: '#4ECCA3', border: '1px solid rgba(78,204,163,0.2)' }}
+          >
+            ✓ Saved
+          </span>
+        )}
+      </div>
       <div className="flex gap-2">
         <div
           className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5"
@@ -118,20 +130,30 @@ const Section: React.FC<SectionProps> = ({ title, children, delay = 0 }) => (
 // ------- Main Component -------
 
 const MODEL_OPTIONS = [
-  'claude-3-5-sonnet-20241022',
-  'claude-3-opus-20240229',
-  'claude-3-5-haiku-20241022',
+  // Claude (Anthropic) — Latest 2026
+  'claude-opus-4-7',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5-20251001',
+  // GPT (OpenAI) — Latest 2026
+  'gpt-5.5',
+  'gpt-4.1',
+  'gpt-4.1-mini',
   'gpt-4o',
-  'gpt-4o-mini',
-  'gemini-1.5-pro',
-  'gemini-1.5-flash',
+  // Gemini (Google) — Latest 2026
+  'gemini-3.1-pro',
+  'gemini-3-flash',
+  'gemini-2.5-flash',
+  // Grok (xAI)
+  'grok-3',
+  'grok-3-mini',
 ]
 
 export const Settings: React.FC = () => {
   const [anthropicKey, setAnthropicKey] = useState('')
   const [openaiKey, setOpenaiKey] = useState('')
   const [geminiKey, setGeminiKey] = useState('')
-  const [defaultModel, setDefaultModel] = useState('claude-3-5-sonnet-20241022')
+  const [xaiKey, setXaiKey] = useState('')
+  const [defaultModel, setDefaultModel] = useState('claude-sonnet-4-6')
   const [temperature, setTemperature] = useState(0.7)
   const [maxTokens, setMaxTokens] = useState(4096)
   const [memoryEnabled, setMemoryEnabled] = useState(true)
@@ -140,11 +162,35 @@ export const Settings: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
+  // Saved key status indicators
+  const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({
+    anthropic: false,
+    openai: false,
+    gemini: false,
+    xai: false,
+  })
+
+  // Backend URL
+  const [backendUrl, setBackendUrlState] = useState(getBackendUrl())
+  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'offline'>('unknown')
+  const [checkingBackend, setCheckingBackend] = useState(false)
+
+  // Notification permission state
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>(
+    'Notification' in window ? Notification.permission : 'unsupported'
+  )
+
   const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'ok' | 'fail'>>({
     anthropic: 'idle',
     openai: 'idle',
     gemini: 'idle',
+    xai: 'idle',
   })
+
+  // Check backend health on mount
+  useEffect(() => {
+    checkBackendHealth().then(ok => setBackendStatus(ok ? 'online' : 'offline'))
+  }, [])
 
   useEffect(() => {
     getConfig()
@@ -155,17 +201,36 @@ export const Settings: React.FC = () => {
         if (cfg.memory_enabled !== undefined) setMemoryEnabled(cfg.memory_enabled)
         if (cfg.code_execution_enabled !== undefined) setCodeExecEnabled(cfg.code_execution_enabled)
         if (cfg.max_concurrent_agents !== undefined) setMaxConcurrentAgents(cfg.max_concurrent_agents)
+        // Mark which keys are already saved on the backend (non-empty masked values)
+        setSavedKeys({
+          anthropic: !!cfg.anthropic_api_key,
+          openai: !!cfg.openai_api_key,
+          gemini: !!cfg.gemini_api_key,
+          xai: !!cfg.xai_api_key,
+        })
       })
       .catch(() => {})
   }, [])
 
+  const handleCheckBackend = async () => {
+    setCheckingBackend(true)
+    const ok = await checkBackendHealth()
+    setBackendStatus(ok ? 'online' : 'offline')
+    setCheckingBackend(false)
+    if (ok) toast.success('Backend is reachable!')
+    else toast.error('Cannot reach backend — check the URL and that Docker is running')
+  }
+
   const handleSave = async () => {
     setSaving(true)
+    // Save backend URL to localStorage
+    setBackendUrl(backendUrl)
     try {
       await updateConfig({
         anthropic_api_key: anthropicKey || undefined,
         openai_api_key: openaiKey || undefined,
         gemini_api_key: geminiKey || undefined,
+        xai_api_key: xaiKey || undefined,
         default_model: defaultModel,
         temperature,
         max_tokens: maxTokens,
@@ -181,25 +246,26 @@ export const Settings: React.FC = () => {
     }
   }
 
-  const handleTest = async (provider: 'anthropic' | 'openai' | 'gemini') => {
+  const handleTest = async (provider: 'anthropic' | 'openai' | 'gemini' | 'xai') => {
     const keyMap: Record<string, string> = {
       anthropic: anthropicKey,
       openai: openaiKey,
       gemini: geminiKey,
+      xai: xaiKey,
     }
     const currentKey = keyMap[provider]
     setTestStatus((s) => ({ ...s, [provider]: 'testing' }))
     try {
-      const result = await testConnection(provider, currentKey || undefined)
+      const result = await testConnection(provider as any, currentKey || undefined)
       const ok = result.success
       setTestStatus((s) => ({ ...s, [provider]: ok ? 'ok' : 'fail' }))
-      if (ok) toast.success(`${provider} connected!`)
+      if (ok) toast.success(result.message || `${provider} connected!`)
       else toast.error(result.message || 'Connection failed')
     } catch {
       setTestStatus((s) => ({ ...s, [provider]: 'fail' }))
-      toast.error('Test failed — check that the backend is running')
+      toast.error('Cannot reach backend — enter the Backend URL and start Docker')
     }
-    setTimeout(() => setTestStatus((s) => ({ ...s, [provider]: 'idle' })), 4000)
+    setTimeout(() => setTestStatus((s) => ({ ...s, [provider]: 'idle' })), 5000)
   }
 
   const handleClearMemories = async () => {
@@ -212,8 +278,136 @@ export const Settings: React.FC = () => {
     }
   }
 
+  const handleEnableNotifications = async () => {
+    const granted = await requestNotificationPermission()
+    setNotifPermission('Notification' in window ? Notification.permission : 'unsupported')
+    if (granted) toast.success('Notifications enabled!')
+    else toast.error('Notification permission denied')
+  }
+
   return (
     <div className="px-4 pt-4 pb-8 max-w-2xl mx-auto space-y-5">
+
+      {/* Backend Connection — FIRST */}
+      <Section title="Backend Connection" delay={0}>
+        {/* Status indicator */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {backendStatus === 'online' ? (
+              <Wifi size={14} style={{ color: '#4ECCA3' }} />
+            ) : backendStatus === 'offline' ? (
+              <WifiOff size={14} style={{ color: '#EF5350' }} />
+            ) : (
+              <Globe size={14} className="text-text-muted" />
+            )}
+            <span className="text-sm font-medium text-text-primary">Status</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background:
+                  backendStatus === 'online' ? '#4ECCA3' :
+                  backendStatus === 'offline' ? '#EF5350' :
+                  '#9096B8',
+              }}
+            />
+            <span
+              className="text-xs font-medium"
+              style={{
+                color:
+                  backendStatus === 'online' ? '#4ECCA3' :
+                  backendStatus === 'offline' ? '#EF5350' :
+                  '#9096B8',
+              }}
+            >
+              {backendStatus === 'online' ? 'Online' : backendStatus === 'offline' ? 'Offline' : 'Unknown'}
+            </span>
+          </div>
+        </div>
+
+        <div className="h-px" style={{ background: 'rgba(42,45,74,0.5)' }} />
+
+        {/* URL input */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-text-secondary">Backend URL</label>
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+            style={{ background: 'rgba(18,18,31,0.8)', border: '1px solid rgba(42,45,74,0.7)' }}
+          >
+            <input
+              type="url"
+              value={backendUrl}
+              onChange={(e) => setBackendUrlState(e.target.value)}
+              placeholder="http://localhost:8000 or https://your-server.com"
+              className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none font-mono"
+            />
+          </div>
+          <p className="text-xs text-text-muted leading-relaxed">
+            Run the Docker stack locally and enter its URL here. Leave blank if running on the same server.
+          </p>
+        </div>
+
+        {/* Check Connection button */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={handleCheckBackend}
+          disabled={checkingBackend}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+          style={{
+            background: 'rgba(42,45,74,0.5)',
+            border: '1px solid rgba(42,45,74,0.7)',
+            color: '#9096B8',
+          }}
+        >
+          {checkingBackend ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Wifi size={14} />
+          )}
+          Check Connection
+        </motion.button>
+      </Section>
+
+      {/* Notifications */}
+      <Section title="Notifications" delay={0.03}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-text-primary">Browser Notifications</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {notifPermission === 'granted'
+                ? 'Notifications are enabled — you will be alerted when tasks complete.'
+                : notifPermission === 'denied'
+                ? 'Notifications blocked in browser settings.'
+                : notifPermission === 'unsupported'
+                ? 'Your browser does not support notifications.'
+                : 'Get notified when tasks complete or fail.'}
+            </p>
+          </div>
+          {notifPermission !== 'granted' && notifPermission !== 'unsupported' && notifPermission !== 'denied' && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleEnableNotifications}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium flex-shrink-0"
+              style={{
+                background: 'rgba(217,119,87,0.12)',
+                border: '1px solid rgba(217,119,87,0.3)',
+                color: '#D97757',
+              }}
+            >
+              <Bell size={13} />
+              Enable
+            </motion.button>
+          )}
+          {notifPermission === 'granted' && (
+            <CheckCircle size={18} style={{ color: '#4ECCA3', flexShrink: 0 }} />
+          )}
+          {notifPermission === 'denied' && (
+            <XCircle size={18} style={{ color: '#EF5350', flexShrink: 0 }} />
+          )}
+        </div>
+      </Section>
+
       {/* API Keys */}
       <Section title="API Keys" delay={0.05}>
         <div
@@ -238,15 +432,17 @@ export const Settings: React.FC = () => {
           placeholder="sk-ant-..."
           onTest={() => handleTest('anthropic')}
           testStatus={testStatus.anthropic as 'idle' | 'testing' | 'ok' | 'fail'}
+          hasSavedKey={savedKeys.anthropic}
         />
         <KeyInput
-          label="OpenAI (GPT-4o)"
+          label="OpenAI (GPT)"
           provider="openai"
           value={openaiKey}
           onChange={setOpenaiKey}
           placeholder="sk-..."
           onTest={() => handleTest('openai')}
           testStatus={testStatus.openai as 'idle' | 'testing' | 'ok' | 'fail'}
+          hasSavedKey={savedKeys.openai}
         />
         <KeyInput
           label="Google Gemini"
@@ -256,6 +452,18 @@ export const Settings: React.FC = () => {
           placeholder="AIza..."
           onTest={() => handleTest('gemini')}
           testStatus={testStatus.gemini as 'idle' | 'testing' | 'ok' | 'fail'}
+          hasSavedKey={savedKeys.gemini}
+        />
+
+        <KeyInput
+          label="xAI (Grok-3)"
+          provider="anthropic"
+          value={xaiKey}
+          onChange={setXaiKey}
+          placeholder="xai-…"
+          onTest={() => handleTest('xai')}
+          testStatus={testStatus.xai as 'idle' | 'testing' | 'ok' | 'fail'}
+          hasSavedKey={savedKeys.xai}
         />
       </Section>
 

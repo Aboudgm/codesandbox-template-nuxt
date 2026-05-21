@@ -45,6 +45,9 @@ class APIKeysSettings(BaseSettings):
     google_gemini: Optional[str] = Field(
         default=_yaml_data.get("api_keys", {}).get("google_gemini", None)
     )
+    xai: Optional[str] = Field(
+        default=_yaml_data.get("api_keys", {}).get("xai", None)
+    )
 
 
 class ModelSettings(BaseSettings):
@@ -55,15 +58,25 @@ class ModelSettings(BaseSettings):
     )
     anthropic_model: str = Field(
         default=_yaml_data.get("models", {}).get(
-            "anthropic_model", "claude-3-5-sonnet-20241022"
+            "anthropic_model", "claude-sonnet-4-6"
         )
     )
     openai_model: str = Field(
-        default=_yaml_data.get("models", {}).get("openai_model", "gpt-4o")
+        default=_yaml_data.get("models", {}).get("openai_model", "gpt-4.1")
     )
     gemini_model: str = Field(
         default=_yaml_data.get("models", {}).get(
-            "gemini_model", "gemini-1.5-pro"
+            "gemini_model", "gemini-3-flash"
+        )
+    )
+    anthropic_fast_model: str = Field(
+        default=_yaml_data.get("models", {}).get(
+            "anthropic_fast_model", "claude-haiku-4-5-20251001"
+        )
+    )
+    openai_fast_model: str = Field(
+        default=_yaml_data.get("models", {}).get(
+            "openai_fast_model", "gpt-4.1-mini"
         )
     )
     max_tokens: int = Field(
@@ -156,6 +169,8 @@ class Settings(BaseSettings):
             return "openai"
         if self.api_keys.google_gemini:
             return "gemini"
+        if self.api_keys.xai:
+            return "xai"
         return self.models.default_provider
 
     def masked_api_keys(self) -> dict:
@@ -172,6 +187,7 @@ class Settings(BaseSettings):
             "anthropic": mask(self.api_keys.anthropic),
             "openai": mask(self.api_keys.openai),
             "google_gemini": mask(self.api_keys.google_gemini),
+            "xai": mask(self.api_keys.xai),
         }
 
 

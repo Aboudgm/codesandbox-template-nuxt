@@ -10,6 +10,7 @@ import { MemoryBrowser } from './pages/MemoryBrowser'
 import { Settings } from './pages/Settings'
 import { useAppStore } from './store/useAppStore'
 import { getAgents } from './lib/api'
+import { requestNotificationPermission } from './lib/notifications'
 
 // Neural Network Background Canvas
 const NeuralBackground: React.FC = () => {
@@ -140,7 +141,7 @@ const pageTitles: Record<string, string> = {
 
 function AppContent() {
   const location = useLocation()
-  const { setAgents, setConnected } = useAppStore()
+  const { setAgents, setConnected, isConnected } = useAppStore()
 
   // Determine if on task detail (hide bottom nav)
   const isTaskDetail = location.pathname.startsWith('/tasks/') && location.pathname !== '/tasks'
@@ -165,6 +166,13 @@ function AppContent() {
     const interval = setInterval(fetchAgents, 15000)
     return () => clearInterval(interval)
   }, [setAgents, setConnected])
+
+  // Request notification permission once backend is connected
+  useEffect(() => {
+    if (isConnected) {
+      requestNotificationPermission()
+    }
+  }, [isConnected])
 
   return (
     <div className="relative min-h-screen min-h-dvh bg-background text-text-primary overflow-x-hidden">

@@ -9,6 +9,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Trash2, Pause, Play, CheckCircle2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getTask, deleteTask, pauseTask, resumeTask } from '../lib/api'
+import { notifyTaskComplete } from '../lib/notifications'
 import { useAppStore } from '../store/useAppStore'
 import { useTaskWebSocket } from '../lib/websocket'
 import { TaskTimeline } from '../components/Tasks/TaskTimeline'
@@ -47,13 +48,15 @@ export const TaskDetail: React.FC = () => {
       } else if (msg.type === 'status_update' && id) {
         updateTask(id, { status: msg.status as Task['status'] })
         queryClient.invalidateQueries({ queryKey: ['task', id] })
-      } else if (msg.type === 'task_complete' && id) {
+      } else if ((msg.type === 'task_complete' || msg.type === 'task_completed') && id) {
         updateTask(id, { status: 'completed', result: msg.result })
         queryClient.invalidateQueries({ queryKey: ['task', id] })
         toast.success('Task completed!')
+        if (task?.goal) notifyTaskComplete(id, task.goal, true)
       } else if (msg.type === 'task_failed' && id) {
         updateTask(id, { status: 'failed' })
         toast.error('Task failed')
+        if (task?.goal) notifyTaskComplete(id, task.goal, false)
       }
     },
     [id, updateTask, queryClient]

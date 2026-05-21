@@ -1,5 +1,6 @@
 """
-WriterAgent – synthesises research results and code output into a polished report.
+WriterAgent (CLARITY) – Content & Language AI Research Intelligence.
+Worker tier: synthesises research and code output into a polished report.
 """
 from __future__ import annotations
 
@@ -18,18 +19,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_CLARITY_PERSONA = (
+    "You are CLARITY — Content & Language AI Research Intelligence. "
+    "A master storyteller who transforms complex findings into compelling narratives. "
+    "Elegant, clear, insightful. "
+    "Your tone: professional journalist meets data scientist."
+)
+
 _WRITER_SYSTEM = (
-    "You are an expert technical writer. Your job is to synthesise research findings "
-    "and code results into a comprehensive, well-structured Markdown document. "
+    _CLARITY_PERSONA + "\n\n"
+    "Synthesise research findings and code results into a comprehensive, "
+    "well-structured Markdown document. "
     "The document should be clear, informative, and professional. "
-    "Use headings, bullet points, and code blocks where appropriate."
+    "Transform raw data into insight. Lead with the most important finding. "
+    "Use headings, bullet points, and code blocks where appropriate. "
+    "End with actionable conclusions."
 )
 
 
 class WriterAgent(BaseAgent):
     """
-    Takes the combined context (goal, research, code results) and produces
+    CLARITY: Takes the combined context (goal, research, code results) and produces
     a polished Markdown report saved to /data/workspace/reports/.
+    Worker-tier agent.
     """
 
     def __init__(self, ws_manager: Optional["ConnectionManager"] = None):
@@ -45,7 +57,11 @@ class WriterAgent(BaseAgent):
         task_id: Optional[str] = getattr(task, "id", None)
         self.set_task(task_id)
 
-        self.send_message(f"Writing final report for: {goal[:120]}", task_id=task_id)
+        self.send_message(
+            f"CLARITY engaged. Crafting narrative for: {goal[:120]}",
+            task_id=task_id,
+            metadata={"tier": "worker", "personality": "CLARITY", "role": "Content"},
+        )
 
         research = context.get("research", "")
         code_result = context.get("code_result", "")
@@ -65,15 +81,20 @@ class WriterAgent(BaseAgent):
 
         prompt_parts.append(
             "Based on all of the above information, write a comprehensive final report "
-            "that addresses the original task goal. Structure it with clear sections, "
-            "key findings, and actionable conclusions."
+            "that addresses the original task goal. Lead with the key insight. "
+            "Structure it with clear sections, key findings, and actionable conclusions. "
+            "Make it compelling — data-driven but human-readable."
         )
 
         prompt = "\n\n".join(prompt_parts)
 
         # ── Call LLM ───────────────────────────────────────────────────
         self.set_state(AgentState.ACTING)
-        self.send_message("Generating report with LLM…", task_id=task_id)
+        self.send_message(
+            "Composing report — turning data into narrative…",
+            task_id=task_id,
+            metadata={"tier": "worker", "personality": "CLARITY", "role": "Content"},
+        )
 
         try:
             report = await llm_complete(
@@ -100,12 +121,20 @@ class WriterAgent(BaseAgent):
         try:
             fm = get_file_manager()
             await fm.create_file(filename, full_report)
-            self.send_message(f"Report saved to {filename}", task_id=task_id)
+            self.send_message(
+                f"Report archived at {filename}",
+                task_id=task_id,
+                metadata={"tier": "worker", "personality": "CLARITY", "role": "Content"},
+            )
         except Exception as exc:
             logger.warning("Could not save report: %s", exc)
 
         self.set_state(AgentState.DONE)
-        self.send_message("Report writing complete.", task_id=task_id)
+        self.send_message(
+            "Narrative complete. Delivering report.",
+            task_id=task_id,
+            metadata={"tier": "worker", "personality": "CLARITY", "role": "Content"},
+        )
         return full_report
 
     # ------------------------------------------------------------------

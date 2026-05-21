@@ -46,6 +46,7 @@ class ConfigUpdate(BaseModel):
     anthropic_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
+    xai_api_key: Optional[str] = None
     default_model: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
@@ -66,6 +67,7 @@ async def get_config() -> dict:
         "anthropic_api_key": masked["anthropic"],
         "openai_api_key": masked["openai"],
         "gemini_api_key": masked["google_gemini"],
+        "xai_api_key": masked.get("xai", ""),
         "default_model": settings.models.anthropic_model,
         "temperature": settings.models.temperature,
         "max_tokens": settings.models.max_tokens,
@@ -87,6 +89,8 @@ async def update_config(payload: ConfigUpdate) -> dict:
         settings.api_keys.openai = payload.openai_api_key or None
     if payload.gemini_api_key is not None:
         settings.api_keys.google_gemini = payload.gemini_api_key or None
+    if payload.xai_api_key is not None:
+        settings.api_keys.xai = payload.xai_api_key or None
     if payload.default_model is not None:
         settings.models.anthropic_model = payload.default_model
     if payload.temperature is not None:
@@ -105,6 +109,8 @@ async def update_config(payload: ConfigUpdate) -> dict:
         raw["api_keys"]["openai"] = payload.openai_api_key
     if payload.gemini_api_key:
         raw["api_keys"]["google_gemini"] = payload.gemini_api_key
+    if payload.xai_api_key:
+        raw["api_keys"]["xai"] = payload.xai_api_key
     if payload.default_model is not None:
         raw["models"]["anthropic_model"] = payload.default_model
     if payload.temperature is not None:
@@ -157,6 +163,19 @@ async def test_connection(provider: str, body: TestPayload = TestPayload()) -> d
             model = genai.GenerativeModel(settings.models.gemini_model)
             model.generate_content("ping")
             return {"success": True, "message": "Gemini connected successfully"}
+
+        elif provider == "xai":
+            key = body.key or settings.api_keys.xai
+            if not key:
+                return {"success": False, "message": "No xAI key — enter a key and try again"}
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=key, base_url="https://api.x.ai/v1")
+            await client.chat.completions.create(
+                model="grok-3-mini",
+                max_tokens=10,
+                messages=[{"role": "user", "content": "ping"}],
+            )
+            return {"success": True, "message": "xAI Grok connected successfully"}
 
         return {"success": False, "message": f"Unknown provider: {provider}"}
     except Exception as exc:
