@@ -1,64 +1,46 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 import type { TaskStatus, AgentState } from '../../types'
 
 type BadgeStatus = TaskStatus | AgentState
 
-interface StatusBadgeProps {
-  status: BadgeStatus
-  size?: 'sm' | 'md'
+const cfg: Record<BadgeStatus, { label: string; color: string; dot: string }> = {
+  pending:   { label: 'Pending',   color: '#00E5FF', dot: '#00E5FF' },
+  running:   { label: 'Running',   color: '#D97757', dot: '#D97757' },
+  paused:    { label: 'Paused',    color: '#FFB74D', dot: '#FFB74D' },
+  completed: { label: 'Done',      color: '#00FFB3', dot: '#00FFB3' },
+  failed:    { label: 'Failed',    color: '#FF5370', dot: '#FF5370' },
+  idle:      { label: 'Idle',      color: '#4A4A70', dot: '#4A4A70' },
+  thinking:  { label: 'Thinking',  color: '#7C71F0', dot: '#7C71F0' },
+  acting:    { label: 'Acting',    color: '#D97757', dot: '#D97757' },
+  waiting:   { label: 'Waiting',   color: '#FFB74D', dot: '#FFB74D' },
+  done:      { label: 'Done',      color: '#00FFB3', dot: '#00FFB3' },
+  error:     { label: 'Error',     color: '#FF5370', dot: '#FF5370' },
 }
 
-const statusConfig: Record<BadgeStatus, { label: string; color: string; bg: string; pulse?: boolean }> = {
-  // Task statuses
-  pending: { label: 'Pending', color: 'text-text-muted', bg: 'bg-text-muted/10' },
-  running: { label: 'Running', color: 'text-primary', bg: 'bg-primary/10', pulse: true },
-  paused: { label: 'Paused', color: 'text-warning', bg: 'bg-warning/10' },
-  completed: { label: 'Done', color: 'text-success', bg: 'bg-success/10' },
-  failed: { label: 'Failed', color: 'text-error', bg: 'bg-error/10' },
-  // Agent states
-  idle: { label: 'Idle', color: 'text-text-muted', bg: 'bg-text-muted/10' },
-  thinking: { label: 'Thinking', color: 'text-secondary', bg: 'bg-secondary/10', pulse: true },
-  acting: { label: 'Acting', color: 'text-primary', bg: 'bg-primary/10', pulse: true },
-  waiting: { label: 'Waiting', color: 'text-warning', bg: 'bg-warning/10' },
-  done: { label: 'Done', color: 'text-success', bg: 'bg-success/10' },
-  error: { label: 'Error', color: 'text-error', bg: 'bg-error/10' },
-}
+const PULSE = new Set<BadgeStatus>(['running', 'thinking', 'acting', 'pending'])
 
-const dotColors: Record<BadgeStatus, string> = {
-  pending: 'bg-text-muted',
-  running: 'bg-primary',
-  paused: 'bg-warning',
-  completed: 'bg-success',
-  failed: 'bg-error',
-  idle: 'bg-text-muted',
-  thinking: 'bg-secondary',
-  acting: 'bg-primary',
-  waiting: 'bg-warning',
-  done: 'bg-success',
-  error: 'bg-error',
-}
-
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
-  const config = statusConfig[status] ?? statusConfig.idle
-  const dotColor = dotColors[status] ?? 'bg-text-muted'
+export const StatusBadge: React.FC<{ status: BadgeStatus; size?: 'sm' | 'md' }> = ({ status, size = 'md' }) => {
+  const c = cfg[status] ?? cfg.idle
+  const pulse = PULSE.has(status)
+  const sz = size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'
 
   return (
     <span
-      className={`
-        inline-flex items-center gap-1.5 rounded-full font-medium
-        ${config.color} ${config.bg}
-        ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}
-      `}
+      className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${sz}`}
+      style={{ background: `${c.color}12`, border: `1px solid ${c.color}30`, color: c.color }}
     >
-      <span
-        className={`
-          rounded-full flex-shrink-0
-          ${dotColor}
-          ${size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2'}
-          ${config.pulse ? 'animate-pulse' : ''}
-        `}
-      />
-      {config.label}
+      {pulse ? (
+        <motion.span
+          animate={{ opacity: [1, 0.3, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{ background: c.dot }}
+        />
+      ) : (
+        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
+      )}
+      {c.label}
     </span>
   )
 }

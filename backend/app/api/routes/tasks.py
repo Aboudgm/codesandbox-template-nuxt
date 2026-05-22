@@ -1,13 +1,15 @@
-"""Task management API routes."""
+"""Task management API routes — NEXUS AI v2.0."""
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from app.models.task import Task, TaskCreate, TaskStatus, TaskUpdate
 
@@ -122,6 +124,77 @@ async def resume_task(task_id: str, background_tasks: BackgroundTasks) -> Task:
         await _persist(task)
         background_tasks.add_task(_run_task, task.id, task.goal)
     return task
+
+
+@router.get("/{task_id}/stream")
+async def stream_task_events(task_id: str, request: Request) -> StreamingResponse:
+    """
+    Server-Sent Events stream for real-time agent updates.
+
+    Yields existing message history immediately, then streams new
+    StreamEvents as agents work. Sends `: keepalive` comments every 25s
+    to prevent proxy timeouts.
+    """
+    from app.api.websocket import manager
+
+    task = _tasks.get(task_id)
+    if not task:
+        raise HTTPException(404, detail="Task not found")
+
+    q = manager.subscribe_sse(task_id)
+
+    async def event_gen():
+        # Yield stored messages as history first
+        stored = _tasks.get(task_id)
+        if stored:
+            for msg in stored.messages:
+                data = {
+                    "type": "output",
+                    "agent_type": msg.agent_type.value,
+                    "agent_name": msg.agent_type.value,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "metadata": msg.metadata,
+                    "task_id": task_id,
+                    "id": msg.id,
+                }
+                yield f"data: {json.dumps(data)}\n\n"
+
+            # If task is already done, send done and exit
+            if stored.status not in (TaskStatus.RUNNING, TaskStatus.PENDING):
+                yield f"data: {json.dumps({'type': 'task_done', 'status': stored.status.value, 'task_id': task_id})}\n\n"
+                manager.unsubscribe_sse(task_id, q)
+                return
+
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=25.0)
+                    if event is None:  # done sentinel
+                        yield f"data: {json.dumps({'type': 'task_done', 'task_id': task_id})}\n\n"
+                        break
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    # Check if task completed while we were waiting
+                    t2 = _tasks.get(task_id)
+                    if t2 and t2.status not in (TaskStatus.RUNNING, TaskStatus.PENDING):
+                        yield f"data: {json.dumps({'type': 'task_done', 'status': t2.status.value, 'task_id': task_id})}\n\n"
+                        break
+        finally:
+            manager.unsubscribe_sse(task_id, q)
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.patch("/{task_id}", response_model=Task)

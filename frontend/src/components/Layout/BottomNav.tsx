@@ -1,126 +1,119 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
-import { Home, List, Brain, Settings, Plus } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Home, List, Plus, Database, Settings } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 
-const NavItem: React.FC<{
-  path: string
+interface NavItem {
+  path:  string
+  icon:  React.ReactNode
   label: string
-  Icon: React.ElementType
-  badge?: number
-}> = ({ path, label, Icon, badge = 0 }) => (
-  <NavLink to={path} end={path === '/'} className="flex-1 min-w-0">
-    {({ isActive }) => (
-      <div
-        className="relative flex flex-col items-center justify-center gap-1 py-3 px-1"
-        style={{ minHeight: '60px' }}
-      >
-        {isActive && (
+}
+
+const NAV: NavItem[] = [
+  { path: '/',         icon: <Home      size={20} />, label: 'Home'     },
+  { path: '/tasks',    icon: <List      size={20} />, label: 'Tasks'    },
+  { path: '/memory',   icon: <Database  size={20} />, label: 'Memory'   },
+  { path: '/settings', icon: <Settings  size={20} />, label: 'Settings' },
+]
+
+const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ item, active, badge }) => {
+  const navigate = useNavigate()
+  return (
+    <button
+      onClick={() => navigate(item.path)}
+      className="flex-1 flex flex-col items-center justify-center gap-1 py-2 relative"
+      style={{ minHeight: 56 }}
+    >
+      <AnimatePresence>
+        {active && (
           <motion.div
-            layoutId="nav-indicator"
-            className="absolute inset-x-1.5 inset-y-1.5 rounded-xl"
-            style={{
-              background: 'rgba(217,119,87,0.12)',
-              border: '1px solid rgba(217,119,87,0.22)',
-            }}
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            layoutId="nav-bar"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+            style={{ background: '#00E5FF', boxShadow: '0 0 8px #00E5FF' }}
           />
         )}
+      </AnimatePresence>
 
-        <div className="relative">
-          <motion.div
-            animate={{ scale: isActive ? 1.1 : 1, y: isActive ? -1 : 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      <motion.div
+        animate={{ scale: active ? 1.05 : 1, y: active ? -1 : 0 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 400 }}
+        style={{ color: active ? '#00E5FF' : '#2A2A50', position: 'relative' }}
+      >
+        {item.icon}
+        {badge && badge > 0 ? (
+          <span
+            className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+            style={{ background: '#D97757', color: '#fff' }}
           >
-            <Icon
-              size={21}
-              style={{
-                color: isActive ? '#D97757' : '#5A6080',
-                filter: isActive ? 'drop-shadow(0 0 6px rgba(217,119,87,0.55))' : 'none',
-                transition: 'all 0.2s',
-              }}
-            />
-          </motion.div>
+            {badge > 9 ? '9+' : badge}
+          </span>
+        ) : null}
+      </motion.div>
 
-          <AnimatePresence>
-            {badge > 0 && (
-              <motion.span
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
-                style={{ background: '#D97757', color: '#fff' }}
-              >
-                {badge > 9 ? '9+' : badge}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <span
-          className="text-[10px] font-medium tracking-wide relative truncate"
-          style={{
-            color: isActive ? '#D97757' : '#5A6080',
-            transition: 'color 0.2s',
-          }}
-        >
-          {label}
-        </span>
-      </div>
-    )}
-  </NavLink>
-)
+      <span
+        className="text-[9px] font-semibold tracking-widest uppercase"
+        style={{ color: active ? '#00E5FF' : '#2A2A50' }}
+      >
+        {item.label}
+      </span>
+    </button>
+  )
+}
 
 export const BottomNav: React.FC = () => {
-  const { setShowNewTask, tasks } = useAppStore()
-  const activeCount = tasks.filter((t) => t.status === 'running' || t.status === 'pending').length
+  const location = useLocation()
+  const { tasks, setShowNewTask } = useAppStore()
+  const running = tasks.filter((t) => t.status === 'running' || t.status === 'pending').length
+
+  const isActive = (path: string) => {
+    if (path === '/tasks') return location.pathname.startsWith('/tasks')
+    return location.pathname === path
+  }
 
   return (
-    <nav
+    <div
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div
-        className="mx-3 mb-3 rounded-2xl border border-border/60"
+        className="flex items-center"
         style={{
-          background: 'rgba(14,14,26,0.94)',
+          background: 'rgba(5,5,15,0.96)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          boxShadow:
-            '0 -2px 24px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(42,45,74,0.35)',
-          overflow: 'visible',
+          borderTop: '1px solid rgba(0,229,255,0.08)',
+          minHeight: 64,
         }}
       >
-        <div className="flex items-stretch relative">
-          <NavItem path="/" label="Home" Icon={Home} />
-          <NavItem path="/tasks" label="Tasks" Icon={List} badge={activeCount} />
+        <Tab item={NAV[0]} active={isActive('/')} />
+        <Tab item={NAV[1]} active={isActive('/tasks')} badge={running} />
 
-          {/* Center FAB */}
-          <div className="flex-1 flex items-center justify-center" style={{ minWidth: 64 }}>
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              whileHover={{ scale: 1.06 }}
-              onClick={() => setShowNewTask(true)}
-              className="absolute flex items-center justify-center rounded-full"
-              style={{
-                width: 52,
-                height: 52,
-                bottom: 10,
-                background: 'linear-gradient(135deg, #D97757 0%, #B85C38 100%)',
-                boxShadow:
-                  '0 4px 20px rgba(217,119,87,0.55), 0 0 0 3px rgba(14,14,26,0.95)',
-              }}
-              aria-label="New task"
-            >
-              <Plus size={24} color="#fff" strokeWidth={2.5} />
-            </motion.button>
-          </div>
-
-          <NavItem path="/memory" label="Memory" Icon={Brain} />
-          <NavItem path="/settings" label="Settings" Icon={Settings} />
+        {/* Center FAB */}
+        <div className="flex items-center justify-center px-3" style={{ width: 76 }}>
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => setShowNewTask(true)}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center relative"
+            style={{
+              background: 'linear-gradient(135deg, #D97757 0%, #B85C38 100%)',
+              boxShadow: '0 4px 24px rgba(217,119,87,0.5), 0 0 0 3px rgba(5,5,15,0.95)',
+              marginTop: -18,
+            }}
+          >
+            <Plus size={26} color="#fff" strokeWidth={2.5} />
+            <motion.div
+              animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{ background: 'rgba(217,119,87,0.5)' }}
+            />
+          </motion.button>
         </div>
+
+        <Tab item={NAV[2]} active={isActive('/memory')} />
+        <Tab item={NAV[3]} active={isActive('/settings')} />
       </div>
-    </nav>
+    </div>
   )
 }

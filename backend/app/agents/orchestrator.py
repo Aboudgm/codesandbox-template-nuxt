@@ -1,10 +1,10 @@
 """
-StrategistAgent (Boss tier) – top-level coordinator that plans and delegates.
+NEXUS Strategist — Boss-tier orchestrator with full streaming (v2.0).
 
 Three-phase execution:
-  Phase 1 (Strategy) : Deep analysis of goal → structured plan with agent assignments.
-  Phase 2 (Execution): Delegate to sub-agents (worker tier).
-  Phase 3 (Synthesis): Evaluate results, produce quality-checked final output.
+  Phase 1 (Strategy) : Deep analysis → JSON plan emitted as a PLAN event.
+  Phase 2 (Execution): Delegate to sub-agents, streaming their progress.
+  Phase 3 (Synthesis): Quality-checked final synthesis streamed as OUTPUT.
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from typing import Any, Optional, TYPE_CHECKING
 from app.agents.base import BaseAgent
 from app.agents.llm_client import llm_complete
 from app.models.agent import AgentState
+from app.models.event import StreamEventType
 from app.models.task import AgentType, TaskStatus
 
 if TYPE_CHECKING:
@@ -23,19 +24,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Strategist personality & system prompts
-# ---------------------------------------------------------------------------
-
-_STRATEGIST_PERSONA = (
-    "You are NEXUS Strategist — a visionary executive AI. "
-    "You see the big picture, think in systems, and set clear directives. "
-    "Your tone: confident, precise, strategic. You speak like a brilliant CEO."
+_PERSONA = (
+    "You are NEXUS — an elite autonomous AI orchestrator. "
+    "You think in systems, speak precisely, and command with confidence. "
+    "Your decisions are data-driven, your strategy is always multi-dimensional."
 )
 
 _PLAN_SYSTEM = (
-    _STRATEGIST_PERSONA + "\n\n"
-    "Given a high-level goal, produce an execution plan as a JSON object with this exact structure:\n\n"
+    _PERSONA + "\n\n"
+    "Analyze the user's goal and create a precise execution plan as JSON:\n\n"
     "{\n"
     '  "steps": [\n'
     '    {"agent": "memory",   "description": "..."},\n'
@@ -43,306 +40,251 @@ _PLAN_SYSTEM = (
     '    {"agent": "code",     "description": "...", "language": "python"},\n'
     '    {"agent": "writer",   "description": "..."}\n'
     "  ],\n"
-    '  "summary": "One-sentence strategic plan summary",\n'
-    '  "priorities": ["priority 1", "priority 2"],\n'
-    '  "expected_outputs": {"agent_name": "expected output description"}\n'
+    '  "summary": "One-sentence strategic summary",\n'
+    '  "priorities": ["p1", "p2"],\n'
+    '  "complexity": "low|medium|high"\n'
     "}\n\n"
     "Available agents: memory, research, code, writer.\n"
-    "Include only agents genuinely needed for the goal.\n"
-    "Return ONLY valid JSON — no other text."
+    "Only include agents genuinely needed. For simple goals, use 1-2 agents.\n"
+    "Return ONLY valid JSON — no markdown, no extra text."
 )
 
 _SYNTHESIS_SYSTEM = (
-    _STRATEGIST_PERSONA + "\n\n"
-    "You are synthesising the outputs of multiple specialist agents into a final, "
-    "authoritative response. Your job:\n"
-    "1. Evaluate the quality and completeness of each agent's output.\n"
-    "2. Integrate insights coherently — no redundancy, no gaps.\n"
-    "3. Produce a polished executive summary followed by detailed findings.\n"
-    "4. Flag any gaps or quality concerns at the end under '## Quality Notes'.\n\n"
-    "Format: clean Markdown, professional tone, actionable conclusions."
+    _PERSONA + "\n\n"
+    "Synthesize multiple agent outputs into a final authoritative response.\n"
+    "1. Integrate insights coherently — no redundancy, no gaps.\n"
+    "2. Produce a polished executive summary + detailed findings.\n"
+    "3. Note any gaps under '## Gaps & Limitations' if applicable.\n"
+    "Format: clean Markdown, professional tone, actionable conclusions.\n"
+    "Be comprehensive but focused on what the user actually asked for."
 )
 
 
 class OrchestratorAgent(BaseAgent):
-    """
-    Strategist (Boss-tier) agent.
-
-    Breaks down a high-level goal into a strategic plan, dispatches each
-    sub-agent in sequence, then synthesises a quality-checked final output.
-
-    The class is named OrchestratorAgent for backward compatibility but
-    operates as the STRATEGIST tier internally.
-    """
+    """NEXUS Strategist — orchestrates the multi-agent pipeline with streaming."""
 
     def __init__(self, ws_manager: Optional["ConnectionManager"] = None):
         super().__init__(
-            name="StrategistAgent",
+            name="NEXUS",
             agent_type=AgentType.STRATEGIST,
             ws_manager=ws_manager,
         )
-        self._ws_manager = ws_manager
 
     async def run(self, task: Any, context: dict[str, Any]) -> str:
         self.set_state(AgentState.THINKING)
         goal: str = getattr(task, "goal", str(task))
         task_id: Optional[str] = getattr(task, "id", None)
         self.set_task(task_id)
+        start = time.time()
 
-        start_time = time.time()
-
-        self.send_message(
-            f"NEXUS Strategist engaged. Analyzing goal: {goal[:150]}",
+        # ── Announce ──────────────────────────────────────────────────────────
+        await self.emit(StreamEventType.AGENT_START, f"NEXUS Strategist online", task_id=task_id)
+        await self.think(
+            f"Analyzing goal: '{goal[:120]}' — determining optimal agent configuration…",
             task_id=task_id,
-            metadata={"tier": "boss", "personality": "Strategist"},
         )
 
-        # ── Phase 1: Strategic planning ────────────────────────────────
+        # ── Phase 1: Plan ─────────────────────────────────────────────────────
         plan = await self._create_plan(goal, task_id)
         steps = plan.get("steps", [])
-        plan_summary = plan.get("summary", "Executing multi-agent pipeline.")
+        summary = plan.get("summary", "Executing multi-agent pipeline.")
+        complexity = plan.get("complexity", "medium")
         priorities = plan.get("priorities", [])
 
-        priority_text = (
-            "\nPriorities: " + ", ".join(priorities) if priorities else ""
-        )
-        self.send_message(
-            f"Strategic plan locked.\n{plan_summary}{priority_text}\nSteps: {len(steps)}",
+        # Emit the plan as a PLAN event so the frontend can render it specially
+        await self.emit(
+            StreamEventType.PLAN,
+            json.dumps(plan),
+            {"steps": steps, "summary": summary, "complexity": complexity},
             task_id=task_id,
-            metadata={
-                "tier": "boss",
-                "personality": "Strategist",
-                "plan": plan,
-            },
+        )
+        await self.output(
+            f"**Strategic Plan:** {summary}\n"
+            f"Complexity: **{complexity}** | Steps: **{len(steps)}**"
+            + (f"\nPriorities: {', '.join(priorities)}" if priorities else ""),
+            task_id=task_id,
         )
 
-        # ── Phase 2: Execute each step (delegation) ────────────────────
-        accumulated_context: dict[str, Any] = {"goal": goal}
+        # ── Phase 2: Execute ──────────────────────────────────────────────────
+        self.set_state(AgentState.ACTING)
+        accumulated: dict[str, Any] = {"goal": goal}
         results: dict[str, str] = {}
 
-        for i, step in enumerate(steps):
-            agent_name = step.get("agent", "").lower()
+        for i, step in enumerate(steps, 1):
+            agent_key = step.get("agent", "").lower()
             description = step.get("description", "")
 
-            self.send_message(
-                f"[{i + 1}/{len(steps)}] Directing {agent_name}: {description[:100]}",
+            await self.think(
+                f"Step {i}/{len(steps)}: Dispatching **{agent_key.upper()}** — {description[:120]}",
                 task_id=task_id,
-                metadata={"tier": "boss", "personality": "Strategist"},
             )
 
-            agent_result = await self._dispatch(
-                agent_name, task, accumulated_context, step
-            )
-            results[agent_name] = agent_result
-            accumulated_context[agent_name] = agent_result
+            agent_result = await self._dispatch(agent_key, task, accumulated, step)
+            results[agent_key] = agent_result
+            accumulated[agent_key] = agent_result
 
-            excerpt = agent_result[:200] + ("…" if len(agent_result) > 200 else "")
-            self.send_message(
-                f"{agent_name} delivered.\n{excerpt}",
+            excerpt = (agent_result[:180] + "…") if len(agent_result) > 180 else agent_result
+            await self.status(
+                f"✓ {agent_key.upper()} delivered ({len(agent_result)} chars)",
                 task_id=task_id,
-                metadata={"tier": "boss", "personality": "Strategist"},
             )
 
-        # ── Phase 3: Synthesis & quality check ────────────────────────
+        # ── Phase 3: Synthesize ───────────────────────────────────────────────
         self.set_state(AgentState.THINKING)
-        self.send_message(
-            "Synthesising all agent outputs. Running quality check…",
+        await self.think(
+            f"All {len(results)} agent(s) reported. Running quality synthesis…",
             task_id=task_id,
-            metadata={"tier": "boss", "personality": "Strategist"},
         )
 
-        final_result = await self._synthesise(goal, results, task_id)
+        final = await self._synthesise(goal, results, task_id)
+        duration = time.time() - start
 
-        duration = time.time() - start_time
-
-        # ── Save to episodic memory ────────────────────────────────────
+        # Save to episodic memory (best-effort)
         try:
             from app.memory.episodic import get_episodic_memory
-
-            em = get_episodic_memory()
-            await em.save_task(
+            await get_episodic_memory().save_task(
                 task_id=str(task_id or ""),
                 goal=goal,
-                summary=plan_summary,
-                result=final_result[:2000],
+                summary=summary,
+                result=final[:2000],
                 duration=duration,
                 success=True,
             )
         except Exception as exc:
-            logger.warning("Failed to save to episodic memory: %s", exc)
+            logger.warning("Episodic memory save failed: %s", exc)
 
         self.set_state(AgentState.DONE)
-        self.send_message(
-            f"Mission complete. Total time: {duration:.1f}s.",
+        await self.emit(
+            StreamEventType.AGENT_DONE,
+            f"NEXUS complete — {duration:.1f}s",
+            {"duration": duration, "agents_used": list(results.keys())},
             task_id=task_id,
-            metadata={
-                "tier": "boss",
-                "personality": "Strategist",
-                "duration": duration,
-            },
         )
 
-        return final_result
+        return final
 
-    # ------------------------------------------------------------------
-    # Phase 1 helpers
-    # ------------------------------------------------------------------
+    # ── Phase 1: Plan creation ─────────────────────────────────────────────────
 
     async def _create_plan(self, goal: str, task_id: Optional[str]) -> dict:
-        self.send_message(
-            "Formulating strategic execution plan…",
+        await self.think("Formulating strategic execution plan…", task_id=task_id)
+        await self.use_tool(
+            "plan_generator",
+            {"goal": goal[:200], "available_agents": ["memory", "research", "code", "writer"]},
             task_id=task_id,
-            metadata={"tier": "boss", "personality": "Strategist"},
         )
-        prompt = f"Goal: {goal}\n\nCreate a strategic execution plan as JSON."
         try:
             raw = await llm_complete(
-                prompt=prompt,
+                prompt=f"Goal: {goal}\n\nCreate execution plan as JSON.",
                 system=_PLAN_SYSTEM,
                 max_tokens=1024,
-                temperature=0.2,
-                fast=True,  # planning uses fast model to keep latency low
+                temperature=0.15,
+                fast=True,
             )
             raw = raw.strip()
             if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
+                raw = "\n".join(raw.split("\n")[1:])
+            if raw.endswith("```"):
+                raw = raw[: raw.rfind("```")]
             plan = json.loads(raw)
         except Exception as exc:
             logger.warning("Plan generation failed (%s). Using default plan.", exc)
             plan = self._default_plan(goal)
 
+        await self.tool_result("plan_generator", json.dumps(plan)[:300], task_id=task_id)
         return plan
 
     @staticmethod
     def _default_plan(goal: str) -> dict:
-        """Fallback plan when LLM is unavailable."""
         needs_code = any(
             kw in goal.lower()
-            for kw in ("code", "script", "program", "function", "implement", "write a")
+            for kw in ("code", "script", "program", "function", "implement", "build", "create a")
         )
         steps = [
-            {"agent": "memory", "description": "Retrieve relevant past context"},
+            {"agent": "memory",   "description": "Retrieve relevant prior knowledge"},
             {"agent": "research", "description": f"Research: {goal[:80]}"},
         ]
         if needs_code:
-            steps.append(
-                {
-                    "agent": "code",
-                    "description": f"Implement code for: {goal[:80]}",
-                    "language": "python",
-                }
-            )
-        steps.append({"agent": "writer", "description": "Write final report"})
+            steps.append({"agent": "code", "description": f"Implement: {goal[:80]}", "language": "python"})
+        steps.append({"agent": "writer", "description": "Synthesize findings into final report"})
         return {
             "steps": steps,
-            "summary": f"Default pipeline for: {goal[:60]}",
+            "summary": f"Default multi-agent pipeline for: {goal[:60]}",
             "priorities": ["accuracy", "completeness"],
-            "expected_outputs": {
-                "memory": "Relevant past context",
-                "research": "Comprehensive research summary",
-                "writer": "Final polished report",
-            },
+            "complexity": "medium",
         }
 
-    # ------------------------------------------------------------------
-    # Phase 3 helpers
-    # ------------------------------------------------------------------
+    # ── Phase 3: Synthesis ─────────────────────────────────────────────────────
 
-    async def _synthesise(
-        self, goal: str, results: dict[str, str], task_id: Optional[str]
-    ) -> str:
-        """Use the LLM strategist to synthesise all agent results."""
-        # If writer already produced output, prefer it as the base
-        if "writer" in results and results["writer"]:
-            writer_out = results["writer"]
-            # If we have other results, still pass through quality synthesis
-            if len(results) == 1:
-                return writer_out
+    async def _synthesise(self, goal: str, results: dict[str, str], task_id: Optional[str]) -> str:
+        if "writer" in results and len(results) == 1:
+            return results["writer"]
 
-        # Build synthesis prompt
-        parts = [f"## Original Goal\n{goal}\n"]
-        for agent_name, result in results.items():
-            parts.append(f"## {agent_name.capitalize()} Agent Output\n{result[:2000]}")
-        parts.append(
-            "\nSynthesise the above into a final, comprehensive, quality-checked response."
+        await self.use_tool(
+            "synthesizer",
+            {"agents": list(results.keys()), "goal": goal[:100]},
+            task_id=task_id,
         )
+
+        parts = [f"## Original Goal\n{goal}\n"]
+        for name, result in results.items():
+            parts.append(f"## {name.capitalize()} Agent Output\n{result[:2500]}")
+        parts.append("\nSynthesize the above into a final, comprehensive, quality-checked response.")
         prompt = "\n\n".join(parts)
 
         try:
-            return await llm_complete(
-                prompt=prompt,
-                system=_SYNTHESIS_SYSTEM,
-                max_tokens=4096,
-                temperature=0.3,
+            result = await llm_complete(
+                prompt=prompt, system=_SYNTHESIS_SYSTEM, max_tokens=4096, temperature=0.3
             )
+            await self.tool_result("synthesizer", f"Synthesis complete ({len(result)} chars)", task_id=task_id)
+            return result
         except Exception as exc:
-            logger.warning("Synthesis LLM call failed (%s). Falling back to aggregation.", exc)
+            logger.warning("Synthesis failed (%s). Falling back to aggregation.", exc)
             return self._aggregate(goal, results)
 
     @staticmethod
     def _aggregate(goal: str, results: dict[str, str]) -> str:
         parts = [f"# Result for: {goal}\n"]
         for name, result in results.items():
-            parts.append(f"## {name.capitalize()} Agent\n{result[:1500]}")
+            parts.append(f"## {name.capitalize()} Agent\n{result[:2000]}")
         return "\n\n".join(parts)
 
-    # ------------------------------------------------------------------
-    # Phase 2: Agent dispatch
-    # ------------------------------------------------------------------
+    # ── Dispatch ───────────────────────────────────────────────────────────────
 
-    async def _dispatch(
-        self,
-        agent_name: str,
-        task: Any,
-        context: dict[str, Any],
-        step: dict,
-    ) -> str:
-        agent_map = {
-            "memory": self._run_memory,
+    async def _dispatch(self, agent_name: str, task: Any, context: dict, step: dict) -> str:
+        runners = {
+            "memory":   self._run_memory,
             "research": self._run_research,
-            "code": self._run_code,
-            "writer": self._run_writer,
+            "code":     self._run_code,
+            "writer":   self._run_writer,
         }
-        runner = agent_map.get(agent_name)
+        runner = runners.get(agent_name)
         if runner is None:
-            logger.warning("Unknown agent: %s – skipping", agent_name)
-            return f"(Agent '{agent_name}' not found)"
+            logger.warning("Unknown agent '%s' — skipping", agent_name)
+            return f"(Agent '{agent_name}' not available)"
         try:
             return await runner(task, context, step)
         except Exception as exc:
             logger.error("Agent %s failed: %s", agent_name, exc)
             return f"(Agent '{agent_name}' encountered an error: {exc})"
 
-    async def _run_memory(self, task: Any, context: dict, step: dict) -> str:
+    async def _run_memory(self, task, context, step):
         from app.agents.memory_agent import MemoryAgent
+        return await MemoryAgent(ws_manager=self._ws_manager).run(task, context)
 
-        agent = MemoryAgent(ws_manager=self._ws_manager)
-        return await agent.run(task, context)
-
-    async def _run_research(self, task: Any, context: dict, step: dict) -> str:
+    async def _run_research(self, task, context, step):
         from app.agents.research_agent import ResearchAgent
+        return await ResearchAgent(ws_manager=self._ws_manager).run(task, context)
 
-        agent = ResearchAgent(ws_manager=self._ws_manager)
-        return await agent.run(task, context)
-
-    async def _run_code(self, task: Any, context: dict, step: dict) -> str:
+    async def _run_code(self, task, context, step):
         from app.agents.code_agent import CodeAgent
-
         ctx = {**context, "language": step.get("language", "python")}
-        if "research" not in ctx and "research" in context:
-            ctx["research"] = context["research"]
-        agent = CodeAgent(ws_manager=self._ws_manager)
-        return await agent.run(task, ctx)
+        return await CodeAgent(ws_manager=self._ws_manager).run(task, ctx)
 
-    async def _run_writer(self, task: Any, context: dict, step: dict) -> str:
+    async def _run_writer(self, task, context, step):
         from app.agents.writer_agent import WriterAgent
-
         ctx = {
-            "research": context.get("research", ""),
+            "research":    context.get("research", ""),
             "code_result": context.get("code", ""),
-            "memory": context.get("memory", ""),
+            "memory":      context.get("memory", ""),
         }
-        agent = WriterAgent(ws_manager=self._ws_manager)
-        return await agent.run(task, ctx)
+        return await WriterAgent(ws_manager=self._ws_manager).run(task, ctx)

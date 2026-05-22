@@ -143,4 +143,9 @@ export async function getStats(): Promise<{ total_tasks: number; memories_stored
   return data
 }
 
+export function getStreamUrl(taskId: string): string {
+  const base = (localStorage.getItem('nexus_backend_url') || '').replace(/\/$/, '')
+  return base ? `${base}/api/tasks/${taskId}/stream` : `/api/tasks/${taskId}/stream`
+}
+
 export default api
