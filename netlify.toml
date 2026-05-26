@@ -1,0 +1,8 @@
+[build]
+  command = "yarn generate"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+  # Nuxt 2 ships webpack 4, which breaks on Node 17+ OpenSSL 3 without this.
+  NODE_OPTIONS = "--openssl-legacy-provider"
