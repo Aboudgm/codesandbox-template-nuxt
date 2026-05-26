@@ -4,7 +4,7 @@ export default {
 
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
-    title: 'Neumorphic Music Player',
+    title: 'High-Frequency Algo Trading Hub',
     htmlAttrs: {
       lang: 'en',
     },
@@ -15,16 +15,16 @@ export default {
         hid: 'description',
         name: 'description',
         content:
-          'A sophisticated neumorphic music player UI with soft shadows and modern design',
+          'An algorithmic trading control deck: live market metrics, technical indicators, and strict pre-trade risk validation.',
       },
       { name: 'format-detection', content: 'telephone=no' },
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-      // Google Fonts - Poppins
+      // Google Fonts - Inter (UI) + Roboto Mono (numerics)
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap',
       },
       // Font Awesome Icons
       {
