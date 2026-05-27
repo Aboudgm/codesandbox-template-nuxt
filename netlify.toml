@@ -1,0 +1,14 @@
+[build]
+  command = "yarn generate"
+  publish = "dist"
+
+[build.environment]
+  # Nuxt 2 uses webpack 4, which needs the legacy OpenSSL provider on Node 17+.
+  NODE_VERSION = "18"
+  NODE_OPTIONS = "--openssl-legacy-provider"
+
+# SPA fallback for any route not pre-rendered (static files are served first).
+[[redirects]]
+  from = "/*"
+  to = "/200.html"
+  status = 200
