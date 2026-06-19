@@ -6,19 +6,23 @@ import { useAppStore } from '../../store/useAppStore'
 
 interface NavItem {
   path:  string
-  icon:  React.ReactNode
+  icon:  React.ElementType
   label: string
 }
 
 const NAV: NavItem[] = [
-  { path: '/',         icon: <Home      size={20} />, label: 'Home'     },
-  { path: '/tasks',    icon: <List      size={20} />, label: 'Tasks'    },
-  { path: '/memory',   icon: <Database  size={20} />, label: 'Memory'   },
-  { path: '/settings', icon: <Settings  size={20} />, label: 'Settings' },
+  { path: '/',         icon: Home,     label: 'Home'     },
+  { path: '/tasks',    icon: List,     label: 'Tasks'    },
+  { path: '/memory',   icon: Database, label: 'Memory'   },
+  { path: '/settings', icon: Settings, label: 'Settings' },
 ]
+
+const ACTIVE_COLOR = '#D97757'
+const IDLE_COLOR   = '#38384A'
 
 const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ item, active, badge }) => {
   const navigate = useNavigate()
+  const Icon = item.icon
   return (
     <button
       onClick={() => navigate(item.path)}
@@ -28,19 +32,26 @@ const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ ite
       <AnimatePresence>
         {active && (
           <motion.div
-            layoutId="nav-bar"
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-            style={{ background: '#00E5FF', boxShadow: '0 0 8px #00E5FF' }}
+            layoutId="nav-indicator"
+            className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
+            style={{
+              width: 28,
+              background: ACTIVE_COLOR,
+              boxShadow: `0 0 8px ${ACTIVE_COLOR}80`,
+            }}
           />
         )}
       </AnimatePresence>
 
       <motion.div
-        animate={{ scale: active ? 1.05 : 1, y: active ? -1 : 0 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 400 }}
-        style={{ color: active ? '#00E5FF' : '#2A2A50', position: 'relative' }}
+        animate={{
+          scale: active ? 1.08 : 1,
+          y: active ? -1 : 0,
+        }}
+        transition={{ type: 'spring', damping: 22, stiffness: 420 }}
+        style={{ color: active ? ACTIVE_COLOR : IDLE_COLOR, position: 'relative' }}
       >
-        {item.icon}
+        <Icon size={20} />
         {badge && badge > 0 ? (
           <span
             className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
@@ -53,7 +64,7 @@ const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ ite
 
       <span
         className="text-[9px] font-semibold tracking-widest uppercase"
-        style={{ color: active ? '#00E5FF' : '#2A2A50' }}
+        style={{ color: active ? ACTIVE_COLOR : IDLE_COLOR }}
       >
         {item.label}
       </span>
@@ -79,10 +90,10 @@ export const BottomNav: React.FC = () => {
       <div
         className="flex items-center"
         style={{
-          background: 'rgba(5,5,15,0.96)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(0,229,255,0.08)',
+          background: 'rgba(8,8,16,0.97)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          borderTop: '1px solid rgba(217,119,87,0.1)',
           minHeight: 64,
         }}
       >
@@ -90,23 +101,26 @@ export const BottomNav: React.FC = () => {
         <Tab item={NAV[1]} active={isActive('/tasks')} badge={running} />
 
         {/* Center FAB */}
-        <div className="flex items-center justify-center px-3" style={{ width: 76 }}>
+        <div className="flex items-center justify-center px-2" style={{ width: 72 }}>
           <motion.button
-            whileTap={{ scale: 0.88 }}
+            whileTap={{ scale: 0.86 }}
+            whileHover={{ scale: 1.04 }}
             onClick={() => setShowNewTask(true)}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center relative"
+            className="w-13 h-13 rounded-2xl flex items-center justify-center relative"
             style={{
-              background: 'linear-gradient(135deg, #D97757 0%, #B85C38 100%)',
-              boxShadow: '0 4px 24px rgba(217,119,87,0.5), 0 0 0 3px rgba(5,5,15,0.95)',
-              marginTop: -18,
+              width: 52,
+              height: 52,
+              background: 'linear-gradient(145deg, #E08060 0%, #C4663E 100%)',
+              boxShadow: '0 4px 20px rgba(217,119,87,0.55), 0 0 0 3px rgba(8,8,16,0.95)',
+              marginTop: -16,
             }}
           >
-            <Plus size={26} color="#fff" strokeWidth={2.5} />
+            <Plus size={24} color="#fff" strokeWidth={2.5} />
             <motion.div
-              animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0, 0.4] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              animate={{ scale: [1, 1.6, 1], opacity: [0.35, 0, 0.35] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute inset-0 rounded-2xl pointer-events-none"
-              style={{ background: 'rgba(217,119,87,0.5)' }}
+              style={{ background: 'rgba(217,119,87,0.45)' }}
             />
           </motion.button>
         </div>

@@ -58,7 +58,7 @@ const NeuralBackground: React.FC = () => {
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(0,229,255,${p.o})`
+        ctx.fillStyle = `rgba(217,119,87,${p.o * 0.7})`
         ctx.fill()
 
         for (let j = i + 1; j < pts.length; j++) {
@@ -66,11 +66,11 @@ const NeuralBackground: React.FC = () => {
           const dx = p.x - q.x, dy = p.y - q.y
           const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < D) {
-            const alpha = (1 - dist / D) * 0.12
+            const alpha = (1 - dist / D) * 0.09
             const g = ctx.createLinearGradient(p.x, p.y, q.x, q.y)
-            g.addColorStop(0, `rgba(0,229,255,${alpha})`)
-            g.addColorStop(0.5, `rgba(124,113,240,${alpha * 0.5})`)
-            g.addColorStop(1, `rgba(0,229,255,${alpha})`)
+            g.addColorStop(0, `rgba(217,119,87,${alpha})`)
+            g.addColorStop(0.5, `rgba(192,132,252,${alpha * 0.4})`)
+            g.addColorStop(1, `rgba(217,119,87,${alpha})`)
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(q.x, q.y)
@@ -149,41 +149,41 @@ const QuickTaskSheet: React.FC = () => {
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 32, stiffness: 400 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
             className="fixed bottom-0 left-0 right-0 z-[70] px-3"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
           >
             <div
               className="rounded-3xl p-5"
               style={{
-                background: 'rgba(10,10,26,0.99)',
-                border: '1px solid rgba(0,229,255,0.2)',
-                boxShadow: '0 -16px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,255,0.05)',
+                background: 'rgba(10,8,18,0.99)',
+                border: '1px solid rgba(217,119,87,0.18)',
+                boxShadow: '0 -20px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(217,119,87,0.05)',
               }}
             >
               {/* Handle */}
               <div className="flex justify-center mb-4">
-                <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(60,64,96,0.6)' }} />
+                <div className="w-8 h-1 rounded-full" style={{ background: 'rgba(80,70,90,0.5)' }} />
               </div>
 
               {/* Header */}
               <div className="flex items-center gap-2.5 mb-4">
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)' }}
+                  style={{ background: 'rgba(217,119,87,0.1)', border: '1px solid rgba(217,119,87,0.22)' }}
                 >
-                  <Sparkles size={15} style={{ color: '#00E5FF' }} />
+                  <Sparkles size={15} style={{ color: '#D97757' }} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold" style={{ color: '#E8E8F8' }}>New Task</h2>
-                  <p className="text-[11px]" style={{ color: '#4A4A70' }}>Multi-agent AI will handle it</p>
+                  <h2 className="text-sm font-bold" style={{ color: '#EEEEF0' }}>New Task</h2>
+                  <p className="text-[11px]" style={{ color: '#4A4A6A' }}>Multi-agent AI will handle it</p>
                 </div>
               </div>
 
               {/* Input */}
               <div
                 className="rounded-2xl px-4 py-3 mb-3"
-                style={{ background: 'rgba(5,5,15,0.8)', border: '1px solid rgba(30,32,64,0.8)' }}
+                style={{ background: 'rgba(6,5,12,0.85)', border: '1px solid rgba(50,46,68,0.7)' }}
               >
                 <textarea
                   ref={inputRef}
@@ -191,8 +191,8 @@ const QuickTaskSheet: React.FC = () => {
                   onChange={(e) => setGoal(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCreate() } }}
                   placeholder="Describe what you want to accomplish…"
-                  className="w-full bg-transparent text-sm outline-none resize-none leading-relaxed placeholder-text-muted"
-                  style={{ color: '#E8E8F8' }}
+                  className="w-full bg-transparent text-sm outline-none resize-none leading-relaxed placeholder-muted"
+                  style={{ color: '#EEEEF0' }}
                   rows={3}
                 />
               </div>
@@ -205,9 +205,9 @@ const QuickTaskSheet: React.FC = () => {
                     onClick={() => setGoal(chip)}
                     className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
                     style={{
-                      background: goal === chip ? 'rgba(0,229,255,0.12)' : 'rgba(20,20,40,0.6)',
-                      border:     goal === chip ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(30,32,64,0.6)',
-                      color:      goal === chip ? '#00E5FF' : '#4A4A70',
+                      background: goal === chip ? 'rgba(217,119,87,0.12)' : 'rgba(18,16,28,0.7)',
+                      border:     goal === chip ? '1px solid rgba(217,119,87,0.35)' : '1px solid rgba(50,46,68,0.55)',
+                      color:      goal === chip ? '#D97757' : '#4A4A6A',
                     }}
                   >
                     {chip}
@@ -222,8 +222,8 @@ const QuickTaskSheet: React.FC = () => {
                 disabled={!goal.trim() || creating}
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
                 style={{
-                  background: 'linear-gradient(135deg, #D97757 0%, #B85C38 100%)',
-                  boxShadow: '0 4px 24px rgba(217,119,87,0.4)',
+                  background: 'linear-gradient(135deg, #E08060 0%, #C4663E 100%)',
+                  boxShadow: '0 4px 24px rgba(217,119,87,0.38)',
                 }}
               >
                 {creating ? (
@@ -287,14 +287,14 @@ function AppContent() {
   }, [setCmdPalette])
 
   return (
-    <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#05050F' }}>
+    <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#080810' }}>
       <NeuralBackground />
 
       <div className="relative" style={{ zIndex: 1 }}>
         <Header title={pageTitle} showBack={isTaskDetail} />
 
         <main
-          className="pt-16"
+          className="pt-14"
           style={{
             paddingBottom: isTaskDetail
               ? '1rem'

@@ -10,9 +10,11 @@
 
   html {
     font-family: 'Inter', system-ui, sans-serif;
-    background-color: #05050F;
-    color: #E8E8F8;
+    background-color: #080810;
+    color: #EEEEF0;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
@@ -21,18 +23,22 @@
     min-height: 100vh;
     min-height: 100dvh;
     overscroll-behavior: none;
-    background-color: #05050F;
-    /* Subtle dot grid */
-    background-image: radial-gradient(circle, rgba(0,229,255,0.06) 1px, transparent 1px);
-    background-size: 28px 28px;
+    background-color: #080810;
+    /* Subtle warm dot grid */
+    background-image: radial-gradient(circle, rgba(217,119,87,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
 
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1E2040; border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2A2D60; }
+  ::-webkit-scrollbar-thumb { background: rgba(217,119,87,0.2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(217,119,87,0.4); }
 
-  ::selection { background: rgba(0,229,255,0.2); color: #E8E8F8; }
+  ::selection { background: rgba(217,119,87,0.25); color: #EEEEF0; }
+
+  /* ── Placeholder helper (replaces broken placeholder-text-muted class) ── */
+  .placeholder-muted::placeholder { color: #4A4A6A; opacity: 1; }
+  .placeholder-dim::placeholder   { color: #2A2A4A; opacity: 1; }
 }
 
 @layer utilities {
@@ -65,7 +71,14 @@
   .glow-violet { box-shadow: 0 0 16px rgba(192,132,252,0.35), 0 0 48px rgba(192,132,252,0.1); }
 
   .text-gradient-nexus {
-    background: linear-gradient(135deg, #E8E8F8 0%, #D97757 40%, #7C71F0 100%);
+    background: linear-gradient(135deg, #F0EEE8 0%, #D97757 45%, #C084FC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-warm {
+    background: linear-gradient(135deg, #F0EEE8 0%, #D97757 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

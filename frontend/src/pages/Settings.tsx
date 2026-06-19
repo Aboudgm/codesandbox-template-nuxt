@@ -78,7 +78,8 @@ const KeyInput: React.FC<KeyInputProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder ?? 'Enter API key...'}
-            className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none font-mono"
+            className="flex-1 bg-transparent text-sm outline-none font-mono placeholder-muted"
+            style={{ color: '#EEEEF0' }}
           />
           <button
             onClick={() => setShow(!show)}
@@ -365,7 +366,8 @@ export const Settings: React.FC = () => {
               value={backendUrl}
               onChange={(e) => setBackendUrlState(e.target.value)}
               placeholder="http://localhost:8000"
-              className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none font-mono"
+              className="flex-1 bg-transparent text-sm outline-none font-mono placeholder-muted"
+            style={{ color: '#EEEEF0' }}
             />
           </div>
           <p className="text-xs text-text-muted leading-relaxed">

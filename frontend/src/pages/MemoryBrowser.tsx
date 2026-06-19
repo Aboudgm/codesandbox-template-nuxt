@@ -223,7 +223,8 @@ export const MemoryBrowser: React.FC = () => {
               if (e.key === 'Escape') clearSearch()
             }}
             placeholder="Search memories semantically..."
-            className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none"
+            className="flex-1 bg-transparent text-sm outline-none placeholder-muted"
+            style={{ color: '#EEEEF0' }}
           />
           <AnimatePresence>
             {searchQuery && (

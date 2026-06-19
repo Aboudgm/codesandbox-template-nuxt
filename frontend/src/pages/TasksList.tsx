@@ -60,14 +60,14 @@ export const TasksList: React.FC = () => {
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-base" style={{ color: '#E8E8F8' }}>Tasks</h2>
-          <p className="text-xs" style={{ color: '#4A4A70' }}>{tasks.length} total</p>
+          <h2 className="font-bold text-base" style={{ color: '#EEEEF0' }}>Tasks</h2>
+          <p className="text-xs" style={{ color: '#38384A' }}>{tasks.length} total</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={() => refetch()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs"
-          style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.15)', color: '#00E5FF' }}
+          style={{ background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.18)', color: '#D97757' }}
         >
           {isFetching
             ? <Loader2 size={12} className="animate-spin" />
@@ -80,19 +80,19 @@ export const TasksList: React.FC = () => {
       {/* Search */}
       <div
         className="flex items-center gap-2 rounded-2xl px-3 py-2.5"
-        style={{ background: 'rgba(10,10,26,0.8)', border: '1px solid rgba(30,32,64,0.8)' }}
+        style={{ background: 'rgba(12,10,20,0.8)', border: '1px solid rgba(50,46,68,0.65)' }}
       >
-        <Search size={14} style={{ color: '#4A4A70', flexShrink: 0 }} />
+        <Search size={14} style={{ color: '#38384A', flexShrink: 0 }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search tasks…"
-          className="flex-1 bg-transparent text-sm outline-none"
-          style={{ color: '#E8E8F8' }}
+          className="flex-1 bg-transparent text-sm outline-none placeholder-muted"
+          style={{ color: '#EEEEF0' }}
         />
         {search && (
           <button onClick={() => setSearch('')}>
-            <X size={13} style={{ color: '#4A4A70' }} />
+            <X size={13} style={{ color: '#38384A' }} />
           </button>
         )}
       </div>
@@ -108,16 +108,19 @@ export const TasksList: React.FC = () => {
               onClick={() => setFilter(f.key)}
               className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               style={{
-                background: active ? `${f.color}18` : 'rgba(10,10,26,0.7)',
-                border: active ? `1px solid ${f.color}40` : '1px solid rgba(30,32,64,0.6)',
-                color: active ? f.color : '#4A4A70',
+                background: active ? `${f.color}14` : 'rgba(12,10,20,0.75)',
+                border: active ? `1px solid ${f.color}35` : '1px solid rgba(50,46,68,0.55)',
+                color: active ? f.color : '#38384A',
               }}
             >
               {f.label}
               {count > 0 && (
                 <span
                   className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
-                  style={{ background: active ? `${f.color}25` : 'rgba(30,32,64,0.7)', color: active ? f.color : '#4A4A70' }}
+                  style={{
+                    background: active ? `${f.color}20` : 'rgba(36,34,50,0.7)',
+                    color: active ? f.color : '#38384A',
+                  }}
                 >
                   {count}
                 </span>
@@ -130,18 +133,18 @@ export const TasksList: React.FC = () => {
       {/* Task list */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 size={24} className="animate-spin" style={{ color: '#00E5FF' }} />
+          <Loader2 size={22} className="animate-spin" style={{ color: '#D97757' }} />
         </div>
       ) : sorted.length === 0 ? (
         <div
           className="rounded-2xl p-8 flex flex-col items-center gap-3"
-          style={{ background: 'rgba(10,10,26,0.6)', border: '1px solid rgba(30,32,64,0.5)' }}
+          style={{ background: 'rgba(12,10,20,0.65)', border: '1px solid rgba(50,46,68,0.45)' }}
         >
           <span className="text-3xl">📋</span>
-          <p className="text-sm font-medium" style={{ color: '#E8E8F8' }}>
+          <p className="text-sm font-medium" style={{ color: '#EEEEF0' }}>
             {search ? 'No matching tasks' : filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}
           </p>
-          <p className="text-xs text-center" style={{ color: '#4A4A70' }}>
+          <p className="text-xs text-center" style={{ color: '#38384A' }}>
             {!search && filter === 'all' && 'Create a task with the + button to get started.'}
           </p>
         </div>

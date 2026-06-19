@@ -7,47 +7,46 @@ import toast from 'react-hot-toast'
 import { AgentOrb } from '../components/UI/AgentOrb'
 import { ChatInput } from '../components/Chat/ChatInput'
 import { TaskCard } from '../components/Tasks/TaskCard'
-import { GlassCard } from '../components/UI/GlassCard'
 import { createTask, getTasks, getAgents, deleteTask, getStats } from '../lib/api'
 import { useAppStore } from '../store/useAppStore'
 
 const QUICK_GOALS = [
-  'Research recent breakthroughs in quantum computing',
-  'Write a Python web scraper for news headlines',
-  'Analyze AI benchmark trends in 2024–2025',
-  'Create a market research report on EVs',
+  'Research quantum computing breakthroughs',
+  'Write a Python web scraper',
+  'Analyze AI benchmark trends',
+  'Create an EV market research report',
 ]
 
 const AGENT_INFO = [
-  { type: 'STRATEGIST', name: 'NEXUS', desc: 'Orchestrator' },
-  { type: 'RESEARCHER', name: 'ARIA',  desc: 'Research'     },
-  { type: 'CODER',      name: 'FORGE', desc: 'Code'         },
-  { type: 'WRITER',     name: 'SCRIBE',desc: 'Writer'       },
-  { type: 'MEMORY',     name: 'ECHO',  desc: 'Memory'       },
+  { type: 'STRATEGIST', name: 'NEXUS',  desc: 'Orchestrator' },
+  { type: 'RESEARCHER', name: 'ARIA',   desc: 'Research'     },
+  { type: 'CODER',      name: 'FORGE',  desc: 'Code'         },
+  { type: 'WRITER',     name: 'SCRIBE', desc: 'Writer'       },
+  { type: 'MEMORY',     name: 'ECHO',   desc: 'Memory'       },
 ]
 
 const StatCard: React.FC<{
   icon: React.ElementType; label: string; value: string | number; color: string; delay?: number
 }> = ({ icon: Icon, label, value, color, delay = 0 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 12 }}
+    initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.35 }}
-    className="rounded-2xl p-3.5 flex flex-col gap-2.5"
+    transition={{ delay, duration: 0.3 }}
+    className="rounded-2xl p-3.5 flex flex-col gap-2"
     style={{
-      background: 'rgba(10,10,26,0.8)',
-      border: `1px solid ${color}20`,
+      background: 'rgba(12,10,20,0.8)',
+      border: `1px solid ${color}1A`,
     }}
   >
     <div
-      className="w-8 h-8 rounded-xl flex items-center justify-center"
-      style={{ background: `${color}18` }}
+      className="w-7 h-7 rounded-lg flex items-center justify-center"
+      style={{ background: `${color}14` }}
     >
-      <Icon size={16} style={{ color }} />
+      <Icon size={14} style={{ color }} />
     </div>
     <div>
-      <p className="text-2xl font-bold" style={{ color: '#E8E8F8' }}>{value}</p>
-      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#4A4A70' }}>
+      <p className="text-xl font-bold tracking-tight" style={{ color: '#EEEEF0' }}>{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: '#38384A' }}>
         {label}
       </p>
     </div>
@@ -90,25 +89,42 @@ export const Dashboard: React.FC = () => {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
 
-  // Build agent list: merge API agents with fallback display list
   const displayAgents = AGENT_INFO.map((info) => {
     const live = agents.find((a) => a.type?.toUpperCase() === info.type.toUpperCase())
     return live ?? { id: info.type, name: info.name, type: info.type as any, state: 'idle' as any, messages_count: 0 }
   })
 
   return (
-    <div className="flex flex-col gap-5 pb-4">
+    <div className="flex flex-col gap-6 pb-4">
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <div className="px-4 pt-5">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap size={13} style={{ color: '#D97757' }} />
-            <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: '#4A4A70' }}>
-              Multi-Agent Command Center
-            </span>
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-2 mb-2.5">
+            <div
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+              style={{ background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.18)' }}
+            >
+              <Zap size={10} style={{ color: '#D97757' }} />
+              <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: '#D97757' }}>
+                Multi-Agent AI
+              </span>
+            </div>
           </div>
-          <h1 className="text-3xl font-black mb-1 text-gradient-nexus">NEXUS AI</h1>
-          <p className="text-sm leading-relaxed" style={{ color: '#4A4A70' }}>
+
+          {/* Title */}
+          <h1
+            className="text-[2.2rem] font-black mb-1.5 leading-none"
+            style={{
+              background: 'linear-gradient(135deg, #F0EEE8 0%, #D97757 50%, #C084FC 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            NEXUS AI
+          </h1>
+          <p className="text-sm leading-relaxed" style={{ color: '#4A4A6A' }}>
             Orchestrate autonomous agents to research, code, and create.
           </p>
 
@@ -116,13 +132,20 @@ export const Dashboard: React.FC = () => {
           <button
             onClick={() => setCmdPalette(true)}
             className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all active:scale-95"
-            style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.15)' }}
+            style={{
+              background: 'rgba(217,119,87,0.06)',
+              border: '1px solid rgba(217,119,87,0.14)',
+            }}
           >
-            <Command size={11} style={{ color: '#00E5FF' }} />
-            <span className="text-xs" style={{ color: '#4A4A70' }}>Quick commands</span>
+            <Command size={11} style={{ color: '#D97757' }} />
+            <span className="text-xs" style={{ color: '#4A4A6A' }}>Quick commands</span>
             <kbd
-              className="text-[9px] px-1 py-0.5 rounded"
-              style={{ background: 'rgba(30,32,64,0.6)', color: '#4A4A70', fontFamily: 'monospace', border: '1px solid rgba(30,32,64,0.8)' }}
+              className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+              style={{
+                background: 'rgba(30,28,42,0.7)',
+                color: '#4A4A6A',
+                border: '1px solid rgba(50,46,68,0.6)',
+              }}
             >
               ⌘K
             </kbd>
@@ -136,7 +159,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Quick goals */}
         <div className="mt-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#2A2A50' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: '#2A2A3A' }}>
             Quick Start
           </p>
           <div className="flex flex-wrap gap-2">
@@ -145,12 +168,12 @@ export const Dashboard: React.FC = () => {
                 key={g}
                 onClick={() => !isCreating && createMutation.mutate(g)}
                 disabled={isCreating}
-                whileTap={{ scale: 0.96 }}
-                className="text-xs px-3 py-2 rounded-xl transition-colors disabled:opacity-40"
+                whileTap={{ scale: 0.95 }}
+                className="text-xs px-3 py-1.5 rounded-xl transition-colors disabled:opacity-40"
                 style={{
-                  background: 'rgba(15,15,32,0.7)',
-                  border: '1px solid rgba(30,32,64,0.7)',
-                  color: '#4A4A70',
+                  background: 'rgba(14,12,22,0.75)',
+                  border: '1px solid rgba(50,46,68,0.6)',
+                  color: '#4A4A6A',
                 }}
               >
                 {g}
@@ -160,16 +183,16 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Agent orbs ────────────────────────────────────────────── */}
+      {/* ── Agent network ─────────────────────────────────────────── */}
       <div className="px-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#2A2A50' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#2A2A3A' }}>
           Agent Network
         </p>
         <div
           className="rounded-2xl p-4"
           style={{
-            background: 'rgba(10,10,26,0.7)',
-            border: '1px solid rgba(0,229,255,0.08)',
+            background: 'rgba(10,8,18,0.75)',
+            border: '1px solid rgba(217,119,87,0.09)',
           }}
         >
           <div className="flex items-end justify-around">
@@ -183,21 +206,21 @@ export const Dashboard: React.FC = () => {
       {/* ── Stats ─────────────────────────────────────────────────── */}
       <div className="px-4">
         <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={TrendingUp} label="Tasks"    value={stats?.total_tasks ?? tasks.length}    color="#D97757" delay={0.05} />
-          <StatCard icon={Database}   label="Memories" value={stats?.memories_stored ?? 0}           color="#00E5FF" delay={0.10} />
-          <StatCard icon={Users}      label="Agents"   value={stats?.agents_available ?? displayAgents.length} color="#00FFB3" delay={0.15} />
+          <StatCard icon={TrendingUp} label="Tasks"    value={stats?.total_tasks ?? tasks.length}              color="#D97757" delay={0.05} />
+          <StatCard icon={Database}   label="Memories" value={stats?.memories_stored ?? 0}                    color="#00FFB3" delay={0.10} />
+          <StatCard icon={Users}      label="Agents"   value={stats?.agents_available ?? displayAgents.length} color="#C084FC" delay={0.15} />
         </div>
       </div>
 
       {/* ── Recent tasks ──────────────────────────────────────────── */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#2A2A50' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#2A2A3A' }}>
             Recent Tasks
           </p>
           <button
             onClick={() => navigate('/tasks')}
-            className="flex items-center gap-1 text-xs font-medium"
+            className="flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80"
             style={{ color: '#D97757' }}
           >
             View all <ArrowRight size={12} />
@@ -205,29 +228,37 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {recent.length === 0 ? (
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="rounded-2xl p-8 flex flex-col items-center gap-3"
-            style={{ background: 'rgba(10,10,26,0.6)', border: '1px solid rgba(30,32,64,0.5)' }}
+            style={{
+              background: 'rgba(10,8,18,0.65)',
+              border: '1px solid rgba(50,46,68,0.45)',
+            }}
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-              style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.1)' }}
+              style={{
+                background: 'rgba(217,119,87,0.07)',
+                border: '1px solid rgba(217,119,87,0.14)',
+              }}
             >
               ⚡
             </div>
-            <p className="font-semibold text-sm" style={{ color: '#E8E8F8' }}>Ready to launch</p>
-            <p className="text-xs text-center max-w-xs" style={{ color: '#4A4A70' }}>
-              Enter a goal above and your multi-agent team will research, code, and write a comprehensive result.
+            <p className="font-semibold text-sm" style={{ color: '#EEEEF0' }}>Ready to launch</p>
+            <p className="text-xs text-center max-w-xs" style={{ color: '#4A4A6A' }}>
+              Enter a goal and your multi-agent team will research, code, and write a comprehensive result.
             </p>
-          </div>
+          </motion.div>
         ) : (
           <div className="flex flex-col gap-3">
             {recent.map((task, i) => (
               <motion.div
                 key={task.id}
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.06 }}
+                transition={{ delay: i * 0.05 }}
               >
                 <TaskCard task={task} onDelete={(id) => deleteMutation.mutate(id)} />
               </motion.div>

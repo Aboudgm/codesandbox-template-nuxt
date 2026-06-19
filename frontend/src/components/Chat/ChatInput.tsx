@@ -43,18 +43,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <motion.div
         animate={{
           boxShadow: focused
-            ? '0 0 0 1.5px rgba(217,119,87,0.5), 0 4px 30px rgba(217,119,87,0.12)'
-            : '0 2px 20px rgba(0,0,0,0.3)',
+            ? '0 0 0 1.5px rgba(217,119,87,0.45), 0 4px 32px rgba(217,119,87,0.1)'
+            : '0 2px 20px rgba(0,0,0,0.35)',
         }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.18 }}
         className="relative rounded-2xl overflow-hidden"
         style={{
-          background: 'rgba(26, 26, 46, 0.9)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          background: 'rgba(18,16,28,0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           border: focused
-            ? '1px solid rgba(217,119,87,0.4)'
-            : '1px solid rgba(42,45,74,0.6)',
+            ? '1px solid rgba(217,119,87,0.38)'
+            : '1px solid rgba(50,46,68,0.55)',
         }}
       >
         {/* Textarea */}
@@ -68,8 +68,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           placeholder={placeholder}
           minRows={2}
           maxRows={8}
-          className="w-full bg-transparent text-text-primary placeholder-text-muted resize-none outline-none px-4 pt-4 pb-2 text-sm leading-relaxed"
-          style={{ fontFamily: 'Inter, sans-serif' }}
+          className="w-full bg-transparent resize-none outline-none px-4 pt-4 pb-2 text-sm leading-relaxed placeholder-muted"
+          style={{ fontFamily: 'Inter, sans-serif', color: '#EEEEF0' }}
           disabled={isLoading}
           maxLength={MAX_CHARS + 100}
         />
@@ -81,11 +81,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors"
-              style={{ background: 'rgba(42,45,74,0.5)' }}
+              style={{ background: 'rgba(42,40,56,0.5)' }}
               aria-label="Voice input"
               tabIndex={-1}
             >
-              <Mic size={16} className="text-text-muted" />
+              <Mic size={16} style={{ color: '#4A4A6A' }} />
             </button>
 
             <AnimatePresence>
@@ -94,7 +94,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className={`text-xs font-mono ${isOverLimit ? 'text-error' : 'text-text-muted'}`}
+                  className="text-xs font-mono"
+                  style={{ color: isOverLimit ? '#FF5370' : '#4A4A6A' }}
                 >
                   {charCount}/{MAX_CHARS}
                 </motion.span>
@@ -105,8 +106,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {/* Right: Hint + Send */}
           <div className="flex items-center gap-2">
             {!isLoading && (
-              <span className="text-xs text-text-muted hidden sm:block">
-                Enter to send · Shift+Enter for newline
+              <span className="text-xs hidden sm:block" style={{ color: '#4A4A6A' }}>
+                Enter · Shift+Enter for newline
               </span>
             )}
 
@@ -119,7 +120,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               style={{
                 background: canSubmit
                   ? 'linear-gradient(135deg, #D97757, #C4663E)'
-                  : 'rgba(42,45,74,0.4)',
+                  : 'rgba(42,40,56,0.4)',
                 boxShadow: canSubmit ? '0 4px 16px rgba(217,119,87,0.35)' : 'none',
                 cursor: canSubmit ? 'pointer' : 'not-allowed',
               }}
@@ -132,7 +133,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                 />
               ) : (
-                <Send size={16} className={canSubmit ? 'text-white' : 'text-text-muted'} />
+                <Send size={16} style={{ color: canSubmit ? '#fff' : '#4A4A6A' }} />
               )}
             </motion.button>
           </div>
