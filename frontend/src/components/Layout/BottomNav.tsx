@@ -23,6 +23,7 @@ const IDLE_COLOR   = '#33333C'
 const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ item, active, badge }) => {
   const navigate = useNavigate()
   const Icon = item.icon
+
   return (
     <button
       onClick={() => navigate(item.path)}
@@ -46,10 +47,7 @@ const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ ite
       </AnimatePresence>
 
       <motion.div
-        animate={{
-          scale: active ? 1.08 : 1,
-          y: active ? -1 : 0,
-        }}
+        animate={{ scale: active ? 1.08 : 1, y: active ? -1 : 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 420 }}
         style={{ color: active ? ACTIVE_COLOR : IDLE_COLOR, position: 'relative' }}
       >
@@ -96,7 +94,7 @@ export const BottomNav: React.FC = () => {
           background: 'rgba(8,8,12,0.97)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
-          borderTop: '1px solid rgba(232,112,64,0.1)',
+          borderTop: '1px solid rgba(232,112,64,0.08)',
           minHeight: 64,
         }}
       >
@@ -110,18 +108,18 @@ export const BottomNav: React.FC = () => {
             whileHover={{ scale: 1.04 }}
             onClick={() => setShowNewTask(true)}
             aria-label="Create new task"
-            className="w-13 h-13 rounded-2xl flex items-center justify-center relative"
+            className="relative flex items-center justify-center rounded-2xl"
             style={{
               width: 52,
               height: 52,
-              background: 'linear-gradient(145deg, #E08060 0%, #C4663E 100%)',
-              boxShadow: '0 4px 20px rgba(232,112,64,0.55), 0 0 0 3px rgba(8,8,16,0.95)',
+              background: 'linear-gradient(145deg, #F09868 0%, #E87040 50%, #C45A28 100%)',
+              boxShadow: '0 4px 20px rgba(232,112,64,0.55), 0 0 0 3px rgba(8,8,12,0.95)',
               marginTop: -16,
             }}
           >
             <Plus size={24} color="#fff" strokeWidth={2.5} />
             <motion.div
-              animate={{ scale: [1, 1.6, 1], opacity: [0.35, 0, 0.35] }}
+              animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute inset-0 rounded-2xl pointer-events-none"
               style={{ background: 'rgba(232,112,64,0.45)' }}

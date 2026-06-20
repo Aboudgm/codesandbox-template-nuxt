@@ -11,7 +11,6 @@ import { useAppStore }     from './store/useAppStore'
 import { getAgents, createTask } from './lib/api'
 
 // ─── Lazy-loaded page chunks ──────────────────────────────────────────────────
-// Each page is its own async chunk; TaskDetail defers the 787KB markdown bundle
 const Dashboard    = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const TasksList    = lazy(() => import('./pages/TasksList').then(m => ({ default: m.TasksList })))
 const TaskDetail   = lazy(() => import('./pages/TaskDetail').then(m => ({ default: m.TaskDetail })))
@@ -30,7 +29,7 @@ const NeuralBackground: React.FC = () => {
     if (!ctx) return
 
     let rafId: number
-    let pts: { x: number; y: number; vx: number; vy: number; r: number; o: number }[] = []
+    let pts: { x: number; y: number; vx: number; vy: number; r: number; o: number; c: number }[] = []
 
     const resize = () => {
       canvas.width  = window.innerWidth
@@ -40,18 +39,19 @@ const NeuralBackground: React.FC = () => {
     const init = () => {
       const n = Math.min(Math.floor((canvas.width * canvas.height) / 22000), 55)
       pts = Array.from({ length: n }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r:  Math.random() * 1.5 + 0.4,
-        o:  Math.random() * 0.4 + 0.1,
+        x:  Math.random() * canvas.width,
+        y:  Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        r:  Math.random() * 1.4 + 0.4,
+        o:  Math.random() * 0.35 + 0.08,
+        c:  Math.random(),   // 0 = coral, 1 = violet
       }))
     }
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const D = 120
+      const D = 130
 
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i]
@@ -59,9 +59,14 @@ const NeuralBackground: React.FC = () => {
         if (p.x < 0 || p.x > canvas.width)  p.vx *= -1
         if (p.y < 0 || p.y > canvas.height) p.vy *= -1
 
+        // Alternate coral/violet particles
+        const r = p.c < 0.6 ? 232 : 155
+        const g = p.c < 0.6 ? 112 : 140
+        const b = p.c < 0.6 ? 64  : 232
+
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(232,112,64,${p.o * 0.7})`
+        ctx.fillStyle = `rgba(${r},${g},${b},${p.o * 0.7})`
         ctx.fill()
 
         for (let j = i + 1; j < pts.length; j++) {
@@ -69,16 +74,16 @@ const NeuralBackground: React.FC = () => {
           const dx = p.x - q.x, dy = p.y - q.y
           const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < D) {
-            const alpha = (1 - dist / D) * 0.09
-            const g = ctx.createLinearGradient(p.x, p.y, q.x, q.y)
-            g.addColorStop(0, `rgba(232,112,64,${alpha})`)
-            g.addColorStop(0.5, `rgba(155,140,232,${alpha * 0.4})`)
-            g.addColorStop(1, `rgba(232,112,64,${alpha})`)
+            const alpha = (1 - dist / D) * 0.07
+            const g2 = ctx.createLinearGradient(p.x, p.y, q.x, q.y)
+            g2.addColorStop(0, `rgba(232,112,64,${alpha})`)
+            g2.addColorStop(0.5, `rgba(155,140,232,${alpha * 0.5})`)
+            g2.addColorStop(1, `rgba(232,112,64,${alpha})`)
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(q.x, q.y)
-            ctx.strokeStyle = g
-            ctx.lineWidth = 0.5
+            ctx.strokeStyle = g2
+            ctx.lineWidth = 0.45
             ctx.stroke()
           }
         }
@@ -96,7 +101,7 @@ const NeuralBackground: React.FC = () => {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 0, opacity: 0.5 }}
+      style={{ zIndex: 0, opacity: 0.45 }}
     />
   )
 }
@@ -145,7 +150,7 @@ const QuickTaskSheet: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60]"
-            style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+            style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(10px)' }}
             onClick={() => setShowNewTask(false)}
           />
           <motion.div
@@ -162,26 +167,29 @@ const QuickTaskSheet: React.FC = () => {
             <div
               className="rounded-3xl p-5"
               style={{
-                background: 'rgba(10,8,18,0.99)',
-                border: '1px solid rgba(232,112,64,0.18)',
-                boxShadow: '0 -20px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(232,112,64,0.05)',
+                background: 'rgba(10,10,14,0.99)',
+                border: '1px solid rgba(232,112,64,0.16)',
+                boxShadow: '0 -24px 80px rgba(0,0,0,0.80), 0 0 0 1px rgba(232,112,64,0.04)',
               }}
             >
               {/* Handle */}
               <div className="flex justify-center mb-4">
-                <div className="w-8 h-1 rounded-full" style={{ background: 'rgba(80,70,90,0.5)' }} />
+                <div className="w-8 h-1 rounded-full" style={{ background: 'rgba(80,70,90,0.4)' }} />
               </div>
 
               {/* Header */}
               <div className="flex items-center gap-2.5 mb-4">
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(232,112,64,0.1)', border: '1px solid rgba(232,112,64,0.22)' }}
+                  style={{
+                    background: 'rgba(232,112,64,0.10)',
+                    border: '1px solid rgba(232,112,64,0.20)',
+                  }}
                 >
                   <Sparkles size={15} style={{ color: '#E87040' }} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold" style={{ color: '#EEEEF0' }}>New Task</h2>
+                  <h2 className="text-sm font-bold" style={{ color: '#F0F0F4' }}>New Task</h2>
                   <p className="text-[11px]" style={{ color: '#55556A' }}>Multi-agent AI will handle it</p>
                 </div>
               </div>
@@ -189,7 +197,10 @@ const QuickTaskSheet: React.FC = () => {
               {/* Input */}
               <div
                 className="rounded-2xl px-4 py-3 mb-3"
-                style={{ background: 'rgba(6,5,12,0.85)', border: '1px solid rgba(50,46,68,0.7)' }}
+                style={{
+                  background: 'rgba(6,5,10,0.90)',
+                  border: '1px solid rgba(255,255,255,0.055)',
+                }}
               >
                 <textarea
                   ref={inputRef}
@@ -198,7 +209,7 @@ const QuickTaskSheet: React.FC = () => {
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCreate() } }}
                   placeholder="Describe what you want to accomplish…"
                   className="w-full bg-transparent text-sm outline-none resize-none leading-relaxed placeholder-muted"
-                  style={{ color: '#EEEEF0' }}
+                  style={{ color: '#F0F0F4' }}
                   rows={3}
                 />
               </div>
@@ -211,8 +222,8 @@ const QuickTaskSheet: React.FC = () => {
                     onClick={() => setGoal(chip)}
                     className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
                     style={{
-                      background: goal === chip ? 'rgba(232,112,64,0.12)' : 'rgba(18,16,28,0.7)',
-                      border:     goal === chip ? '1px solid rgba(232,112,64,0.35)' : '1px solid rgba(255,255,255,0.055)',
+                      background: goal === chip ? 'rgba(232,112,64,0.10)' : 'rgba(22,22,30,0.8)',
+                      border:     goal === chip ? '1px solid rgba(232,112,64,0.28)' : '1px solid rgba(255,255,255,0.055)',
                       color:      goal === chip ? '#E87040' : '#55556A',
                     }}
                   >
@@ -228,7 +239,7 @@ const QuickTaskSheet: React.FC = () => {
                 disabled={!goal.trim() || creating}
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
                 style={{
-                  background: 'linear-gradient(135deg, #E08060 0%, #C4663E 100%)',
+                  background: 'linear-gradient(135deg, #F09868 0%, #E87040 50%, #C45A28 100%)',
                   boxShadow: '0 4px 24px rgba(232,112,64,0.38)',
                 }}
               >
@@ -280,7 +291,7 @@ function AppContent() {
     return () => clearInterval(id)
   }, [setAgents, setConnected])
 
-  // ⌘K / Ctrl+K to open command palette
+  // ⌘K / Ctrl+K
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -293,7 +304,10 @@ function AppContent() {
   }, [setCmdPalette])
 
   return (
-    <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#08080C' }}>
+    <div
+      className="relative min-h-screen min-h-dvh overflow-x-hidden"
+      style={{ background: '#08080C' }}
+    >
       {/* Skip-to-content for keyboard users (WCAG 2.4.1) */}
       <a href="#main-content" className="skip-nav">Skip to content</a>
 
@@ -302,7 +316,8 @@ function AppContent() {
       <div className="relative" style={{ zIndex: 1 }}>
         <Header title={pageTitle} showBack={isTaskDetail} />
 
-        <main id="main-content"
+        <main
+          id="main-content"
           className="pt-14"
           style={{
             paddingBottom: isTaskDetail

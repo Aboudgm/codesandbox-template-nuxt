@@ -1,7 +1,3 @@
-/**
- * SSE streaming client for real-time agent event consumption.
- * Connects to /api/tasks/{id}/stream and dispatches typed events.
- */
 import type { StreamEvent, StreamEventType } from '../types'
 
 export type StreamCallback = (event: StreamEvent | { type: 'done' | 'task_done'; status?: string; task_id?: string }) => void
@@ -22,7 +18,6 @@ export function connectTaskStream(taskId: string, onEvent: StreamCallback, backe
       try {
         const data = JSON.parse(e.data)
         onEvent(data)
-        // Auto-close on done signal
         if (data.type === 'task_done' || data.type === 'done') {
           es?.close()
         }
@@ -34,7 +29,6 @@ export function connectTaskStream(taskId: string, onEvent: StreamCallback, backe
     es.onerror = () => {
       es?.close()
       if (!closed) {
-        // Signal connection loss
         onEvent({ type: 'done', status: 'error' })
       }
     }
@@ -64,12 +58,36 @@ export function getAgentIcon(agentType: string): string {
   const map: Record<string, string> = {
     STRATEGIST:   '⚡',
     ORCHESTRATOR: '⚡',
-    RESEARCHER:   '🔍',
-    CODER:        '⚙️',
-    WRITER:       '✍️',
-    MEMORY:       '🧠',
+    RESEARCHER:   '🔭',
+    CODER:        '⚙',
+    WRITER:       '✦',
+    MEMORY:       '◎',
   }
-  return map[agentType?.toUpperCase()] ?? '🤖'
+  return map[agentType?.toUpperCase()] ?? '◆'
+}
+
+export function getAgentName(agentType: string): string {
+  const map: Record<string, string> = {
+    STRATEGIST:   'NEXUS',
+    ORCHESTRATOR: 'NEXUS',
+    RESEARCHER:   'ARIA',
+    CODER:        'FORGE',
+    WRITER:       'SCRIBE',
+    MEMORY:       'ECHO',
+  }
+  return map[agentType?.toUpperCase()] ?? agentType
+}
+
+export function getAgentTagline(agentType: string): string {
+  const map: Record<string, string> = {
+    STRATEGIST:   'I orchestrate. You describe, I execute.',
+    ORCHESTRATOR: 'I orchestrate. You describe, I execute.',
+    RESEARCHER:   'Thorough. Nothing escapes my search.',
+    CODER:        'Spec in, code out. Clean and precise.',
+    WRITER:       'Every word matters. Every story lands.',
+    MEMORY:       'I remember everything. Ask me anything.',
+  }
+  return map[agentType?.toUpperCase()] ?? ''
 }
 
 export function getEventLabel(type: StreamEventType | string): string {

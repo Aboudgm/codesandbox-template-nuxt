@@ -45,15 +45,15 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
   }, [notifEnabled])
 
   const statusColor =
-    backendStatus === 'online'  ? '#4ADE80' :
-    backendStatus === 'offline' ? '#EF6060' : '#F5C518'
+    backendStatus === 'online'   ? '#2DD4BF' :
+    backendStatus === 'offline'  ? '#EF6060' : '#F5C518'
 
   return (
     <header
       className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
-        background: 'rgba(8,8,12,0.94)',
+        background: 'rgba(8,8,12,0.95)',
         backdropFilter: 'blur(28px)',
         WebkitBackdropFilter: 'blur(28px)',
         borderBottom: '1px solid rgba(232,112,64,0.08)',
@@ -65,13 +65,17 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
           <button
             onClick={() => navigate(-1)}
             className="flex items-center justify-center w-8 h-8 rounded-xl transition-all active:scale-95"
-            style={{ background: 'rgba(232,112,64,0.08)', border: '1px solid rgba(232,112,64,0.18)' }}
+            style={{
+              background: 'rgba(232,112,64,0.07)',
+              border: '1px solid rgba(232,112,64,0.16)',
+            }}
             aria-label="Go back"
           >
             <ArrowLeft size={16} style={{ color: '#E87040' }} />
           </button>
         ) : (
           <div className="flex items-center gap-2.5">
+            {/* Logo orb */}
             <motion.div
               animate={{
                 boxShadow: [
@@ -82,12 +86,15 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
               }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'radial-gradient(circle at 35% 35%, rgba(232,112,64,0.22), rgba(8,8,12,0.9))' }}
+              style={{
+                background: 'linear-gradient(145deg, rgba(232,112,64,0.22), rgba(232,112,64,0.06))',
+                border: '1px solid rgba(232,112,64,0.20)',
+              }}
             >
               <span
                 className="font-black text-[11px] select-none"
                 style={{
-                  background: 'linear-gradient(135deg, #F09868, #E87040)',
+                  background: 'linear-gradient(135deg, #F0A070, #E87040)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -113,7 +120,10 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
       {/* Center title on sub-pages */}
       {showBack && (
         <div className="flex-1 flex justify-center">
-          <span className="text-sm font-semibold truncate max-w-[160px]" style={{ color: '#F0F0F4' }}>
+          <span
+            className="text-sm font-semibold truncate max-w-[160px]"
+            style={{ color: '#F0F0F4' }}
+          >
             {title}
           </span>
         </div>
@@ -125,7 +135,9 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
         <div className="flex items-center gap-1.5 mr-1">
           <motion.div
             animate={backendStatus === 'online'
-              ? { scale: [1, 1.4, 1], opacity: [0.9, 0.4, 0.9] }
+              ? { scale: [1, 1.5, 1], opacity: [0.9, 0.35, 0.9] }
+              : backendStatus === 'checking'
+              ? { opacity: [1, 0.4, 1] }
               : {}
             }
             transition={{ duration: 2.5, repeat: Infinity }}
@@ -134,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
           />
         </div>
 
-        {/* Running badge */}
+        {/* Running tasks badge */}
         <AnimatePresence>
           {running > 0 && (
             <motion.div
@@ -143,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
               exit={{ scale: 0, opacity: 0 }}
               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(232,112,64,0.10)',
-                border: '1px solid rgba(232,112,64,0.28)',
+                background: 'rgba(232,112,64,0.09)',
+                border: '1px solid rgba(232,112,64,0.24)',
                 color: '#E87040',
               }}
             >
@@ -159,32 +171,35 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
           )}
         </AnimatePresence>
 
-        {/* ⌘K */}
+        {/* ⌘K command palette */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setCmdPalette(true)}
-          className="flex items-center justify-center w-8 h-8 rounded-xl"
-          style={{ background: 'rgba(232,112,64,0.07)', border: '1px solid rgba(232,112,64,0.16)' }}
+          className="flex items-center justify-center w-8 h-8 rounded-xl transition-all"
+          style={{
+            background: 'rgba(232,112,64,0.07)',
+            border: '1px solid rgba(232,112,64,0.15)',
+          }}
           aria-label="Command palette"
           title="Command palette (⌘K)"
         >
           <Command size={14} style={{ color: '#E87040' }} />
         </motion.button>
 
-        {/* Bell */}
+        {/* Notification bell */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleNotifToggle}
-          className="flex items-center justify-center w-8 h-8 rounded-xl"
+          className="flex items-center justify-center w-8 h-8 rounded-xl transition-all"
           style={{
-            background: notifEnabled ? 'rgba(74,222,128,0.07)' : 'rgba(29,29,38,0.4)',
-            border: notifEnabled ? '1px solid rgba(74,222,128,0.18)' : '1px solid transparent',
+            background: notifEnabled ? 'rgba(45,212,191,0.07)' : 'rgba(29,29,38,0.4)',
+            border: notifEnabled ? '1px solid rgba(45,212,191,0.15)' : '1px solid transparent',
           }}
           aria-label={notifEnabled ? 'Notifications on' : 'Enable notifications'}
         >
           {notifEnabled
-            ? <Bell size={14} style={{ color: '#4ADE80' }} />
-            : <BellOff size={14} style={{ color: '#55556A' }} />
+            ? <Bell size={14} style={{ color: '#2DD4BF' }} />
+            : <BellOff size={14} style={{ color: '#33333C' }} />
           }
         </motion.button>
       </div>

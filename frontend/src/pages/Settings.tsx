@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Eye, EyeOff, CheckCircle, XCircle, Loader2, Trash2,
-  AlertTriangle, Info, ToggleLeft, ToggleRight, Bell,
-  Globe, Wifi, WifiOff, Zap, Star,
+  AlertTriangle, ToggleLeft, ToggleRight, Bell,
+  Wifi, WifiOff, Globe, Zap, Star,
 } from 'lucide-react'
 import { GlassCard } from '../components/UI/GlassCard'
 import {
@@ -40,11 +40,11 @@ const KeyInput: React.FC<KeyInputProps> = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-xs font-medium text-text-secondary">{label}</label>
+        <label className="text-xs font-medium" style={{ color: '#8A8A9A' }}>{label}</label>
         {recommended && (
           <span
             className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-bold"
-            style={{ background: 'rgba(232,112,64,0.15)', color: '#E87040', border: '1px solid rgba(232,112,64,0.3)' }}
+            style={{ background: 'rgba(232,112,64,0.12)', color: '#E87040', border: '1px solid rgba(232,112,64,0.25)' }}
           >
             <Star size={9} />
             RECOMMENDED
@@ -53,7 +53,7 @@ const KeyInput: React.FC<KeyInputProps> = ({
         {hasSavedKey && !value && (
           <span
             className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-            style={{ background: 'rgba(78,204,163,0.12)', color: '#4ECCA3', border: '1px solid rgba(78,204,163,0.2)' }}
+            style={{ background: 'rgba(45,212,191,0.10)', color: '#2DD4BF', border: '1px solid rgba(45,212,191,0.20)' }}
           >
             ✓ Saved
           </span>
@@ -61,7 +61,7 @@ const KeyInput: React.FC<KeyInputProps> = ({
         {testStatus === 'ok' && (
           <span
             className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-            style={{ background: 'rgba(78,204,163,0.12)', color: '#4ECCA3', border: '1px solid rgba(78,204,163,0.2)' }}
+            style={{ background: 'rgba(45,212,191,0.10)', color: '#2DD4BF', border: '1px solid rgba(45,212,191,0.20)' }}
           >
             ✓ Connected
           </span>
@@ -71,20 +71,21 @@ const KeyInput: React.FC<KeyInputProps> = ({
       <div className="flex gap-2">
         <div
           className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5"
-          style={{ background: 'rgba(18,18,31,0.8)', border: '1px solid rgba(42,45,74,0.7)' }}
+          style={{ background: 'rgba(16,16,22,0.85)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           <input
             type={show ? 'text' : 'password'}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder ?? 'Enter API key...'}
+            placeholder={placeholder ?? 'Enter API key…'}
             className="flex-1 bg-transparent text-sm outline-none font-mono placeholder-muted"
-            style={{ color: '#EEEEF0' }}
+            style={{ color: '#F0F0F4' }}
           />
           <button
             onClick={() => setShow(!show)}
-            className="text-text-muted transition-colors p-0.5"
+            className="p-0.5 transition-opacity hover:opacity-80"
             aria-label={show ? 'Hide key' : 'Show key'}
+            style={{ color: '#55556A' }}
           >
             {show ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -97,22 +98,22 @@ const KeyInput: React.FC<KeyInputProps> = ({
           className="px-3 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-40 min-w-[56px] flex items-center justify-center"
           style={{
             background:
-              testStatus === 'ok' ? 'rgba(78,204,163,0.12)' :
-              testStatus === 'fail' ? 'rgba(239,83,80,0.1)' :
-              'rgba(42,45,74,0.5)',
+              testStatus === 'ok'   ? 'rgba(45,212,191,0.10)' :
+              testStatus === 'fail' ? 'rgba(239,96,96,0.08)'  :
+              'rgba(29,29,38,0.7)',
             border:
-              testStatus === 'ok' ? '1px solid rgba(78,204,163,0.25)' :
-              testStatus === 'fail' ? '1px solid rgba(239,83,80,0.25)' :
-              '1px solid rgba(42,45,74,0.7)',
-            color: '#9096B8',
+              testStatus === 'ok'   ? '1px solid rgba(45,212,191,0.22)' :
+              testStatus === 'fail' ? '1px solid rgba(239,96,96,0.22)' :
+              '1px solid rgba(255,255,255,0.06)',
+            color: '#8A8A9A',
           }}
         >
           {testStatus === 'testing' ? (
             <Loader2 size={14} className="animate-spin" />
           ) : testStatus === 'ok' ? (
-            <CheckCircle size={14} style={{ color: '#4ECCA3' }} />
+            <CheckCircle size={14} style={{ color: '#2DD4BF' }} />
           ) : testStatus === 'fail' ? (
-            <XCircle size={14} style={{ color: '#EF5350' }} />
+            <XCircle size={14} style={{ color: '#EF6060' }} />
           ) : (
             'Test'
           )}
@@ -120,7 +121,7 @@ const KeyInput: React.FC<KeyInputProps> = ({
       </div>
 
       {hint && (
-        <p className="text-[11px] text-text-muted leading-relaxed">{hint}</p>
+        <p className="text-[11px] leading-relaxed" style={{ color: '#55556A' }}>{hint}</p>
       )}
     </div>
   )
@@ -134,8 +135,8 @@ const ToggleRow: React.FC<{
 }> = ({ label, description, value, onChange }) => (
   <div className="flex items-center justify-between gap-4">
     <div className="flex-1">
-      <p className="text-sm font-medium text-text-primary">{label}</p>
-      {description && <p className="text-xs text-text-muted mt-0.5">{description}</p>}
+      <p className="text-sm font-medium" style={{ color: '#F0F0F4' }}>{label}</p>
+      {description && <p className="text-xs mt-0.5" style={{ color: '#55556A' }}>{description}</p>}
     </div>
     <button
       onClick={() => onChange(!value)}
@@ -147,7 +148,7 @@ const ToggleRow: React.FC<{
     >
       {value
         ? <ToggleRight size={28} style={{ color: '#E87040' }} aria-hidden="true" />
-        : <ToggleLeft size={28} className="text-text-muted" aria-hidden="true" />
+        : <ToggleLeft size={28} style={{ color: '#55556A' }} aria-hidden="true" />
       }
     </button>
   </div>
@@ -157,7 +158,12 @@ const Section: React.FC<{ title: string; children: React.ReactNode; delay?: numb
   title, children, delay = 0, accent,
 }) => (
   <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-    <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">{title}</h2>
+    <h2
+      className="text-xs font-semibold uppercase tracking-widest mb-3"
+      style={{ color: '#55556A' }}
+    >
+      {title}
+    </h2>
     <GlassCard glow={accent}>
       <div className="space-y-4">{children}</div>
     </GlassCard>
@@ -167,19 +173,15 @@ const Section: React.FC<{ title: string; children: React.ReactNode; delay?: numb
 // ─── Model options ────────────────────────────────────────────────────────────
 
 const MODEL_OPTIONS = [
-  // Gemini — Primary / Recommended
   { value: 'gemini-2.5-pro',   label: 'Gemini 2.5 Pro (best quality)' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (fast + capable)' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  // Claude (Anthropic)
   { value: 'claude-opus-4-7',           label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6' },
   { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-  // GPT (OpenAI)
   { value: 'gpt-5.5',     label: 'GPT-5.5' },
   { value: 'gpt-4.1',     label: 'GPT-4.1' },
   { value: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
-  // Grok (xAI)
   { value: 'grok-3',      label: 'Grok 3' },
   { value: 'grok-3-mini', label: 'Grok 3 mini' },
 ]
@@ -268,7 +270,6 @@ export const Settings: React.FC = () => {
         code_execution_enabled: codeExecEnabled,
         max_concurrent_agents:  maxConcurrentAgents,
       })
-      // Refresh saved-key indicators
       setSavedKeys(prev => ({
         ...prev,
         gemini:    geminiKey    ? true : prev.gemini,
@@ -319,54 +320,43 @@ export const Settings: React.FC = () => {
     else toast.error('Notification permission denied')
   }
 
-  const statusDot = (
-    <span
-      className="w-2 h-2 rounded-full inline-block"
-      style={{
-        background:
-          backendStatus === 'online' ? '#4ECCA3' :
-          backendStatus === 'offline' ? '#EF5350' : '#9096B8',
-      }}
-    />
-  )
+  const statusColor =
+    backendStatus === 'online'  ? '#2DD4BF' :
+    backendStatus === 'offline' ? '#EF6060' : '#F5C518'
 
   return (
     <div className="px-4 pt-4 pb-8 max-w-2xl mx-auto space-y-5">
 
-      {/* ── Backend Connection ──────────────────────────────────────── */}
+      {/* ── Backend Connection ───────────────────────────────────────── */}
       <Section title="Backend Connection" delay={0}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {backendStatus === 'online'
-              ? <Wifi size={14} style={{ color: '#4ECCA3' }} />
+              ? <Wifi size={14} style={{ color: '#2DD4BF' }} />
               : backendStatus === 'offline'
-              ? <WifiOff size={14} style={{ color: '#EF5350' }} />
-              : <Globe size={14} className="text-text-muted" />}
-            <span className="text-sm font-medium text-text-primary">Status</span>
+              ? <WifiOff size={14} style={{ color: '#EF6060' }} />
+              : <Globe size={14} style={{ color: '#55556A' }} />}
+            <span className="text-sm font-medium" style={{ color: '#F0F0F4' }}>Status</span>
           </div>
           <div className="flex items-center gap-2">
-            {statusDot}
             <span
-              className="text-xs font-medium"
-              style={{
-                color:
-                  backendStatus === 'online' ? '#4ECCA3' :
-                  backendStatus === 'offline' ? '#EF5350' : '#9096B8',
-              }}
-            >
+              className="w-2 h-2 rounded-full"
+              style={{ background: statusColor }}
+            />
+            <span className="text-xs font-medium" style={{ color: statusColor }}>
               {backendStatus === 'online' ? 'Online' : backendStatus === 'offline' ? 'Offline' : 'Unknown'}
               {activeProvider && backendStatus === 'online' && ` · ${activeProvider}`}
             </span>
           </div>
         </div>
 
-        <div className="h-px" style={{ background: 'rgba(42,45,74,0.5)' }} />
+        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
         <div className="space-y-2">
-          <label className="text-xs font-medium text-text-secondary">Backend URL</label>
+          <label className="text-xs font-medium" style={{ color: '#8A8A9A' }}>Backend URL</label>
           <div
             className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-            style={{ background: 'rgba(18,18,31,0.8)', border: '1px solid rgba(42,45,74,0.7)' }}
+            style={{ background: 'rgba(16,16,22,0.85)', border: '1px solid rgba(255,255,255,0.06)' }}
           >
             <input
               type="url"
@@ -374,13 +364,17 @@ export const Settings: React.FC = () => {
               onChange={(e) => setBackendUrlState(e.target.value)}
               placeholder="http://localhost:8000"
               className="flex-1 bg-transparent text-sm outline-none font-mono placeholder-muted"
-            style={{ color: '#EEEEF0' }}
+              style={{ color: '#F0F0F4' }}
             />
           </div>
-          <p className="text-xs text-text-muted leading-relaxed">
+          <p className="text-xs leading-relaxed" style={{ color: '#55556A' }}>
             Run the Docker stack locally:{' '}
-            <code className="font-mono" style={{ color: '#4FC3F7' }}>docker-compose up --build</code>
-            . Leave blank if frontend and backend share the same server.
+            <code
+              className="font-mono px-1 py-0.5 rounded text-xs"
+              style={{ background: 'rgba(56,189,248,0.08)', color: '#38BDF8' }}
+            >
+              docker-compose up --build
+            </code>
           </p>
         </div>
 
@@ -389,7 +383,11 @@ export const Settings: React.FC = () => {
           onClick={handleCheckBackend}
           disabled={checkingBackend}
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-          style={{ background: 'rgba(42,45,74,0.5)', border: '1px solid rgba(42,45,74,0.7)', color: '#9096B8' }}
+          style={{
+            background: 'rgba(29,29,38,0.7)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            color: '#8A8A9A',
+          }}
         >
           {checkingBackend ? <Loader2 size={14} className="animate-spin" /> : <Wifi size={14} />}
           Check Connection
@@ -400,8 +398,8 @@ export const Settings: React.FC = () => {
       <Section title="Notifications" delay={0.03}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <p className="text-sm font-medium text-text-primary">Browser Notifications</p>
-            <p className="text-xs text-text-muted mt-0.5">
+            <p className="text-sm font-medium" style={{ color: '#F0F0F4' }}>Browser Notifications</p>
+            <p className="text-xs mt-0.5" style={{ color: '#55556A' }}>
               {notifPermission === 'granted'
                 ? 'Enabled — you will be alerted when tasks complete.'
                 : notifPermission === 'denied'
@@ -416,14 +414,18 @@ export const Settings: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleEnableNotifications}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium flex-shrink-0"
-              style={{ background: 'rgba(232,112,64,0.12)', border: '1px solid rgba(232,112,64,0.3)', color: '#E87040' }}
+              style={{
+                background: 'rgba(232,112,64,0.10)',
+                border: '1px solid rgba(232,112,64,0.25)',
+                color: '#E87040',
+              }}
             >
               <Bell size={13} />
               Enable
             </motion.button>
           )}
-          {notifPermission === 'granted' && <CheckCircle size={18} style={{ color: '#4ECCA3', flexShrink: 0 }} />}
-          {notifPermission === 'denied'  && <XCircle size={18} style={{ color: '#EF5350', flexShrink: 0 }} />}
+          {notifPermission === 'granted' && <CheckCircle size={18} style={{ color: '#2DD4BF', flexShrink: 0 }} />}
+          {notifPermission === 'denied'  && <XCircle size={18} style={{ color: '#EF6060', flexShrink: 0 }} />}
         </div>
       </Section>
 
@@ -431,40 +433,42 @@ export const Settings: React.FC = () => {
       <Section title="API Keys" delay={0.05} accent="#E87040">
         <div
           className="flex items-start gap-2 p-3 rounded-xl"
-          style={{ background: 'rgba(232,112,64,0.06)', border: '1px solid rgba(232,112,64,0.18)' }}
+          style={{ background: 'rgba(232,112,64,0.05)', border: '1px solid rgba(232,112,64,0.15)' }}
         >
           <Zap size={14} style={{ color: '#E87040' }} className="mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-text-secondary leading-relaxed">
+          <p className="text-xs leading-relaxed" style={{ color: '#8A8A9A' }}>
             Keys are stored in{' '}
-            <code className="font-mono text-xs px-1 py-0.5 rounded" style={{ background: 'rgba(79,195,247,0.1)', color: '#4FC3F7' }}>
+            <code
+              className="font-mono text-xs px-1 py-0.5 rounded"
+              style={{ background: 'rgba(56,189,248,0.08)', color: '#38BDF8' }}
+            >
               config.yaml
             </code>
-            {' '}on your server. You can test a key before saving it.
+            {' '}on your server. Test before saving.
           </p>
         </div>
 
-        {/* Gemini — First & Recommended */}
         <KeyInput
           label="Google Gemini"
           provider="gemini"
           value={geminiKey}
           onChange={setGeminiKey}
-          placeholder="AIza..."
+          placeholder="AIza…"
           onTest={() => handleTest('gemini')}
           testStatus={testStatus.gemini}
           hasSavedKey={savedKeys.gemini}
           recommended
-          hint="Free tier available at aistudio.google.com/apikey — no credit card required."
+          hint="Free tier at aistudio.google.com/apikey — no credit card required."
         />
 
-        <div className="h-px" style={{ background: 'rgba(42,45,74,0.4)' }} />
+        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
         <KeyInput
           label="Anthropic (Claude)"
           provider="anthropic"
           value={anthropicKey}
           onChange={setAnthropicKey}
-          placeholder="sk-ant-..."
+          placeholder="sk-ant-…"
           onTest={() => handleTest('anthropic')}
           testStatus={testStatus.anthropic}
           hasSavedKey={savedKeys.anthropic}
@@ -475,7 +479,7 @@ export const Settings: React.FC = () => {
           provider="openai"
           value={openaiKey}
           onChange={setOpenaiKey}
-          placeholder="sk-..."
+          placeholder="sk-…"
           onTest={() => handleTest('openai')}
           testStatus={testStatus.openai}
           hasSavedKey={savedKeys.openai}
@@ -486,7 +490,7 @@ export const Settings: React.FC = () => {
           provider="xai"
           value={xaiKey}
           onChange={setXaiKey}
-          placeholder="xai-..."
+          placeholder="xai-…"
           onTest={() => handleTest('xai')}
           testStatus={testStatus.xai}
           hasSavedKey={savedKeys.xai}
@@ -496,15 +500,19 @@ export const Settings: React.FC = () => {
       {/* ── Model Settings ──────────────────────────────────────────── */}
       <Section title="Model Settings" delay={0.1}>
         <div className="space-y-2">
-          <label className="text-xs font-medium text-text-secondary">Default Model</label>
+          <label className="text-xs font-medium" style={{ color: '#8A8A9A' }}>Default Model</label>
           <select
             value={defaultModel}
             onChange={(e) => setDefaultModel(e.target.value)}
-            className="w-full rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none appearance-none"
-            style={{ background: 'rgba(18,18,31,0.8)', border: '1px solid rgba(42,45,74,0.7)' }}
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none appearance-none"
+            style={{
+              background: 'rgba(16,16,22,0.85)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: '#F0F0F4',
+            }}
           >
             {MODEL_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value} style={{ background: '#12121F' }}>
+              <option key={value} value={value} style={{ background: '#16161E' }}>
                 {label}
               </option>
             ))}
@@ -513,28 +521,33 @@ export const Settings: React.FC = () => {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-medium text-text-secondary">Temperature</label>
+            <label className="text-xs font-medium" style={{ color: '#8A8A9A' }}>Temperature</label>
             <span className="text-xs font-mono" style={{ color: '#E87040' }}>{temperature.toFixed(1)}</span>
           </div>
           <input
             type="range" min="0" max="1" step="0.1"
             value={temperature}
             onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            className="w-full" style={{ accentColor: '#E87040' }}
+            className="w-full"
+            style={{ accentColor: '#E87040' }}
           />
-          <div className="flex justify-between text-xs text-text-muted">
+          <div className="flex justify-between text-xs" style={{ color: '#55556A' }}>
             <span>Precise</span><span>Creative</span>
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-medium text-text-secondary">Max Output Tokens</label>
+          <label className="text-xs font-medium" style={{ color: '#8A8A9A' }}>Max Output Tokens</label>
           <input
             type="number" min="256" max="65536" step="256"
             value={maxTokens}
             onChange={(e) => setMaxTokens(parseInt(e.target.value))}
-            className="w-full rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none font-mono"
-            style={{ background: 'rgba(18,18,31,0.8)', border: '1px solid rgba(42,45,74,0.7)' }}
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none font-mono"
+            style={{
+              background: 'rgba(16,16,22,0.85)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: '#F0F0F4',
+            }}
           />
         </div>
       </Section>
@@ -547,21 +560,21 @@ export const Settings: React.FC = () => {
           value={memoryEnabled}
           onChange={setMemoryEnabled}
         />
-        <div className="h-px" style={{ background: 'rgba(42,45,74,0.5)' }} />
+        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
         <ToggleRow
           label="Code Execution"
           description="Allow agents to run Python scripts"
           value={codeExecEnabled}
           onChange={setCodeExecEnabled}
         />
-        <div className="h-px" style={{ background: 'rgba(42,45,74,0.5)' }} />
+        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm font-medium text-text-primary">Max Concurrent Agents</p>
-              <p className="text-xs text-text-muted mt-0.5">How many agents run simultaneously</p>
+              <p className="text-sm font-medium" style={{ color: '#F0F0F4' }}>Max Concurrent Agents</p>
+              <p className="text-xs mt-0.5" style={{ color: '#55556A' }}>How many agents run simultaneously</p>
             </div>
-            <span className="text-sm font-mono font-bold" style={{ color: '#4FC3F7' }}>
+            <span className="text-sm font-mono font-bold" style={{ color: '#38BDF8' }}>
               {maxConcurrentAgents}
             </span>
           </div>
@@ -569,9 +582,10 @@ export const Settings: React.FC = () => {
             type="range" min="1" max="10" step="1"
             value={maxConcurrentAgents}
             onChange={(e) => setMaxConcurrentAgents(parseInt(e.target.value))}
-            className="w-full" style={{ accentColor: '#4FC3F7' }}
+            className="w-full"
+            style={{ accentColor: '#38BDF8' }}
           />
-          <div className="flex justify-between text-xs text-text-muted">
+          <div className="flex justify-between text-xs" style={{ color: '#55556A' }}>
             <span>1</span><span>5</span><span>10</span>
           </div>
         </div>
@@ -590,10 +604,10 @@ export const Settings: React.FC = () => {
             >
               <div
                 className="flex items-center gap-2 p-3 rounded-xl"
-                style={{ background: 'rgba(255,183,77,0.08)', border: '1px solid rgba(255,183,77,0.2)' }}
+                style={{ background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.18)' }}
               >
                 <AlertTriangle size={14} style={{ color: '#F5C518' }} className="flex-shrink-0" />
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs" style={{ color: '#8A8A9A' }}>
                   This will permanently delete all stored memories. Cannot be undone.
                 </p>
               </div>
@@ -602,15 +616,23 @@ export const Settings: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleClearMemories}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                  style={{ background: 'rgba(239,83,80,0.15)', border: '1px solid rgba(239,83,80,0.3)', color: '#EF5350' }}
+                  style={{
+                    background: 'rgba(239,96,96,0.12)',
+                    border: '1px solid rgba(239,96,96,0.25)',
+                    color: '#EF6060',
+                  }}
                 >
                   Yes, Delete All
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowClearConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-text-secondary"
-                  style={{ background: 'rgba(42,45,74,0.5)', border: '1px solid rgba(42,45,74,0.7)' }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                  style={{
+                    background: 'rgba(29,29,38,0.7)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: '#8A8A9A',
+                  }}
                 >
                   Cancel
                 </motion.button>
@@ -624,7 +646,11 @@ export const Settings: React.FC = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => setShowClearConfirm(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium w-full"
-              style={{ background: 'rgba(239,83,80,0.08)', border: '1px solid rgba(239,83,80,0.2)', color: '#EF5350' }}
+              style={{
+                background: 'rgba(239,96,96,0.06)',
+                border: '1px solid rgba(239,96,96,0.18)',
+                color: '#EF6060',
+              }}
             >
               <Trash2 size={15} />
               Clear All Memories
@@ -637,15 +663,15 @@ export const Settings: React.FC = () => {
       <Section title="About" delay={0.25}>
         <div className="space-y-3 text-sm">
           {[
-            { label: 'Version',        value: '2.0.0' },
-            { label: 'Framework',      value: 'NEXUS AI' },
-            { label: 'Agents',         value: '5 specialized (Gemini-first)' },
-            { label: 'Primary LLM',    value: 'Google Gemini 2.5' },
-            { label: 'Built with',     value: 'React + FastAPI' },
+            { label: 'Version',     value: '3.0.0'                         },
+            { label: 'Framework',   value: 'NEXUS AI'                      },
+            { label: 'Agents',      value: '5 specialized'                 },
+            { label: 'Primary LLM', value: 'Google Gemini 2.5'            },
+            { label: 'Built with',  value: 'React + FastAPI'               },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between items-center">
-              <span className="text-text-secondary">{label}</span>
-              <span className="text-text-primary font-medium font-mono text-xs">{value}</span>
+              <span style={{ color: '#8A8A9A' }}>{label}</span>
+              <span className="font-medium font-mono text-xs" style={{ color: '#F0F0F4' }}>{value}</span>
             </div>
           ))}
         </div>
@@ -660,8 +686,8 @@ export const Settings: React.FC = () => {
         style={{
           background: saving
             ? 'rgba(232,112,64,0.5)'
-            : 'linear-gradient(135deg, #E87040, #C4663E 50%, #7C71F0)',
-          boxShadow: '0 4px 24px rgba(232,112,64,0.25)',
+            : 'linear-gradient(135deg, #E87040 0%, #C45A28 50%, #9B8CE8 100%)',
+          boxShadow: saving ? 'none' : '0 4px 24px rgba(232,112,64,0.28)',
         }}
       >
         {saving ? (

@@ -1,30 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Zap, Database, Users, TrendingUp, ChevronRight } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Database, Users, TrendingUp, Command, ArrowRight, Send } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { AgentOrb } from '../components/UI/AgentOrb'
-import { ChatInput } from '../components/Chat/ChatInput'
-import { TaskCard } from '../components/Tasks/TaskCard'
 import { NexusGreeting } from '../components/UI/NexusGreeting'
+import { TaskCard } from '../components/Tasks/TaskCard'
 import { createTask, getTasks, getAgents, deleteTask, getStats } from '../lib/api'
 import { useAppStore } from '../store/useAppStore'
 
 const CAPABILITIES = [
-  { icon: '🔍', label: 'Deep Research',   prompt: 'Research and synthesize the latest developments in quantum computing for a technical briefing' },
-  { icon: '⚙️', label: 'Code & Build',    prompt: 'Build a Python REST API with authentication, rate limiting, and comprehensive error handling' },
-  { icon: '✍️', label: 'Write & Create',  prompt: 'Write a detailed technical blog post explaining how transformer models work' },
-  { icon: '📊', label: 'Analyze & Report', prompt: 'Analyze the current AI landscape and produce a structured market intelligence report' },
-  { icon: '🧠', label: 'Learn & Adapt',   prompt: 'What have you learned from previous tasks? Summarize your knowledge base' },
+  { label: 'Research',  prompt: 'Research in depth: ',         icon: '🔭' },
+  { label: 'Code',      prompt: 'Write and explain code for: ', icon: '⚙' },
+  { label: 'Write',     prompt: 'Write a professional piece on: ', icon: '✦' },
+  { label: 'Analyze',   prompt: 'Analyze and summarize: ',      icon: '📊' },
+  { label: 'Plan',      prompt: 'Create a strategic plan for: ', icon: '⚡' },
+  { label: 'Debug',     prompt: 'Debug and fix: ',               icon: '🐛' },
+  { label: 'Summarize', prompt: 'Summarize the key points of: ', icon: '◎' },
+  { label: 'Extract',   prompt: 'Extract insights from: ',       icon: '◆' },
 ]
 
 const AGENT_INFO = [
-  { type: 'STRATEGIST', name: 'NEXUS',  desc: 'Orchestrator', color: '#E87040' },
-  { type: 'RESEARCHER', name: 'ARIA',   desc: 'Research',     color: '#38BDF8' },
-  { type: 'CODER',      name: 'FORGE',  desc: 'Code',         color: '#2DD4BF' },
-  { type: 'WRITER',     name: 'SCRIBE', desc: 'Write',        color: '#9B8CE8' },
-  { type: 'MEMORY',     name: 'ECHO',   desc: 'Memory',       color: '#F5C518' },
+  { type: 'STRATEGIST', name: 'NEXUS',  desc: 'Orchestrator' },
+  { type: 'RESEARCHER', name: 'ARIA',   desc: 'Research'     },
+  { type: 'CODER',      name: 'FORGE',  desc: 'Code'         },
+  { type: 'WRITER',     name: 'SCRIBE', desc: 'Writer'       },
+  { type: 'MEMORY',     name: 'ECHO',   desc: 'Memory'       },
 ]
 
 const StatCard: React.FC<{
@@ -36,19 +38,19 @@ const StatCard: React.FC<{
     transition={{ delay, duration: 0.35 }}
     className="rounded-2xl p-3.5 flex flex-col gap-2"
     style={{
-      background: 'rgba(22,22,30,0.88)',
-      border: `1px solid ${color}1C`,
+      background: 'rgba(22,22,30,0.90)',
+      border: `1px solid ${color}14`,
     }}
   >
     <div
       className="w-7 h-7 rounded-lg flex items-center justify-center"
-      style={{ background: `${color}14` }}
+      style={{ background: `${color}12` }}
     >
-      <Icon size={14} style={{ color }} aria-hidden="true" />
+      <Icon size={14} style={{ color }} />
     </div>
     <div>
       <p className="text-xl font-bold tracking-tight" style={{ color: '#F0F0F4' }}>{value}</p>
-      <p className="text-[10px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: '#55556A' }}>
+      <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#33333C' }}>
         {label}
       </p>
     </div>
@@ -60,7 +62,8 @@ export const Dashboard: React.FC = () => {
   const queryClient   = useQueryClient()
   const { addTask, removeTask, setAgents, setCmdPalette } = useAppStore()
   const [isCreating, setIsCreating] = useState(false)
-  const [activeChip, setActiveChip] = useState<number | null>(null)
+  const [goal, setGoal] = useState('')
+  const [focused, setFocused] = useState(false)
 
   const { data: tasks  = [] } = useQuery({ queryKey: ['tasks'],  queryFn: getTasks,   refetchInterval: 10000 })
   const { data: agents = [] } = useQuery({ queryKey: ['agents'], queryFn: getAgents,  refetchInterval: 8000  })
@@ -79,7 +82,7 @@ export const Dashboard: React.FC = () => {
       navigate(`/tasks/${t.id}`)
     },
     onError:    () => toast.error('Failed to create task. Check API connection in Settings.'),
-    onSettled:  () => { setIsCreating(false); setActiveChip(null) },
+    onSettled:  () => setIsCreating(false),
   })
 
   const deleteMutation = useMutation({
@@ -88,157 +91,173 @@ export const Dashboard: React.FC = () => {
     onError:    () => toast.error('Failed to delete task'),
   })
 
+  const handleSubmit = () => {
+    const g = goal.trim()
+    if (!g || isCreating) return
+    createMutation.mutate(g)
+  }
+
   const recent = [...tasks]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 4)
+    .slice(0, 5)
+
+  const activeTasks = tasks.filter(t => t.status === 'running' || t.status === 'pending').length
 
   const displayAgents = AGENT_INFO.map((info) => {
     const live = agents.find((a) => a.type?.toUpperCase() === info.type.toUpperCase())
     return live ?? { id: info.type, name: info.name, type: info.type as any, state: 'idle' as any, messages_count: 0 }
   })
 
-  const runningCount  = tasks.filter((t) => t.status === 'running').length
-  const doneCount     = tasks.filter((t) => t.status === 'completed').length
-
   return (
-    <div className="flex flex-col gap-5 pb-4">
+    <div className="flex flex-col gap-6 pb-4">
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────────── */}
       <div className="px-4 pt-5">
-        {/* NEXUS personality greeting */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-4"
-        >
-          <NexusGreeting />
-        </motion.div>
+        <NexusGreeting taskCount={tasks.length} activeTasks={activeTasks} />
 
-        {/* Title block */}
-        <motion.div
+        {/* ⌘K hint */}
+        <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.12 }}
-          className="mb-4"
+          transition={{ delay: 0.6 }}
+          onClick={() => setCmdPalette(true)}
+          className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all active:scale-95"
+          style={{
+            background: 'rgba(232,112,64,0.05)',
+            border: '1px solid rgba(232,112,64,0.12)',
+          }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg"
-              style={{ background: 'rgba(232,112,64,0.08)', border: '1px solid rgba(232,112,64,0.16)' }}
-            >
-              <Zap size={9} style={{ color: '#E87040' }} aria-hidden="true" />
-              <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: '#E87040' }}>
-                Multi-Agent Intelligence
-              </span>
-            </div>
-            {runningCount > 0 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
-                style={{
-                  background: 'rgba(232,112,64,0.10)',
-                  border: '1px solid rgba(232,112,64,0.28)',
-                  color: '#E87040',
-                }}
-              >
-                <motion.div
-                  animate={{ opacity: [1, 0.2, 1] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: '#E87040' }}
-                />
-                {runningCount} running
-              </motion.div>
-            )}
-          </div>
-
-          <h1
-            className="text-[2.4rem] font-black leading-none mb-1.5 tracking-tight text-gradient-nexus"
+          <Command size={11} style={{ color: '#E87040' }} />
+          <span className="text-xs" style={{ color: '#55556A' }}>Quick commands</span>
+          <kbd
+            className="text-[9px] px-1.5 py-0.5 rounded font-mono ml-auto"
+            style={{
+              background: 'rgba(29,29,38,0.7)',
+              color: '#55556A',
+              border: '1px solid rgba(255,255,255,0.055)',
+            }}
           >
-            NEXUS AI
-          </h1>
-          <p className="text-sm leading-relaxed" style={{ color: '#55556A' }}>
-            Research. Code. Write. Remember. Simultaneously.
-          </p>
-        </motion.div>
-
-        {/* Chat input */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="-mx-4"
-        >
-          <ChatInput
-            onSubmit={(g) => createMutation.mutate(g)}
-            isLoading={isCreating}
-            placeholder="Give me a goal — I'll orchestrate the agents to get it done…"
-          />
-        </motion.div>
-
-        {/* Capability chips */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.25 }}
-          className="mt-4"
-        >
-          <p className="text-[9px] font-black uppercase tracking-widest mb-2.5" style={{ color: '#33333C' }}>
-            Capabilities
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {CAPABILITIES.map((cap, i) => (
-              <motion.button
-                key={cap.label}
-                onClick={() => {
-                  if (isCreating) return
-                  setActiveChip(i)
-                  createMutation.mutate(cap.prompt)
-                }}
-                disabled={isCreating}
-                whileTap={{ scale: 0.94 }}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all disabled:opacity-40"
-                style={{
-                  background: activeChip === i ? 'rgba(232,112,64,0.12)' : 'rgba(22,22,30,0.88)',
-                  border: activeChip === i
-                    ? '1px solid rgba(232,112,64,0.35)'
-                    : '1px solid rgba(255,255,255,0.055)',
-                  color: activeChip === i ? '#E87040' : '#8A8A9A',
-                }}
-              >
-                <span aria-hidden="true">{cap.icon}</span>
-                {cap.label}
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
+            ⌘K
+          </kbd>
+        </motion.button>
       </div>
 
-      {/* ── Agent network ─────────────────────────────────────────────── */}
+      {/* ── Main Input ────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
+        className="px-4"
+      >
+        <div
+          className="rounded-2xl overflow-hidden transition-all duration-200"
+          style={{
+            background: 'rgba(22,22,30,0.95)',
+            border: focused ? '1px solid rgba(232,112,64,0.40)' : '1px solid rgba(255,255,255,0.055)',
+            boxShadow: focused ? '0 0 0 3px rgba(232,112,64,0.08), 0 8px 32px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.25)',
+          }}
+        >
+          <textarea
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
+            }}
+            placeholder="Describe your goal… what should the agents build, research, or write?"
+            className="w-full bg-transparent text-sm outline-none resize-none leading-relaxed px-4 pt-4 pb-2 placeholder-muted"
+            style={{ color: '#F0F0F4', minHeight: 80 }}
+            rows={3}
+            disabled={isCreating}
+          />
+
+          <div className="flex items-center justify-between px-4 pb-3 pt-1">
+            <span className="text-[10px]" style={{ color: '#33333C' }}>
+              Press Enter to launch · Shift+Enter for newline
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={handleSubmit}
+              disabled={!goal.trim() || isCreating}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-40"
+              style={{
+                background: goal.trim()
+                  ? 'linear-gradient(135deg, #E87040, #C45A28)'
+                  : 'rgba(29,29,38,0.8)',
+                color: goal.trim() ? '#fff' : '#33333C',
+                boxShadow: goal.trim() ? '0 4px 16px rgba(232,112,64,0.35)' : 'none',
+              }}
+            >
+              {isCreating ? (
+                <>
+                  <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  Launching…
+                </>
+              ) : (
+                <>
+                  <Send size={12} />
+                  Launch
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Capability Chips ──────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.35 }}
         className="px-4"
       >
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#33333C' }}>
-            Agent Network
-          </p>
-          <button
-            onClick={() => setCmdPalette(true)}
-            className="text-[10px] flex items-center gap-0.5"
-            style={{ color: '#55556A' }}
-          >
-            ⌘K
-          </button>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: '#33333C' }}>
+          Capabilities
+        </p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {CAPABILITIES.map((cap) => (
+            <motion.button
+              key={cap.label}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setGoal(cap.prompt)}
+              disabled={isCreating}
+              className="flex flex-col items-center gap-1 p-2 rounded-xl text-center transition-all disabled:opacity-40"
+              style={{
+                background: goal.startsWith(cap.prompt)
+                  ? 'rgba(232,112,64,0.10)'
+                  : 'rgba(22,22,30,0.8)',
+                border: goal.startsWith(cap.prompt)
+                  ? '1px solid rgba(232,112,64,0.25)'
+                  : '1px solid rgba(255,255,255,0.055)',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{cap.icon}</span>
+              <span
+                className="text-[9px] font-semibold"
+                style={{ color: goal.startsWith(cap.prompt) ? '#E87040' : '#55556A' }}
+              >
+                {cap.label}
+              </span>
+            </motion.button>
+          ))}
         </div>
+      </motion.div>
+
+      {/* ── Agent Network ─────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="px-4"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#33333C' }}>
+          Agent Network
+        </p>
         <div
           className="rounded-2xl p-4"
           style={{
-            background: 'rgba(16,16,22,0.9)',
+            background: 'rgba(10,10,14,0.75)',
             border: '1px solid rgba(232,112,64,0.08)',
           }}
         >
@@ -247,95 +266,74 @@ export const Dashboard: React.FC = () => {
               <AgentOrb key={agent.id} agent={agent} size="md" showLabel />
             ))}
           </div>
+          <p className="text-center text-[9px] mt-3" style={{ color: '#33333C' }}>
+            5 specialized agents · Gemini 2.5 · Multi-modal reasoning
+          </p>
         </div>
       </motion.div>
 
-      {/* ── Stats ─────────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.35 }}
-        className="px-4"
-      >
+      {/* ── Stats ─────────────────────────────────────────────────── */}
+      <div className="px-4">
         <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={TrendingUp} label="Tasks"     value={stats?.total_tasks ?? tasks.length}               color="#E87040" delay={0.05} />
-          <StatCard icon={Database}   label="Memories"  value={stats?.memories_stored ?? 0}                     color="#4ADE80" delay={0.10} />
-          <StatCard icon={Users}      label="Agents"    value={stats?.agents_available ?? displayAgents.length}  color="#9B8CE8" delay={0.15} />
+          <StatCard icon={TrendingUp} label="Tasks"    value={stats?.total_tasks ?? tasks.length}              color="#E87040" delay={0.45} />
+          <StatCard icon={Database}   label="Memories" value={stats?.memories_stored ?? 0}                    color="#2DD4BF" delay={0.50} />
+          <StatCard icon={Users}      label="Agents"   value={stats?.agents_available ?? displayAgents.length} color="#9B8CE8" delay={0.55} />
         </div>
-      </motion.div>
+      </div>
 
-      {/* ── Recent tasks ──────────────────────────────────────────────── */}
+      {/* ── Recent Tasks ──────────────────────────────────────────── */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#33333C' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#33333C' }}>
             Recent Tasks
           </p>
-          {tasks.length > 0 && (
-            <button
-              onClick={() => navigate('/tasks')}
-              className="flex items-center gap-1 text-xs font-medium"
-              style={{ color: '#E87040' }}
-            >
-              All {tasks.length} <ArrowRight size={11} aria-hidden="true" />
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/tasks')}
+            className="flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80"
+            style={{ color: '#E87040' }}
+          >
+            View all <ArrowRight size={12} />
+          </button>
         </div>
 
-        <AnimatePresence>
-          {recent.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-2xl p-8 flex flex-col items-center gap-4 text-center"
-              style={{ background: 'rgba(16,16,22,0.8)', border: '1px solid rgba(255,255,255,0.04)' }}
+        {recent.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-2xl p-8 flex flex-col items-center gap-3"
+            style={{
+              background: 'rgba(10,10,14,0.65)',
+              border: '1px solid rgba(255,255,255,0.055)',
+            }}
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+              style={{
+                background: 'rgba(232,112,64,0.07)',
+                border: '1px solid rgba(232,112,64,0.14)',
+              }}
             >
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-                style={{ background: 'rgba(232,112,64,0.07)', border: '1px solid rgba(232,112,64,0.14)' }}
-              >
-                ⚡
-              </div>
-              <div>
-                <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F4' }}>Ready to launch</p>
-                <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: '#55556A' }}>
-                  Describe any goal above — your agent team deploys instantly.
-                </p>
-              </div>
-              {doneCount > 0 && (
-                <p className="text-[10px]" style={{ color: '#33333C' }}>
-                  {doneCount} task{doneCount > 1 ? 's' : ''} completed
-                </p>
-              )}
-            </motion.div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {recent.map((task, i) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8 }}
-                  transition={{ delay: i * 0.04 }}
-                >
-                  <TaskCard task={task} onDelete={(id) => deleteMutation.mutate(id)} />
-                </motion.div>
-              ))}
-              {tasks.length > 4 && (
-                <button
-                  onClick={() => navigate('/tasks')}
-                  className="flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium"
-                  style={{
-                    background: 'rgba(22,22,30,0.5)',
-                    border: '1px solid rgba(255,255,255,0.04)',
-                    color: '#55556A',
-                  }}
-                >
-                  View {tasks.length - 4} more <ChevronRight size={12} aria-hidden="true" />
-                </button>
-              )}
+              ⚡
             </div>
-          )}
-        </AnimatePresence>
+            <p className="font-semibold text-sm" style={{ color: '#F0F0F4' }}>Ready to launch</p>
+            <p className="text-xs text-center max-w-xs" style={{ color: '#55556A' }}>
+              Describe something ambitious above — your agent team is standing by.
+            </p>
+          </motion.div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {recent.map((task, i) => (
+              <motion.div
+                key={task.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+              >
+                <TaskCard task={task} onDelete={(id) => deleteMutation.mutate(id)} />
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
