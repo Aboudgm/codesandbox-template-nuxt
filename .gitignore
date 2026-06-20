@@ -93,3 +93,6 @@ dist
 
 # Vim swap files
 *.swp
+
+# Claude Code internal (worktrees, session state)
+.claude/
