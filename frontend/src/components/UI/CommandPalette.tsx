@@ -46,7 +46,7 @@ export const CommandPalette: React.FC = () => {
     id:   `task-${t.id}`,
     label: t.goal.slice(0, 50),
     description: t.status,
-    icon: <Zap size={14} style={{ color: t.status === 'running' ? '#D97757' : '#38384A' }} />,
+    icon: <Zap size={14} style={{ color: t.status === 'running' ? '#E87040' : '#33333C' }} />,
     action: () => navigate(`/tasks/${t.id}`),
     group: 'Recent Tasks',
   }))
@@ -126,8 +126,8 @@ export const CommandPalette: React.FC = () => {
               className="rounded-2xl overflow-hidden"
               style={{
                 background: 'rgba(10,8,18,0.99)',
-                border: '1px solid rgba(217,119,87,0.2)',
-                boxShadow: '0 24px 80px rgba(0,0,0,0.85), 0 0 60px rgba(217,119,87,0.06)',
+                border: '1px solid rgba(232,112,64,0.2)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.85), 0 0 60px rgba(232,112,64,0.06)',
               }}
             >
               {/* Search input */}
@@ -135,7 +135,7 @@ export const CommandPalette: React.FC = () => {
                 className="flex items-center gap-3 px-4 py-3.5"
                 style={{ borderBottom: '1px solid rgba(50,46,68,0.7)' }}
               >
-                <Search size={16} style={{ color: '#D97757', flexShrink: 0 }} aria-hidden="true" />
+                <Search size={16} style={{ color: '#E87040', flexShrink: 0 }} aria-hidden="true" />
                 <input
                   ref={inputRef}
                   value={query}
@@ -155,7 +155,7 @@ export const CommandPalette: React.FC = () => {
                   style={{
                     background: 'rgba(30,28,42,0.7)',
                     border: '1px solid rgba(60,56,80,0.6)',
-                    color: '#38384A',
+                    color: '#33333C',
                   }}
                   aria-hidden="true"
                 >
@@ -171,7 +171,7 @@ export const CommandPalette: React.FC = () => {
                 className="max-h-80 overflow-y-auto no-scrollbar py-2"
               >
                 {filtered.length === 0 ? (
-                  <p className="text-center py-8 text-sm" style={{ color: '#38384A' }} role="status">
+                  <p className="text-center py-8 text-sm" style={{ color: '#33333C' }} role="status">
                     No commands found
                   </p>
                 ) : (
@@ -179,7 +179,7 @@ export const CommandPalette: React.FC = () => {
                     <div key={group} role="group" aria-label={group}>
                       <p
                         className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest"
-                        style={{ color: '#38384A' }}
+                        style={{ color: '#33333C' }}
                         aria-hidden="true"
                       >
                         {group}
@@ -199,13 +199,13 @@ export const CommandPalette: React.FC = () => {
                               onMouseEnter={() => setSelected(globalIdx)}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
                               style={{
-                                background: isSelected ? 'rgba(217,119,87,0.08)' : 'transparent',
+                                background: isSelected ? 'rgba(232,112,64,0.08)' : 'transparent',
                                 borderLeft: isSelected
-                                  ? '2px solid rgba(217,119,87,0.5)'
+                                  ? '2px solid rgba(232,112,64,0.5)'
                                   : '2px solid transparent',
                               }}
                             >
-                              <span style={{ color: isSelected ? '#D97757' : '#38384A' }} aria-hidden="true">
+                              <span style={{ color: isSelected ? '#E87040' : '#33333C' }} aria-hidden="true">
                                 {cmd.icon}
                               </span>
                               <span
@@ -215,7 +215,7 @@ export const CommandPalette: React.FC = () => {
                                 {cmd.label}
                               </span>
                               {cmd.description && (
-                                <span className="text-xs" style={{ color: '#38384A' }} aria-hidden="true">
+                                <span className="text-xs" style={{ color: '#33333C' }} aria-hidden="true">
                                   {cmd.description}
                                 </span>
                               )}
@@ -230,7 +230,7 @@ export const CommandPalette: React.FC = () => {
               {/* Footer */}
               <div
                 className="flex items-center gap-4 px-4 py-2.5 text-[10px]"
-                style={{ borderTop: '1px solid rgba(50,46,68,0.55)', color: '#38384A' }}
+                style={{ borderTop: '1px solid rgba(255,255,255,0.055)', color: '#33333C' }}
                 aria-hidden="true"
               >
                 <span><kbd className="font-mono">↑↓</kbd> navigate</span>

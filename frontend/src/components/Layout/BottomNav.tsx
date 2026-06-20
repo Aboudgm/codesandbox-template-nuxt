@@ -17,8 +17,8 @@ const NAV: NavItem[] = [
   { path: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-const ACTIVE_COLOR = '#D97757'
-const IDLE_COLOR   = '#38384A'
+const ACTIVE_COLOR = '#E87040'
+const IDLE_COLOR   = '#33333C'
 
 const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ item, active, badge }) => {
   const navigate = useNavigate()
@@ -57,7 +57,7 @@ const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ ite
         {badge && badge > 0 ? (
           <span
             className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-            style={{ background: '#D97757', color: '#fff' }}
+            style={{ background: '#E87040', color: '#fff' }}
           >
             {badge > 9 ? '9+' : badge}
           </span>
@@ -93,10 +93,10 @@ export const BottomNav: React.FC = () => {
       <div
         className="flex items-center"
         style={{
-          background: 'rgba(8,8,16,0.97)',
+          background: 'rgba(8,8,12,0.97)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
-          borderTop: '1px solid rgba(217,119,87,0.1)',
+          borderTop: '1px solid rgba(232,112,64,0.1)',
           minHeight: 64,
         }}
       >
@@ -115,7 +115,7 @@ export const BottomNav: React.FC = () => {
               width: 52,
               height: 52,
               background: 'linear-gradient(145deg, #E08060 0%, #C4663E 100%)',
-              boxShadow: '0 4px 20px rgba(217,119,87,0.55), 0 0 0 3px rgba(8,8,16,0.95)',
+              boxShadow: '0 4px 20px rgba(232,112,64,0.55), 0 0 0 3px rgba(8,8,16,0.95)',
               marginTop: -16,
             }}
           >
@@ -124,7 +124,7 @@ export const BottomNav: React.FC = () => {
               animate={{ scale: [1, 1.6, 1], opacity: [0.35, 0, 0.35] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute inset-0 rounded-2xl pointer-events-none"
-              style={{ background: 'rgba(217,119,87,0.45)' }}
+              style={{ background: 'rgba(232,112,64,0.45)' }}
             />
           </motion.button>
         </div>

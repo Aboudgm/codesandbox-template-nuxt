@@ -44,7 +44,7 @@ const KeyInput: React.FC<KeyInputProps> = ({
         {recommended && (
           <span
             className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-bold"
-            style={{ background: 'rgba(217,119,87,0.15)', color: '#D97757', border: '1px solid rgba(217,119,87,0.3)' }}
+            style={{ background: 'rgba(232,112,64,0.15)', color: '#E87040', border: '1px solid rgba(232,112,64,0.3)' }}
           >
             <Star size={9} />
             RECOMMENDED
@@ -146,7 +146,7 @@ const ToggleRow: React.FC<{
       aria-checked={value}
     >
       {value
-        ? <ToggleRight size={28} style={{ color: '#D97757' }} aria-hidden="true" />
+        ? <ToggleRight size={28} style={{ color: '#E87040' }} aria-hidden="true" />
         : <ToggleLeft size={28} className="text-text-muted" aria-hidden="true" />
       }
     </button>
@@ -416,7 +416,7 @@ export const Settings: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleEnableNotifications}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium flex-shrink-0"
-              style={{ background: 'rgba(217,119,87,0.12)', border: '1px solid rgba(217,119,87,0.3)', color: '#D97757' }}
+              style={{ background: 'rgba(232,112,64,0.12)', border: '1px solid rgba(232,112,64,0.3)', color: '#E87040' }}
             >
               <Bell size={13} />
               Enable
@@ -428,12 +428,12 @@ export const Settings: React.FC = () => {
       </Section>
 
       {/* ── API Keys ────────────────────────────────────────────────── */}
-      <Section title="API Keys" delay={0.05} accent="#D97757">
+      <Section title="API Keys" delay={0.05} accent="#E87040">
         <div
           className="flex items-start gap-2 p-3 rounded-xl"
-          style={{ background: 'rgba(217,119,87,0.06)', border: '1px solid rgba(217,119,87,0.18)' }}
+          style={{ background: 'rgba(232,112,64,0.06)', border: '1px solid rgba(232,112,64,0.18)' }}
         >
-          <Zap size={14} style={{ color: '#D97757' }} className="mt-0.5 flex-shrink-0" />
+          <Zap size={14} style={{ color: '#E87040' }} className="mt-0.5 flex-shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             Keys are stored in{' '}
             <code className="font-mono text-xs px-1 py-0.5 rounded" style={{ background: 'rgba(79,195,247,0.1)', color: '#4FC3F7' }}>
@@ -514,13 +514,13 @@ export const Settings: React.FC = () => {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <label className="text-xs font-medium text-text-secondary">Temperature</label>
-            <span className="text-xs font-mono" style={{ color: '#D97757' }}>{temperature.toFixed(1)}</span>
+            <span className="text-xs font-mono" style={{ color: '#E87040' }}>{temperature.toFixed(1)}</span>
           </div>
           <input
             type="range" min="0" max="1" step="0.1"
             value={temperature}
             onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            className="w-full" style={{ accentColor: '#D97757' }}
+            className="w-full" style={{ accentColor: '#E87040' }}
           />
           <div className="flex justify-between text-xs text-text-muted">
             <span>Precise</span><span>Creative</span>
@@ -592,7 +592,7 @@ export const Settings: React.FC = () => {
                 className="flex items-center gap-2 p-3 rounded-xl"
                 style={{ background: 'rgba(255,183,77,0.08)', border: '1px solid rgba(255,183,77,0.2)' }}
               >
-                <AlertTriangle size={14} style={{ color: '#FFB74D' }} className="flex-shrink-0" />
+                <AlertTriangle size={14} style={{ color: '#F5C518' }} className="flex-shrink-0" />
                 <p className="text-xs text-text-secondary">
                   This will permanently delete all stored memories. Cannot be undone.
                 </p>
@@ -659,9 +659,9 @@ export const Settings: React.FC = () => {
         className="w-full py-4 rounded-2xl text-white font-semibold text-base transition-all disabled:opacity-60"
         style={{
           background: saving
-            ? 'rgba(217,119,87,0.5)'
-            : 'linear-gradient(135deg, #D97757, #C4663E 50%, #7C71F0)',
-          boxShadow: '0 4px 24px rgba(217,119,87,0.25)',
+            ? 'rgba(232,112,64,0.5)'
+            : 'linear-gradient(135deg, #E87040, #C4663E 50%, #7C71F0)',
+          boxShadow: '0 4px 24px rgba(232,112,64,0.25)',
         }}
       >
         {saving ? (

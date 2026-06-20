@@ -61,7 +61,7 @@ const NeuralBackground: React.FC = () => {
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(217,119,87,${p.o * 0.7})`
+        ctx.fillStyle = `rgba(232,112,64,${p.o * 0.7})`
         ctx.fill()
 
         for (let j = i + 1; j < pts.length; j++) {
@@ -71,9 +71,9 @@ const NeuralBackground: React.FC = () => {
           if (dist < D) {
             const alpha = (1 - dist / D) * 0.09
             const g = ctx.createLinearGradient(p.x, p.y, q.x, q.y)
-            g.addColorStop(0, `rgba(217,119,87,${alpha})`)
-            g.addColorStop(0.5, `rgba(192,132,252,${alpha * 0.4})`)
-            g.addColorStop(1, `rgba(217,119,87,${alpha})`)
+            g.addColorStop(0, `rgba(232,112,64,${alpha})`)
+            g.addColorStop(0.5, `rgba(155,140,232,${alpha * 0.4})`)
+            g.addColorStop(1, `rgba(232,112,64,${alpha})`)
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(q.x, q.y)
@@ -163,8 +163,8 @@ const QuickTaskSheet: React.FC = () => {
               className="rounded-3xl p-5"
               style={{
                 background: 'rgba(10,8,18,0.99)',
-                border: '1px solid rgba(217,119,87,0.18)',
-                boxShadow: '0 -20px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(217,119,87,0.05)',
+                border: '1px solid rgba(232,112,64,0.18)',
+                boxShadow: '0 -20px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(232,112,64,0.05)',
               }}
             >
               {/* Handle */}
@@ -176,13 +176,13 @@ const QuickTaskSheet: React.FC = () => {
               <div className="flex items-center gap-2.5 mb-4">
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(217,119,87,0.1)', border: '1px solid rgba(217,119,87,0.22)' }}
+                  style={{ background: 'rgba(232,112,64,0.1)', border: '1px solid rgba(232,112,64,0.22)' }}
                 >
-                  <Sparkles size={15} style={{ color: '#D97757' }} />
+                  <Sparkles size={15} style={{ color: '#E87040' }} />
                 </div>
                 <div>
                   <h2 className="text-sm font-bold" style={{ color: '#EEEEF0' }}>New Task</h2>
-                  <p className="text-[11px]" style={{ color: '#4A4A6A' }}>Multi-agent AI will handle it</p>
+                  <p className="text-[11px]" style={{ color: '#55556A' }}>Multi-agent AI will handle it</p>
                 </div>
               </div>
 
@@ -211,9 +211,9 @@ const QuickTaskSheet: React.FC = () => {
                     onClick={() => setGoal(chip)}
                     className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
                     style={{
-                      background: goal === chip ? 'rgba(217,119,87,0.12)' : 'rgba(18,16,28,0.7)',
-                      border:     goal === chip ? '1px solid rgba(217,119,87,0.35)' : '1px solid rgba(50,46,68,0.55)',
-                      color:      goal === chip ? '#D97757' : '#4A4A6A',
+                      background: goal === chip ? 'rgba(232,112,64,0.12)' : 'rgba(18,16,28,0.7)',
+                      border:     goal === chip ? '1px solid rgba(232,112,64,0.35)' : '1px solid rgba(255,255,255,0.055)',
+                      color:      goal === chip ? '#E87040' : '#55556A',
                     }}
                   >
                     {chip}
@@ -229,7 +229,7 @@ const QuickTaskSheet: React.FC = () => {
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
                 style={{
                   background: 'linear-gradient(135deg, #E08060 0%, #C4663E 100%)',
-                  boxShadow: '0 4px 24px rgba(217,119,87,0.38)',
+                  boxShadow: '0 4px 24px rgba(232,112,64,0.38)',
                 }}
               >
                 {creating ? (
@@ -293,7 +293,7 @@ function AppContent() {
   }, [setCmdPalette])
 
   return (
-    <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#080810' }}>
+    <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#08080C' }}>
       {/* Skip-to-content for keyboard users (WCAG 2.4.1) */}
       <a href="#main-content" className="skip-nav">Skip to content</a>
 
@@ -313,7 +313,7 @@ function AppContent() {
           <Suspense
             fallback={
               <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
-                <Loader2 size={22} className="animate-spin" style={{ color: '#D97757', opacity: 0.7 }} />
+                <Loader2 size={22} className="animate-spin" style={{ color: '#E87040', opacity: 0.7 }} />
               </div>
             }
           >

@@ -43,8 +43,8 @@ const ResultView: React.FC<{ result: string }> = ({ result }) => (
     }}
   >
     <div className="flex items-center gap-2 mb-3 pb-2" style={{ borderBottom: '1px solid rgba(0,255,179,0.1)' }}>
-      <CheckCircle2 size={14} style={{ color: '#00FFB3' }} />
-      <span className="text-xs font-bold tracking-wide" style={{ color: '#00FFB3' }}>
+      <CheckCircle2 size={14} style={{ color: '#4ADE80' }} />
+      <span className="text-xs font-bold tracking-wide" style={{ color: '#4ADE80' }}>
         Final Output
       </span>
     </div>
@@ -92,8 +92,8 @@ const ThinkingIndicator: React.FC<{ agentName: string }> = ({ agentName }) => (
     animate={{ opacity: 1 }}
     className="flex items-center gap-2 py-2"
   >
-    <Loader2 size={12} className="animate-spin" style={{ color: '#D97757' }} />
-    <span className="text-xs" style={{ color: '#4A4A70' }}>
+    <Loader2 size={12} className="animate-spin" style={{ color: '#E87040' }} />
+    <span className="text-xs" style={{ color: '#55556A' }}>
       {agentName} is working
     </span>
     <div className="flex gap-1">
@@ -103,7 +103,7 @@ const ThinkingIndicator: React.FC<{ agentName: string }> = ({ agentName }) => (
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
           className="w-1.5 h-1.5 rounded-full"
-          style={{ background: '#4A4A70' }}
+          style={{ background: '#55556A' }}
         />
       ))}
     </div>
@@ -209,13 +209,13 @@ export const TaskDetail: React.FC = () => {
   // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader2 size={24} className="animate-spin" style={{ color: '#00E5FF' }} />
+      <Loader2 size={24} className="animate-spin" style={{ color: '#38BDF8' }} />
     </div>
   )
   if (!task) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 px-6">
-      <AlertCircle size={32} style={{ color: '#FF5370' }} />
-      <p className="text-sm" style={{ color: '#4A4A70' }}>Task not found</p>
+      <AlertCircle size={32} style={{ color: '#EF6060' }} />
+      <p className="text-sm" style={{ color: '#55556A' }}>Task not found</p>
     </div>
   )
 
@@ -238,13 +238,13 @@ export const TaskDetail: React.FC = () => {
         <div className="flex items-center gap-3 flex-wrap">
           <StatusBadge status={task.status} />
 
-          <div className="flex items-center gap-1.5" style={{ color: '#4A4A70' }}>
+          <div className="flex items-center gap-1.5" style={{ color: '#55556A' }}>
             <Clock size={11} aria-hidden="true" />
             <span className="text-[10px]">{timeAgo(task.created_at)}</span>
           </div>
 
           {task.status === 'completed' && (
-            <div className="flex items-center gap-1" style={{ color: '#00FFB3' }}>
+            <div className="flex items-center gap-1" style={{ color: '#4ADE80' }}>
               <CheckCircle2 size={11} aria-hidden="true" />
               <span className="text-[10px]">{formatDuration(task.created_at, task.updated_at)}</span>
             </div>
@@ -253,7 +253,7 @@ export const TaskDetail: React.FC = () => {
           {streamEvents.length > 0 && (
             <span
               className="text-[10px]"
-              style={{ color: '#4A4A70' }}
+              style={{ color: '#55556A' }}
               aria-live="polite"
               aria-atomic="true"
             >
@@ -270,7 +270,7 @@ export const TaskDetail: React.FC = () => {
               onClick={() => pauseMutation.mutate()}
               disabled={pauseMutation.isPending}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium"
-              style={{ background: 'rgba(255,179,0,0.1)', border: '1px solid rgba(255,179,0,0.25)', color: '#FFB74D' }}
+              style={{ background: 'rgba(255,179,0,0.1)', border: '1px solid rgba(255,179,0,0.25)', color: '#F5C518' }}
             >
               <Pause size={12} /> Pause
             </motion.button>
@@ -281,7 +281,7 @@ export const TaskDetail: React.FC = () => {
               onClick={() => resumeMutation.mutate()}
               disabled={resumeMutation.isPending}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium"
-              style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', color: '#00E5FF' }}
+              style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', color: '#38BDF8' }}
             >
               <Play size={12} /> Resume
             </motion.button>
@@ -293,7 +293,7 @@ export const TaskDetail: React.FC = () => {
             }}
             disabled={deleteMutation.isPending}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium"
-            style={{ background: 'rgba(255,83,112,0.08)', border: '1px solid rgba(255,83,112,0.2)', color: '#FF5370' }}
+            style={{ background: 'rgba(255,83,112,0.08)', border: '1px solid rgba(255,83,112,0.2)', color: '#EF6060' }}
           >
             <Trash2 size={12} /> Delete
           </motion.button>
@@ -319,9 +319,9 @@ export const TaskDetail: React.FC = () => {
               animate={isActive ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
               transition={{ duration: 1.2, repeat: Infinity }}
               className="w-2 h-2 rounded-full"
-              style={{ background: isActive ? '#00E5FF' : task.status === 'completed' ? '#00FFB3' : '#FF5370' }}
+              style={{ background: isActive ? '#38BDF8' : task.status === 'completed' ? '#4ADE80' : '#EF6060' }}
             />
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#4A4A70' }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#55556A' }}>
               {isActive ? 'Live Stream' : 'Event Log'}
             </span>
           </div>
@@ -354,10 +354,10 @@ export const TaskDetail: React.FC = () => {
             onClick={() => setShowResult((v) => !v)}
             className="flex items-center gap-2 w-full px-1 py-2"
           >
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#00FFB3' }}>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#4ADE80' }}>
               Final Result
             </span>
-            {showResult ? <ChevronUp size={14} style={{ color: '#00FFB3' }} /> : <ChevronDown size={14} style={{ color: '#00FFB3' }} />}
+            {showResult ? <ChevronUp size={14} style={{ color: '#4ADE80' }} /> : <ChevronDown size={14} style={{ color: '#4ADE80' }} />}
           </button>
           <AnimatePresence>
             {showResult && (
@@ -379,8 +379,8 @@ export const TaskDetail: React.FC = () => {
           className="rounded-2xl p-4 mt-2"
           style={{ background: 'rgba(255,83,112,0.06)', border: '1px solid rgba(255,83,112,0.2)' }}
         >
-          <p className="text-sm font-semibold mb-1" style={{ color: '#FF5370' }}>Task Failed</p>
-          <p className="text-xs" style={{ color: '#4A4A70' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#EF6060' }}>Task Failed</p>
+          <p className="text-xs" style={{ color: '#55556A' }}>
             Check Settings to ensure an API key is configured. The task can be deleted and retried.
           </p>
         </div>

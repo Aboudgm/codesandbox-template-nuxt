@@ -12,10 +12,10 @@ type Filter = 'all' | TaskStatus
 
 const FILTERS: { key: Filter; label: string; color: string }[] = [
   { key: 'all',       label: 'All',     color: '#8080B0' },
-  { key: 'running',   label: 'Running', color: '#D97757' },
-  { key: 'completed', label: 'Done',    color: '#00FFB3' },
-  { key: 'failed',    label: 'Failed',  color: '#FF5370' },
-  { key: 'pending',   label: 'Pending', color: '#00E5FF' },
+  { key: 'running',   label: 'Running', color: '#E87040' },
+  { key: 'completed', label: 'Done',    color: '#4ADE80' },
+  { key: 'failed',    label: 'Failed',  color: '#EF6060' },
+  { key: 'pending',   label: 'Pending', color: '#38BDF8' },
 ]
 
 export const TasksList: React.FC = () => {
@@ -67,7 +67,7 @@ export const TasksList: React.FC = () => {
           whileTap={{ scale: 0.92 }}
           onClick={() => refetch()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs"
-          style={{ background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.18)', color: '#D97757' }}
+          style={{ background: 'rgba(232,112,64,0.08)', border: '1px solid rgba(232,112,64,0.18)', color: '#E87040' }}
         >
           {isFetching
             ? <Loader2 size={12} className="animate-spin" />
@@ -133,7 +133,7 @@ export const TasksList: React.FC = () => {
       {/* Task list */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 size={22} className="animate-spin" style={{ color: '#D97757' }} />
+          <Loader2 size={22} className="animate-spin" style={{ color: '#E87040' }} />
         </div>
       ) : sorted.length === 0 ? (
         <div

@@ -50,14 +50,14 @@ export function connectTaskStream(taskId: string, onEvent: StreamCallback, backe
 
 export function getAgentColor(agentType: string): string {
   const map: Record<string, string> = {
-    STRATEGIST:   '#D97757',
-    ORCHESTRATOR: '#D97757',
-    RESEARCHER:   '#00E5FF',
-    CODER:        '#00FFB3',
-    WRITER:       '#C084FC',
-    MEMORY:       '#FFB74D',
+    STRATEGIST:   '#E87040',
+    ORCHESTRATOR: '#E87040',
+    RESEARCHER:   '#38BDF8',
+    CODER:        '#2DD4BF',
+    WRITER:       '#9B8CE8',
+    MEMORY:       '#F5C518',
   }
-  return map[agentType?.toUpperCase()] ?? '#7C71F0'
+  return map[agentType?.toUpperCase()] ?? '#9B8CE8'
 }
 
 export function getAgentIcon(agentType: string): string {

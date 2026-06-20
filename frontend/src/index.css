@@ -2,6 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── NEXUS Design System v3 ────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --bg:       #08080C;
+  --surface:  #101016;
+  --card:     #16161E;
+  --elevated: #1D1D26;
+  --overlay:  #24242E;
+
+  /* Borders */
+  --border:      rgba(255, 255, 255, 0.055);
+  --border-warm: rgba(232, 112, 64, 0.16);
+  --border-hi:   rgba(255, 255, 255, 0.10);
+
+  /* Brand — NEXUS Orange */
+  --nexus:      #E87040;
+  --nexus-soft: #F09868;
+  --nexus-dim:  rgba(232, 112, 64, 0.10);
+  --nexus-glow: rgba(232, 112, 64, 0.30);
+
+  /* Accent palette */
+  --violet: #9B8CE8;
+  --teal:   #2DD4BF;
+  --amber:  #F5C518;
+  --red:    #EF6060;
+  --cyan:   #38BDF8;
+  --green:  #4ADE80;
+
+  /* Text scale */
+  --t1: #F0F0F4;
+  --t2: #8A8A9A;
+  --t3: #55556A;
+  --t4: #33333C;
+
+  /* Agent identity colors */
+  --c-nexus:  #E87040;
+  --c-aria:   #38BDF8;
+  --c-forge:  #2DD4BF;
+  --c-scribe: #9B8CE8;
+  --c-echo:   #F5C518;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -10,8 +53,8 @@
 
   html {
     font-family: 'Inter', system-ui, sans-serif;
-    background-color: #080810;
-    color: #EEEEF0;
+    background-color: var(--bg);
+    color: var(--t1);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,100 +66,88 @@
     min-height: 100vh;
     min-height: 100dvh;
     overscroll-behavior: none;
-    background-color: #080810;
-    /* Subtle warm dot grid */
-    background-image: radial-gradient(circle, rgba(217,119,87,0.04) 1px, transparent 1px);
+    background-color: var(--bg);
+    /* Warm dot grid — signature NEXUS texture */
+    background-image: radial-gradient(circle, rgba(232,112,64,0.025) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 
+  /* Scrollbar */
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(217,119,87,0.2); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(217,119,87,0.4); }
+  ::-webkit-scrollbar-thumb { background: rgba(232,112,64,0.22); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(232,112,64,0.4); }
 
-  ::selection { background: rgba(217,119,87,0.25); color: #EEEEF0; }
+  /* Selection */
+  ::selection { background: rgba(232,112,64,0.22); color: var(--t1); }
 
-  /* ── Placeholder helper (replaces broken placeholder-text-muted class) ── */
-  .placeholder-muted::placeholder { color: #4A4A6A; opacity: 1; }
-  .placeholder-dim::placeholder   { color: #2A2A4A; opacity: 1; }
+  /* Placeholder */
+  .placeholder-muted::placeholder { color: var(--t3); opacity: 1; }
+  .placeholder-dim::placeholder   { color: var(--t4); opacity: 1; }
 
-  /* ── Skip-nav link (WCAG 2.4.1) ── */
+  /* Skip nav — WCAG 2.4.1 */
   .skip-nav {
     position: absolute;
     left: -9999px;
     z-index: 999;
-    padding: 0.5rem 1rem;
-    background: #D97757;
+    padding: 0.5rem 1.25rem;
+    background: var(--nexus);
     color: #fff;
     font-size: 0.875rem;
     font-weight: 600;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 10px 10px;
     text-decoration: none;
+    white-space: nowrap;
   }
   .skip-nav:focus { left: 50%; transform: translateX(-50%); }
 
-  /* ── WCAG 2.4.11 — visible focus indicator for keyboard users ── */
+  /* Focus visible — WCAG 2.4.11 */
   :focus-visible {
-    outline: 2px solid rgba(217,119,87,0.8);
+    outline: 2px solid rgba(232,112,64,0.75);
     outline-offset: 2px;
     border-radius: 6px;
   }
-
-  /* Remove outline for mouse/touch users only (not keyboard) */
   :focus:not(:focus-visible) { outline: none; }
 }
 
 @layer utilities {
-  /* ── Glass morphism v2 ── */
+  /* ── Glass morphism ── */
   .glass {
-    background: rgba(15, 15, 32, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(30, 32, 64, 0.8);
+    background: rgba(16, 16, 22, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
   }
 
-  .glass-cyan {
-    background: rgba(0, 229, 255, 0.04);
+  .glass-warm {
+    background: rgba(232, 112, 64, 0.05);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 229, 255, 0.15);
+    border: 1px solid var(--border-warm);
   }
 
-  .glass-coral {
-    background: rgba(217, 119, 87, 0.05);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(217, 119, 87, 0.2);
-  }
+  /* ── Glow helpers ── */
+  .glow-nexus  { box-shadow: 0 0 16px var(--nexus-glow), 0 0 48px rgba(232,112,64,0.10); }
+  .glow-violet { box-shadow: 0 0 16px rgba(155,140,232,0.35), 0 0 48px rgba(155,140,232,0.10); }
+  .glow-teal   { box-shadow: 0 0 16px rgba(45,212,191,0.35), 0 0 48px rgba(45,212,191,0.10); }
+  .glow-cyan   { box-shadow: 0 0 16px rgba(56,189,248,0.35), 0 0 48px rgba(56,189,248,0.10); }
 
-  /* ── Neon glow helpers ── */
-  .glow-cyan   { box-shadow: 0 0 16px rgba(0,229,255,0.35), 0 0 48px rgba(0,229,255,0.12); }
-  .glow-coral  { box-shadow: 0 0 16px rgba(217,119,87,0.4), 0 0 48px rgba(217,119,87,0.12); }
-  .glow-teal   { box-shadow: 0 0 16px rgba(0,255,179,0.35), 0 0 48px rgba(0,255,179,0.1); }
-  .glow-violet { box-shadow: 0 0 16px rgba(192,132,252,0.35), 0 0 48px rgba(192,132,252,0.1); }
-
+  /* ── Text gradients ── */
   .text-gradient-nexus {
-    background: linear-gradient(135deg, #F0EEE8 0%, #D97757 45%, #C084FC 100%);
+    background: linear-gradient(135deg, #F0EEE8 0%, #E87040 50%, #9B8CE8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-warm {
-    background: linear-gradient(135deg, #F0EEE8 0%, #D97757 100%);
+    background: linear-gradient(135deg, #F0EEE8 0%, #E87040 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .text-gradient-cyan {
-    background: linear-gradient(135deg, #00E5FF, #7C71F0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* ── Scanline overlay (applied to agent orbs) ── */
+  /* ── Scanlines overlay ── */
   .scanlines::after {
     content: '';
     position: absolute;
@@ -125,54 +156,59 @@
       0deg,
       transparent,
       transparent 2px,
-      rgba(0,0,0,0.06) 2px,
-      rgba(0,0,0,0.06) 4px
+      rgba(0,0,0,0.05) 2px,
+      rgba(0,0,0,0.05) 4px
     );
     pointer-events: none;
     border-radius: inherit;
   }
 
-  /* ── Circuit border ── */
-  .border-circuit {
-    border: 1px solid;
-    border-image: linear-gradient(135deg, rgba(0,229,255,0.4), rgba(124,113,240,0.2), rgba(0,229,255,0.4)) 1;
-  }
-
-  /* ── Utility ── */
+  /* ── Safe area ── */
   .safe-top    { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-  .safe-left   { padding-left: env(safe-area-inset-left); }
-  .safe-right  { padding-right: env(safe-area-inset-right); }
   .pb-safe     { padding-bottom: calc(env(safe-area-inset-bottom) + 5rem); }
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  .touch-target { min-height: 52px; min-width: 52px; }
-
-  /* ── Thinking dots animation ── */
-  .thinking-dots::after {
-    content: '...';
-    animation: thinkingDots 1.4s steps(4, end) infinite;
-  }
-  @keyframes thinkingDots {
-    0%  { content: '.'; }
-    33% { content: '..'; }
-    66% { content: '...'; }
-    99% { content: ''; }
-  }
-
   /* ── Code block ── */
   .code-block {
     font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
     font-size: 0.78rem;
-    line-height: 1.6;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(0,229,255,0.12);
+    line-height: 1.65;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(232,112,64,0.10);
     border-radius: 10px;
     padding: 0.75rem 1rem;
     overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-all;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 8px var(--nexus-glow); }
+    50%       { box-shadow: 0 0 24px var(--nexus-glow), 0 0 48px rgba(232,112,64,0.15); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1);    opacity: 0.6; }
+    50%       { transform: scale(1.06); opacity: 1;   }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
   }
 }

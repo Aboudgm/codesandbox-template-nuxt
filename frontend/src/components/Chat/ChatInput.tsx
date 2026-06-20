@@ -43,7 +43,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <motion.div
         animate={{
           boxShadow: focused
-            ? '0 0 0 1.5px rgba(217,119,87,0.45), 0 4px 32px rgba(217,119,87,0.1)'
+            ? '0 0 0 1.5px rgba(232,112,64,0.45), 0 4px 32px rgba(232,112,64,0.1)'
             : '0 2px 20px rgba(0,0,0,0.35)',
         }}
         transition={{ duration: 0.18 }}
@@ -53,8 +53,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: focused
-            ? '1px solid rgba(217,119,87,0.38)'
-            : '1px solid rgba(50,46,68,0.55)',
+            ? '1px solid rgba(232,112,64,0.38)'
+            : '1px solid rgba(255,255,255,0.055)',
         }}
       >
         {/* Textarea */}
@@ -81,11 +81,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors"
-              style={{ background: 'rgba(42,40,56,0.5)' }}
+              style={{ background: 'rgba(29,29,38,0.5)' }}
               aria-label="Voice input"
               tabIndex={-1}
             >
-              <Mic size={16} style={{ color: '#4A4A6A' }} />
+              <Mic size={16} style={{ color: '#55556A' }} />
             </button>
 
             <AnimatePresence>
@@ -95,7 +95,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   className="text-xs font-mono"
-                  style={{ color: isOverLimit ? '#FF5370' : '#4A4A6A' }}
+                  style={{ color: isOverLimit ? '#EF6060' : '#55556A' }}
                 >
                   {charCount}/{MAX_CHARS}
                 </motion.span>
@@ -106,7 +106,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {/* Right: Hint + Send */}
           <div className="flex items-center gap-2">
             {!isLoading && (
-              <span className="text-xs hidden sm:block" style={{ color: '#4A4A6A' }}>
+              <span className="text-xs hidden sm:block" style={{ color: '#55556A' }}>
                 Enter · Shift+Enter for newline
               </span>
             )}
@@ -119,9 +119,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200"
               style={{
                 background: canSubmit
-                  ? 'linear-gradient(135deg, #D97757, #C4663E)'
-                  : 'rgba(42,40,56,0.4)',
-                boxShadow: canSubmit ? '0 4px 16px rgba(217,119,87,0.35)' : 'none',
+                  ? 'linear-gradient(135deg, #E87040, #C4663E)'
+                  : 'rgba(29,29,38,0.4)',
+                boxShadow: canSubmit ? '0 4px 16px rgba(232,112,64,0.35)' : 'none',
                 cursor: canSubmit ? 'pointer' : 'not-allowed',
               }}
               aria-label="Send"
@@ -133,7 +133,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                 />
               ) : (
-                <Send size={16} style={{ color: canSubmit ? '#fff' : '#4A4A6A' }} />
+                <Send size={16} style={{ color: canSubmit ? '#fff' : '#55556A' }} />
               )}
             </motion.button>
           </div>

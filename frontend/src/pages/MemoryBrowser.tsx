@@ -36,7 +36,7 @@ const MemoryItem: React.FC<MemoryItemProps> = ({ memory, searchMode = false }) =
       exit={{ opacity: 0, scale: 0.95 }}
     >
       <GlassCard
-        glow={searchMode && memory.relevance_score && memory.relevance_score > 0.8 ? '#7C71F0' : undefined}
+        glow={searchMode && memory.relevance_score && memory.relevance_score > 0.8 ? '#9B8CE8' : undefined}
         padding={false}
       >
         <div className="p-4">
@@ -47,7 +47,7 @@ const MemoryItem: React.FC<MemoryItemProps> = ({ memory, searchMode = false }) =
                 className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: 'rgba(124,113,240,0.15)' }}
               >
-                <Brain size={12} style={{ color: '#7C71F0' }} />
+                <Brain size={12} style={{ color: '#9B8CE8' }} />
               </div>
               <div className="flex items-center gap-1.5 text-xs text-text-muted">
                 <Clock size={11} />
@@ -60,7 +60,7 @@ const MemoryItem: React.FC<MemoryItemProps> = ({ memory, searchMode = false }) =
                 className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
                 style={{
                   background: 'rgba(124,113,240,0.12)',
-                  color: '#7C71F0',
+                  color: '#9B8CE8',
                 }}
               >
                 {Math.round(memory.relevance_score * 100)}% match
@@ -89,7 +89,7 @@ const MemoryItem: React.FC<MemoryItemProps> = ({ memory, searchMode = false }) =
             <button
               onClick={() => setExpanded(!expanded)}
               className="flex items-center gap-1 text-xs mt-2 font-medium"
-              style={{ color: '#7C71F0' }}
+              style={{ color: '#9B8CE8' }}
             >
               {expanded ? (
                 <><ChevronUp size={11} /> Show less</>
@@ -162,13 +162,13 @@ export const MemoryBrowser: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <GlassCard glow="#7C71F0" padding={false}>
+          <GlassCard glow="#9B8CE8" padding={false}>
             <div className="p-4 flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: 'rgba(124,113,240,0.15)' }}
               >
-                <Brain size={18} style={{ color: '#7C71F0' }} />
+                <Brain size={18} style={{ color: '#9B8CE8' }} />
               </div>
               <div>
                 <p className="text-lg font-bold text-text-primary">
@@ -181,13 +181,13 @@ export const MemoryBrowser: React.FC = () => {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <GlassCard glow="#4FC3F7" padding={false}>
+          <GlassCard glow="#38BDF8" padding={false}>
             <div className="p-4 flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: 'rgba(79,195,247,0.15)' }}
               >
-                <Database size={18} style={{ color: '#4FC3F7' }} />
+                <Database size={18} style={{ color: '#38BDF8' }} />
               </div>
               <div>
                 <p className="text-lg font-bold text-text-primary">1</p>
@@ -246,7 +246,7 @@ export const MemoryBrowser: React.FC = () => {
             disabled={isSearchLoading}
             className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 disabled:opacity-50"
             style={{
-              background: 'linear-gradient(135deg, #7C71F0, #4FC3F7)',
+              background: 'linear-gradient(135deg, #9B8CE8, #38BDF8)',
               color: 'white',
             }}
           >
@@ -300,7 +300,7 @@ export const MemoryBrowser: React.FC = () => {
               border: '1px solid rgba(124,113,240,0.2)',
             }}
           >
-            <Brain size={32} style={{ color: '#7C71F0', opacity: 0.6 }} />
+            <Brain size={32} style={{ color: '#9B8CE8', opacity: 0.6 }} />
           </div>
           <div className="text-center">
             <p className="text-text-primary font-medium mb-1">
