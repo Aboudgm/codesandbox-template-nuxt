@@ -1,3 +1,8 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Node template
 # Logs
@@ -80,11 +85,14 @@ dist
 # IDE / Editor
 .idea
 
-# Service worker
-sw.*
+# Service worker build output (not our hand-written sw.js)
+# sw.*  # commented out — we have a hand-written public/sw.js
 
 # macOS
 .DS_Store
 
 # Vim swap files
 *.swp
+
+# Claude Code internal (worktrees, session state)
+.claude/

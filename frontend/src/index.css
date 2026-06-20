@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:       #08080C;
+  --surface:  #101016;
+  --card:     #16161E;
+  --elevated: #1D1D26;
+  --border:   rgba(255,255,255,0.055);
+  --border-warm: rgba(232,112,64,0.14);
+
+  --nexus:      #E87040;
+  --nexus-soft: #F09868;
+  --nexus-dim:  rgba(232,112,64,0.10);
+  --nexus-glow: rgba(232,112,64,0.28);
+
+  --violet: #9B8CE8;
+  --teal:   #2DD4BF;
+  --amber:  #F5C518;
+  --red:    #EF6060;
+  --cyan:   #38BDF8;
+  --green:  #4ADE80;
+
+  --t1: #F0F0F4;
+  --t2: #8A8A9A;
+  --t3: #55556A;
+  --t4: #33333C;
+
+  --c-nexus:  #E87040;
+  --c-aria:   #38BDF8;
+  --c-forge:  #2DD4BF;
+  --c-scribe: #9B8CE8;
+  --c-echo:   #F5C518;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg);
+    color: var(--t1);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+    background-color: var(--bg);
+    background-image: radial-gradient(circle, rgba(232,112,64,0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(232,112,64,0.20); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(232,112,64,0.40); }
+
+  ::selection { background: var(--nexus-dim); color: var(--t1); }
+
+  .placeholder-muted::placeholder { color: var(--t3); opacity: 1; }
+  .placeholder-dim::placeholder   { color: var(--t4); opacity: 1; }
+
+  .skip-nav {
+    position: absolute;
+    left: -9999px;
+    z-index: 999;
+    padding: 0.5rem 1rem;
+    background: var(--nexus);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0 0 8px 8px;
+    text-decoration: none;
+  }
+  .skip-nav:focus { left: 50%; transform: translateX(-50%); }
+
+  :focus-visible {
+    outline: 2px solid rgba(232,112,64,0.8);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  :focus:not(:focus-visible) { outline: none; }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(16,16,22,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+  }
+
+  .glass-warm {
+    background: rgba(16,16,18,0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-warm);
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+  }
+
+  .glow-nexus  { box-shadow: 0 0 16px var(--nexus-glow), 0 0 48px rgba(232,112,64,0.12); }
+  .glow-violet { box-shadow: 0 0 16px rgba(155,140,232,0.35), 0 0 48px rgba(155,140,232,0.10); }
+  .glow-teal   { box-shadow: 0 0 16px rgba(45,212,191,0.35), 0 0 48px rgba(45,212,191,0.10); }
+  .glow-cyan   { box-shadow: 0 0 16px rgba(56,189,248,0.35), 0 0 48px rgba(56,189,248,0.10); }
+
+  .gradient-nexus {
+    background: linear-gradient(135deg, #E87040, #F09868);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-nexus {
+    background: linear-gradient(135deg, #F0EEE8 0%, #E87040 45%, #9B8CE8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-warm {
+    background: linear-gradient(135deg, #F0EEE8 0%, #E87040 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-cool {
+    background: linear-gradient(135deg, #38BDF8, #9B8CE8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .safe-top    { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-left   { padding-left: env(safe-area-inset-left); }
+  .safe-right  { padding-right: env(safe-area-inset-right); }
+  .pb-safe     { padding-bottom: calc(env(safe-area-inset-bottom) + 5rem); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .touch-target { min-height: 52px; min-width: 52px; }
+
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .thinking-dots::after {
+    content: '...';
+    animation: thinkingDots 1.4s steps(4, end) infinite;
+  }
+  @keyframes thinkingDots {
+    0%  { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+    99% { content: ''; }
+  }
+
+  .code-block {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(232,112,64,0.10);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(232,112,64,0.3); }
+  50%       { box-shadow: 0 0 24px rgba(232,112,64,0.65), 0 0 48px rgba(232,112,64,0.25); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes orbBreath {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%       { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes typewriterCursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

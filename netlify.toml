@@ -1,0 +1,28 @@
+[build]
+  command = "cd frontend && npm install && npm run build"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS    = "--legacy-peer-deps"
+
+# Never redirect /api/* or /ws/* — let them 404 properly so Axios treats
+# them as errors (not silently return index.html with status 200).
+[[redirects]]
+  from   = "/api/*"
+  to     = "/api/:splat"
+  status = 404
+  force  = true
+
+[[redirects]]
+  from   = "/ws/*"
+  to     = "/ws/:splat"
+  status = 404
+  force  = true
+
+# SPA catch-all — React Router handles all other routing client-side
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+

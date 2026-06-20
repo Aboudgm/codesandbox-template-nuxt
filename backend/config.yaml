@@ -1,0 +1,38 @@
+# Multi-Agent AI Framework — default configuration
+# Override any value with environment variables:
+#   API_KEY_ANTHROPIC, API_KEY_OPENAI, API_KEY_GOOGLE_GEMINI
+#   MODEL_DEFAULT_PROVIDER, MODEL_ANTHROPIC_MODEL, etc.
+
+app:
+  debug: false
+  host: "0.0.0.0"
+  port: 8000
+  log_level: "info"
+
+api_keys:
+  anthropic: ""        # or set API_KEY_ANTHROPIC env var
+  openai: ""           # or set API_KEY_OPENAI env var
+  google_gemini: ""    # or set API_KEY_GOOGLE_GEMINI env var
+
+models:
+  default_provider: "anthropic"
+  anthropic_model: "claude-3-5-sonnet-20241022"
+  openai_model: "gpt-4o"
+  gemini_model: "gemini-1.5-pro"
+  max_tokens: 4096
+  temperature: 0.7
+
+memory:
+  vector_db_path: "/data/chroma"
+  episodic_db_path: "/data/episodic.db"
+  embedding_model: "all-MiniLM-L6-v2"
+  max_memories: 1000
+
+sandbox:
+  workspace_path: "/data/workspace"
+  execution_timeout: 30
+  max_output_size: 65536
+  allowed_languages:
+    - python
+    - javascript
+    - bash

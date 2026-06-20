@@ -1,0 +1,151 @@
+import axios from 'axios'
+import type { Task, AgentInfo, Memory, Config } from '../types'
+
+const getBaseURL = (): string => {
+  const customUrl = localStorage.getItem('nexus_backend_url')
+  return customUrl ? `${customUrl.replace(/\/$/, '')}/api` : '/api'
+}
+
+const api = axios.create({
+  baseURL: getBaseURL(),
+  timeout: 60000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+export function setBackendUrl(url: string): void {
+  if (url) {
+    localStorage.setItem('nexus_backend_url', url)
+  } else {
+    localStorage.removeItem('nexus_backend_url')
+  }
+  api.defaults.baseURL = getBaseURL()
+}
+
+export function getBackendUrl(): string {
+  return localStorage.getItem('nexus_backend_url') || ''
+}
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const baseUrl = localStorage.getItem('nexus_backend_url') || ''
+    const url = baseUrl ? `${baseUrl.replace(/\/$/, '')}/health` : '/health'
+    const { data } = await axios.get(url, { timeout: 5000 })
+    return data?.status === 'ok'
+  } catch {
+    return false
+  }
+}
+
+api.interceptors.response.use(
+  (response) => {
+    // Guard: if Netlify (or any proxy) returns HTML instead of JSON, reject it
+    // so react-query treats it as an error rather than returning HTML as data.
+    const ct = String(response.headers?.['content-type'] ?? '')
+    if (ct.includes('text/html') && typeof response.data === 'string') {
+      return Promise.reject(new Error('Backend unavailable (received HTML instead of JSON)'))
+    }
+    return response
+  },
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message)
+    return Promise.reject(error)
+  }
+)
+
+// Tasks
+export async function createTask(goal: string): Promise<Task> {
+  const { data } = await api.post<Task>('/tasks', { goal })
+  return data
+}
+
+export async function getTasks(): Promise<Task[]> {
+  const { data } = await api.get<Task[]>('/tasks')
+  return data
+}
+
+export async function getTask(id: string): Promise<Task> {
+  const { data } = await api.get<Task>(`/tasks/${id}`)
+  return data
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await api.delete(`/tasks/${id}`)
+}
+
+export async function pauseTask(id: string): Promise<Task> {
+  const { data } = await api.post<Task>(`/tasks/${id}/pause`)
+  return data
+}
+
+export async function resumeTask(id: string): Promise<Task> {
+  const { data } = await api.post<Task>(`/tasks/${id}/resume`)
+  return data
+}
+
+// Agents
+export async function getAgents(): Promise<AgentInfo[]> {
+  const { data } = await api.get<AgentInfo[]>('/agents')
+  return data
+}
+
+// Memory
+export async function searchMemory(query: string): Promise<Memory[]> {
+  const { data } = await api.get<Memory[]>('/memory/search', {
+    params: { q: query },
+  })
+  return data
+}
+
+export async function getRecentMemories(): Promise<Memory[]> {
+  const { data } = await api.get<Memory[]>('/memory/recent')
+  return data
+}
+
+export async function getMemoryStats(): Promise<any> {
+  const { data } = await api.get('/memory/stats')
+  return data
+}
+
+export async function deleteMemory(id: string): Promise<void> {
+  await api.delete(`/memory/${id}`)
+}
+
+export async function clearMemories(): Promise<void> {
+  await api.delete('/memory/all')
+}
+
+// Config
+export async function getConfig(): Promise<Config> {
+  const { data } = await api.get<Config>('/config')
+  return data
+}
+
+export async function updateConfig(config: Partial<Config>): Promise<Config> {
+  const { data } = await api.put<Config>('/config', config)
+  return data
+}
+
+export async function testConnection(
+  provider: 'gemini' | 'anthropic' | 'openai' | 'xai',
+  key?: string,
+): Promise<{ success: boolean; message: string; model?: string }> {
+  const { data } = await api.post<{ success: boolean; message: string; model?: string }>(
+    `/config/test/${provider}`,
+    key ? { key } : {},
+  )
+  return data
+}
+
+export async function getStats(): Promise<{ total_tasks: number; memories_stored: number; agents_available: number }> {
+  const { data } = await api.get('/stats')
+  return data
+}
+
+export function getStreamUrl(taskId: string): string {
+  const base = (localStorage.getItem('nexus_backend_url') || '').replace(/\/$/, '')
+  return base ? `${base}/api/tasks/${taskId}/stream` : `/api/tasks/${taskId}/stream`
+}
+
+export default api

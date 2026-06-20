@@ -1,0 +1,20 @@
+{
+  "name": "NEXUS AI — Multi-Agent Framework",
+  "short_name": "NEXUS AI",
+  "description": "Advanced multi-agent AI system with web research, code execution, and persistent memory",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A14",
+  "theme_color": "#D97757",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230A0A14'/><text y='.9em' font-size='80' x='10'>🤖</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false
+}
