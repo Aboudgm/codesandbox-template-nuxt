@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, Suspense, lazy } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2, Plus, Sparkles, Command } from 'lucide-react'
@@ -7,13 +7,16 @@ import toast from 'react-hot-toast'
 import { BottomNav }       from './components/Layout/BottomNav'
 import { Header }          from './components/Layout/Header'
 import { CommandPalette }  from './components/UI/CommandPalette'
-import { Dashboard }       from './pages/Dashboard'
-import { TasksList }       from './pages/TasksList'
-import { TaskDetail }      from './pages/TaskDetail'
-import { MemoryBrowser }   from './pages/MemoryBrowser'
-import { Settings }        from './pages/Settings'
 import { useAppStore }     from './store/useAppStore'
 import { getAgents, createTask } from './lib/api'
+
+// ─── Lazy-loaded page chunks ──────────────────────────────────────────────────
+// Each page is its own async chunk; TaskDetail defers the 787KB markdown bundle
+const Dashboard    = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
+const TasksList    = lazy(() => import('./pages/TasksList').then(m => ({ default: m.TasksList })))
+const TaskDetail   = lazy(() => import('./pages/TaskDetail').then(m => ({ default: m.TaskDetail })))
+const MemoryBrowser = lazy(() => import('./pages/MemoryBrowser').then(m => ({ default: m.MemoryBrowser })))
+const Settings     = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 
 // ─── Neural Canvas Background ─────────────────────────────────────────────────
 
@@ -152,6 +155,9 @@ const QuickTaskSheet: React.FC = () => {
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
             className="fixed bottom-0 left-0 right-0 z-[70] px-3"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create new task"
           >
             <div
               className="rounded-3xl p-5"
@@ -288,12 +294,15 @@ function AppContent() {
 
   return (
     <div className="relative min-h-screen min-h-dvh overflow-x-hidden" style={{ background: '#080810' }}>
+      {/* Skip-to-content for keyboard users (WCAG 2.4.1) */}
+      <a href="#main-content" className="skip-nav">Skip to content</a>
+
       <NeuralBackground />
 
       <div className="relative" style={{ zIndex: 1 }}>
         <Header title={pageTitle} showBack={isTaskDetail} />
 
-        <main
+        <main id="main-content"
           className="pt-14"
           style={{
             paddingBottom: isTaskDetail
@@ -301,24 +310,32 @@ function AppContent() {
               : 'calc(env(safe-area-inset-bottom) + 5.5rem)',
           }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={{ type: 'tween', ease: 'anticipate', duration: 0.22 }}
-            >
-              <Routes location={location}>
-                <Route path="/"          element={<Dashboard />} />
-                <Route path="/tasks"     element={<TasksList />} />
-                <Route path="/tasks/:id" element={<TaskDetail />} />
-                <Route path="/memory"    element={<MemoryBrowser />} />
-                <Route path="/settings"  element={<Settings />} />
-              </Routes>
-            </motion.div>
-          </AnimatePresence>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
+                <Loader2 size={22} className="animate-spin" style={{ color: '#D97757', opacity: 0.7 }} />
+              </div>
+            }
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial="initial"
+                animate="in"
+                exit="out"
+                variants={pageVariants}
+                transition={{ type: 'tween', ease: 'anticipate', duration: 0.22 }}
+              >
+                <Routes location={location}>
+                  <Route path="/"          element={<Dashboard />} />
+                  <Route path="/tasks"     element={<TasksList />} />
+                  <Route path="/tasks/:id" element={<TaskDetail />} />
+                  <Route path="/memory"    element={<MemoryBrowser />} />
+                  <Route path="/settings"  element={<Settings />} />
+                </Routes>
+              </motion.div>
+            </AnimatePresence>
+          </Suspense>
         </main>
 
         {!isTaskDetail && <BottomNav />}

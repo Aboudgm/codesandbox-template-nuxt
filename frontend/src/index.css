@@ -39,6 +39,31 @@
   /* ── Placeholder helper (replaces broken placeholder-text-muted class) ── */
   .placeholder-muted::placeholder { color: #4A4A6A; opacity: 1; }
   .placeholder-dim::placeholder   { color: #2A2A4A; opacity: 1; }
+
+  /* ── Skip-nav link (WCAG 2.4.1) ── */
+  .skip-nav {
+    position: absolute;
+    left: -9999px;
+    z-index: 999;
+    padding: 0.5rem 1rem;
+    background: #D97757;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0 0 8px 8px;
+    text-decoration: none;
+  }
+  .skip-nav:focus { left: 50%; transform: translateX(-50%); }
+
+  /* ── WCAG 2.4.11 — visible focus indicator for keyboard users ── */
+  :focus-visible {
+    outline: 2px solid rgba(217,119,87,0.8);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Remove outline for mouse/touch users only (not keyboard) */
+  :focus:not(:focus-visible) { outline: none; }
 }
 
 @layer utilities {

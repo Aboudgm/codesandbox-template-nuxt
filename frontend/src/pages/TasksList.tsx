@@ -91,8 +91,8 @@ export const TasksList: React.FC = () => {
           style={{ color: '#EEEEF0' }}
         />
         {search && (
-          <button onClick={() => setSearch('')}>
-            <X size={13} style={{ color: '#38384A' }} />
+          <button onClick={() => setSearch('')} aria-label="Clear search">
+            <X size={13} style={{ color: '#38384A' }} aria-hidden="true" />
           </button>
         )}
       </div>

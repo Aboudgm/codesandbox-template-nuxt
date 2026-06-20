@@ -233,9 +233,10 @@ export const MemoryBrowser: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={clearSearch}
+                aria-label="Clear search"
                 className="mr-1"
               >
-                <X size={14} className="text-text-muted" />
+                <X size={14} aria-hidden="true" style={{ color: '#4A4A6A' }} />
               </motion.button>
             )}
           </AnimatePresence>

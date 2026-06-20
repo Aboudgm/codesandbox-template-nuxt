@@ -137,10 +137,17 @@ const ToggleRow: React.FC<{
       <p className="text-sm font-medium text-text-primary">{label}</p>
       {description && <p className="text-xs text-text-muted mt-0.5">{description}</p>}
     </div>
-    <button onClick={() => onChange(!value)} className="flex-shrink-0" aria-label={`Toggle ${label}`}>
+    <button
+      onClick={() => onChange(!value)}
+      className="flex-shrink-0"
+      aria-label={`${value ? 'Disable' : 'Enable'} ${label}`}
+      aria-pressed={value}
+      role="switch"
+      aria-checked={value}
+    >
       {value
-        ? <ToggleRight size={28} style={{ color: '#D97757' }} />
-        : <ToggleLeft size={28} className="text-text-muted" />
+        ? <ToggleRight size={28} style={{ color: '#D97757' }} aria-hidden="true" />
+        : <ToggleLeft size={28} className="text-text-muted" aria-hidden="true" />
       }
     </button>
   </div>
@@ -150,7 +157,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode; delay?: numb
   title, children, delay = 0, accent,
 }) => (
   <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-    <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">{title}</p>
+    <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">{title}</h2>
     <GlassCard glow={accent}>
       <div className="space-y-4">{children}</div>
     </GlassCard>

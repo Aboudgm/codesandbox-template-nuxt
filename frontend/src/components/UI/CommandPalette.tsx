@@ -118,6 +118,9 @@ export const CommandPalette: React.FC = () => {
             transition={{ type: 'spring', damping: 28, stiffness: 480 }}
             className="fixed top-[14vh] left-1/2 -translate-x-1/2 z-[91]"
             style={{ width: 'min(92vw, 540px)' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
           >
             <div
               className="rounded-2xl overflow-hidden"
@@ -132,7 +135,7 @@ export const CommandPalette: React.FC = () => {
                 className="flex items-center gap-3 px-4 py-3.5"
                 style={{ borderBottom: '1px solid rgba(50,46,68,0.7)' }}
               >
-                <Search size={16} style={{ color: '#D97757', flexShrink: 0 }} />
+                <Search size={16} style={{ color: '#D97757', flexShrink: 0 }} aria-hidden="true" />
                 <input
                   ref={inputRef}
                   value={query}
@@ -140,6 +143,12 @@ export const CommandPalette: React.FC = () => {
                   placeholder="Search commands, tasks…"
                   className="flex-1 bg-transparent text-sm outline-none placeholder-muted"
                   style={{ color: '#EEEEF0' }}
+                  role="combobox"
+                  aria-expanded={filtered.length > 0}
+                  aria-controls="cmd-palette-list"
+                  aria-activedescendant={filtered[selected] ? `cmd-item-${filtered[selected].id}` : undefined}
+                  aria-autocomplete="list"
+                  aria-label="Search commands"
                 />
                 <kbd
                   className="text-xs px-1.5 py-0.5 rounded font-mono"
@@ -148,23 +157,30 @@ export const CommandPalette: React.FC = () => {
                     border: '1px solid rgba(60,56,80,0.6)',
                     color: '#38384A',
                   }}
+                  aria-hidden="true"
                 >
                   ESC
                 </kbd>
               </div>
 
               {/* Results */}
-              <div className="max-h-80 overflow-y-auto no-scrollbar py-2">
+              <div
+                id="cmd-palette-list"
+                role="listbox"
+                aria-label="Commands"
+                className="max-h-80 overflow-y-auto no-scrollbar py-2"
+              >
                 {filtered.length === 0 ? (
-                  <p className="text-center py-8 text-sm" style={{ color: '#38384A' }}>
+                  <p className="text-center py-8 text-sm" style={{ color: '#38384A' }} role="status">
                     No commands found
                   </p>
                 ) : (
                   groups.map((group) => (
-                    <div key={group}>
+                    <div key={group} role="group" aria-label={group}>
                       <p
                         className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest"
                         style={{ color: '#38384A' }}
+                        aria-hidden="true"
                       >
                         {group}
                       </p>
@@ -176,6 +192,9 @@ export const CommandPalette: React.FC = () => {
                           return (
                             <button
                               key={cmd.id}
+                              id={`cmd-item-${cmd.id}`}
+                              role="option"
+                              aria-selected={isSelected}
                               onClick={() => run(cmd)}
                               onMouseEnter={() => setSelected(globalIdx)}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
@@ -186,7 +205,7 @@ export const CommandPalette: React.FC = () => {
                                   : '2px solid transparent',
                               }}
                             >
-                              <span style={{ color: isSelected ? '#D97757' : '#38384A' }}>
+                              <span style={{ color: isSelected ? '#D97757' : '#38384A' }} aria-hidden="true">
                                 {cmd.icon}
                               </span>
                               <span
@@ -196,7 +215,7 @@ export const CommandPalette: React.FC = () => {
                                 {cmd.label}
                               </span>
                               {cmd.description && (
-                                <span className="text-xs" style={{ color: '#38384A' }}>
+                                <span className="text-xs" style={{ color: '#38384A' }} aria-hidden="true">
                                   {cmd.description}
                                 </span>
                               )}
@@ -212,6 +231,7 @@ export const CommandPalette: React.FC = () => {
               <div
                 className="flex items-center gap-4 px-4 py-2.5 text-[10px]"
                 style={{ borderTop: '1px solid rgba(50,46,68,0.55)', color: '#38384A' }}
+                aria-hidden="true"
               >
                 <span><kbd className="font-mono">↑↓</kbd> navigate</span>
                 <span><kbd className="font-mono">↵</kbd> select</span>

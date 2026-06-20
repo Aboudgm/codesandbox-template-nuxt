@@ -229,29 +229,34 @@ export const TaskDetail: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="py-4"
       >
-        {/* Goal */}
-        <p className="text-base font-semibold mb-3 leading-snug" style={{ color: '#E8E8F8' }}>
+        {/* Goal — semantic h1 for screen readers */}
+        <h1 className="text-base font-semibold mb-3 leading-snug" style={{ color: '#E8E8F8' }}>
           {task.goal}
-        </p>
+        </h1>
 
         {/* Meta row */}
         <div className="flex items-center gap-3 flex-wrap">
           <StatusBadge status={task.status} />
 
           <div className="flex items-center gap-1.5" style={{ color: '#4A4A70' }}>
-            <Clock size={11} />
+            <Clock size={11} aria-hidden="true" />
             <span className="text-[10px]">{timeAgo(task.created_at)}</span>
           </div>
 
           {task.status === 'completed' && (
             <div className="flex items-center gap-1" style={{ color: '#00FFB3' }}>
-              <CheckCircle2 size={11} />
+              <CheckCircle2 size={11} aria-hidden="true" />
               <span className="text-[10px]">{formatDuration(task.created_at, task.updated_at)}</span>
             </div>
           )}
 
           {streamEvents.length > 0 && (
-            <span className="text-[10px]" style={{ color: '#4A4A70' }}>
+            <span
+              className="text-[10px]"
+              style={{ color: '#4A4A70' }}
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {streamEvents.length} events
             </span>
           )}

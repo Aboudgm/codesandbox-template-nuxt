@@ -84,11 +84,11 @@ export const AgentOrb: React.FC<AgentOrbProps> = ({ agent, size = 'md', showLabe
         <div className="text-center">
           <p
             className="text-[10px] font-bold tracking-widest"
-            style={{ color: isActive ? color : '#4A4A70' }}
+            style={{ color: isActive ? color : '#5A5A7A' }}
           >
             {AGENT_NAMES[agent.type?.toUpperCase() ?? ''] ?? agent.name}
           </p>
-          <p className="text-[9px]" style={{ color: '#2A2A50' }}>
+          <p className="text-[9px]" style={{ color: isActive ? `${color}99` : '#38384A' }}>
             {agent.state}
           </p>
         </div>

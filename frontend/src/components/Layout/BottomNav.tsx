@@ -26,6 +26,8 @@ const Tab: React.FC<{ item: NavItem; active: boolean; badge?: number }> = ({ ite
   return (
     <button
       onClick={() => navigate(item.path)}
+      aria-label={item.label}
+      aria-current={active ? 'page' : undefined}
       className="flex-1 flex flex-col items-center justify-center gap-1 py-2 relative"
       style={{ minHeight: 56 }}
     >
@@ -83,7 +85,8 @@ export const BottomNav: React.FC = () => {
   }
 
   return (
-    <div
+    <nav
+      aria-label="Main navigation"
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
@@ -106,6 +109,7 @@ export const BottomNav: React.FC = () => {
             whileTap={{ scale: 0.86 }}
             whileHover={{ scale: 1.04 }}
             onClick={() => setShowNewTask(true)}
+            aria-label="Create new task"
             className="w-13 h-13 rounded-2xl flex items-center justify-center relative"
             style={{
               width: 52,
@@ -128,6 +132,6 @@ export const BottomNav: React.FC = () => {
         <Tab item={NAV[2]} active={isActive('/memory')} />
         <Tab item={NAV[3]} active={isActive('/settings')} />
       </div>
-    </div>
+    </nav>
   )
 }
