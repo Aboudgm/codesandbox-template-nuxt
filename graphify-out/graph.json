@@ -1728,6 +1728,28 @@
       "source_location": "L1"
     },
     {
+      "id": "vault_decisions_0002_adopt_ultimate_guide_practices",
+      "label": "0002-adopt-ultimate-guide-practices.md",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "Project Overview.md",
+      "file_type": "document",
+      "frontmatter": {
+        "title": "ADR 0002: Adopt Ultimate Guide practices",
+        "type": "decision",
+        "tags": [
+          "decision"
+        ],
+        "status": "accepted",
+        "date": "2026-10-10",
+        "source": "https://github.com/FlorianBruniaux/claude-code-ultimate-guide"
+      },
+      "node_kind": "page",
+      "norm_label": "0002-adopt-ultimate-guide-practices.md",
+      "source_file": "vault/Decisions/0002-adopt-ultimate-guide-practices.md",
+      "source_location": "L1"
+    },
+    {
       "id": "vault_decisions_0001_use_graphify",
       "label": "0001-use-graphify.md",
       "_origin": "ast",
@@ -1771,6 +1793,18 @@
       "norm_label": "adr 0001: use graphify for code context",
       "source_file": "vault/Decisions/0001-use-graphify.md",
       "source_location": "L10"
+    },
+    {
+      "id": "vault_decisions_0002_adopt_ultimate_guide_practices_adr_0002_adopt_ultimate_guide_practices",
+      "label": "ADR 0002: Adopt Ultimate Guide practices",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "Project Overview.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "adr 0002: adopt ultimate guide practices",
+      "source_file": "vault/Decisions/0002-adopt-ultimate-guide-practices.md",
+      "source_location": "L11"
     },
     {
       "id": "vault_project_overview_code_graph",
@@ -2184,6 +2218,18 @@
       "source_location": "L1"
     },
     {
+      "id": "claude_project",
+      "label": "Project",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "CLAUDE.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "project",
+      "source_file": "CLAUDE.md",
+      "source_location": "L11"
+    },
+    {
       "id": "claude_claude",
       "label": ".claude/CLAUDE.md",
       "_origin": "ast",
@@ -2229,6 +2275,842 @@
       "node_kind": "heading",
       "norm_label": "store",
       "source_file": "store/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_skills_session_save_skill",
+      "label": "session-save/SKILL.md",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "session-save",
+        "description": "Save the current session state (decisions, modified files, current status, and next steps) to a handoff file for later resume.",
+        "effort": "low",
+        "disable-model-invocation": true
+      },
+      "node_kind": "page",
+      "norm_label": "session-save/skill.md",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_skills_session_save_skill_blockers_open_questions",
+      "label": "Blockers / open questions",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "blockers / open questions",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L66"
+    },
+    {
+      "id": "claude_skills_session_save_skill_context_to_reload",
+      "label": "Context to reload",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "context to reload",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L60"
+    },
+    {
+      "id": "claude_skills_session_save_skill_current_status",
+      "label": "Current status",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "current status",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L46"
+    },
+    {
+      "id": "claude_skills_session_save_skill_example_1_mid_feature_save",
+      "label": "Example 1: Mid-Feature save",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "example 1: mid-feature save",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L89"
+    },
+    {
+      "id": "claude_skills_session_save_skill_example_2_context_pressure_save",
+      "label": "Example 2: Context-Pressure save",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "example 2: context-pressure save",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L101"
+    },
+    {
+      "id": "claude_skills_session_save_skill_examples",
+      "label": "Examples",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "examples",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L87"
+    },
+    {
+      "id": "claude_skills_session_save_skill_files_modified_this_session",
+      "label": "Files modified this session",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "files modified this session",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L31"
+    },
+    {
+      "id": "claude_skills_session_save_skill_implementation",
+      "label": "Implementation",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "implementation",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L73"
+    },
+    {
+      "id": "claude_skills_session_save_skill_instructions",
+      "label": "Instructions",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "instructions",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L20"
+    },
+    {
+      "id": "claude_skills_session_save_skill_key_decisions_made",
+      "label": "Key decisions made",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "key decisions made",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "claude_skills_session_save_skill_next_steps_ordered",
+      "label": "Next steps (ordered)",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "next steps (ordered)",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L53"
+    },
+    {
+      "id": "claude_skills_session_save_skill_notes",
+      "label": "Notes",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "notes",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L105"
+    },
+    {
+      "id": "claude_skills_session_save_skill_resume_pattern",
+      "label": "Resume pattern",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "resume pattern",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L77"
+    },
+    {
+      "id": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "label": "Session handoff: [TIMESTAMP]",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "session handoff: [timestamp]",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L26"
+    },
+    {
+      "id": "claude_skills_session_save_skill_session_save",
+      "label": "/session-save",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "/session-save",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "claude_skills_session_save_skill_what_was_being_done",
+      "label": "What was being done",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what was being done",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "claude_skills_session_save_skill_when_to_use",
+      "label": "When to use",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Session handoff: [TIMESTAMP]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "when to use",
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L12"
+    },
+    {
+      "id": "claude_skills_catchup_skill",
+      "label": "catchup/SKILL.md",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "catchup",
+        "description": "Restore context after /clear by summarizing recent work and project state",
+        "argument-hint": "[branch] [--since &lt;date&gt;]",
+        "effort": "low",
+        "when_to_use": "Use after /clear or at session start to restore context.",
+        "disable-model-invocation": true
+      },
+      "node_kind": "page",
+      "norm_label": "catchup/skill.md",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_skills_catchup_skill_context_catchup",
+      "label": "Context catchup",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "context catchup",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L10"
+    },
+    {
+      "id": "claude_skills_catchup_skill_context_restored",
+      "label": "\ud83d\udccd Context restored",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "\ud83d\udccd context restored",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L76"
+    },
+    {
+      "id": "claude_skills_catchup_skill_instructions",
+      "label": "Instructions",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "instructions",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L22"
+    },
+    {
+      "id": "claude_skills_catchup_skill_output_format",
+      "label": "Output format",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "output format",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L70"
+    },
+    {
+      "id": "claude_skills_catchup_skill_outstanding_todos",
+      "label": "\u26a0\ufe0f Outstanding TODOs",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "\u26a0\ufe0f outstanding todos",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L92"
+    },
+    {
+      "id": "claude_skills_catchup_skill_pro_tips",
+      "label": "Pro tips",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "pro tips",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L125"
+    },
+    {
+      "id": "claude_skills_catchup_skill_purpose",
+      "label": "Purpose",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "purpose",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L14"
+    },
+    {
+      "id": "claude_skills_catchup_skill_recent_work_last_5_commits",
+      "label": "\ud83d\udd04 Recent work (last 5 commits)",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "\ud83d\udd04 recent work (last 5 commits)",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L82"
+    },
+    {
+      "id": "claude_skills_catchup_skill_step_1_git_history_analysis",
+      "label": "Step 1: Git history analysis",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 1: git history analysis",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L24"
+    },
+    {
+      "id": "claude_skills_catchup_skill_step_2_recent_changes_summary",
+      "label": "Step 2: Recent changes summary",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 2: recent changes summary",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L38"
+    },
+    {
+      "id": "claude_skills_catchup_skill_step_3_todo_fixme_scan",
+      "label": "Step 3: TODO/FIXME scan",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 3: todo/fixme scan",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L49"
+    },
+    {
+      "id": "claude_skills_catchup_skill_step_4_project_state_check",
+      "label": "Step 4: Project state check",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 4: project state check",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L56"
+    },
+    {
+      "id": "claude_skills_catchup_skill_suggested_next_steps",
+      "label": "\ud83c\udfaf Suggested next steps",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "\ud83c\udfaf suggested next steps",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L97"
+    },
+    {
+      "id": "claude_skills_catchup_skill_uncommitted_changes",
+      "label": "\ud83d\udcdd Uncommitted changes",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "\ud83d\udcdd uncommitted changes",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L88"
+    },
+    {
+      "id": "claude_skills_catchup_skill_usage_examples",
+      "label": "Usage examples",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "Context catchup",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "usage examples",
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L105"
+    },
+    {
+      "id": "claude_agents_test_writer",
+      "label": "test-writer.md",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "test-writer",
+        "description": "Use for generating comprehensive tests following TDD/BDD principles",
+        "model": "sonnet",
+        "tools": "Read, Write, Edit, Grep, Glob, Bash"
+      },
+      "node_kind": "page",
+      "norm_label": "test-writer.md",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_agents_test_writer_1_analyze_the_code",
+      "label": "1. Analyze the code",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "1. analyze the code",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L23"
+    },
+    {
+      "id": "claude_agents_test_writer_2_create_test_plan",
+      "label": "2. Create test plan",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "2. create test plan",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L29"
+    },
+    {
+      "id": "claude_agents_test_writer_3_write_tests",
+      "label": "3. Write tests",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "3. write tests",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L52"
+    },
+    {
+      "id": "claude_agents_test_writer_best_practices",
+      "label": "Best practices",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "best practices",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L101"
+    },
+    {
+      "id": "claude_agents_test_writer_integration_test",
+      "label": "Integration test",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "integration test",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L84"
+    },
+    {
+      "id": "claude_agents_test_writer_test_generation_process",
+      "label": "Test generation process",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "test generation process",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L21"
+    },
+    {
+      "id": "claude_agents_test_writer_test_templates",
+      "label": "Test templates",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "test templates",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L55"
+    },
+    {
+      "id": "claude_agents_test_writer_test_writer_agent",
+      "label": "Test writer agent",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "test writer agent",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "claude_agents_test_writer_testing_philosophy",
+      "label": "Testing philosophy",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "testing philosophy",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L14"
+    },
+    {
+      "id": "claude_agents_test_writer_unit_test_jest_vitest",
+      "label": "Unit test (jest/vitest)",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Test writer agent",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "unit test (jest/vitest)",
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L57"
+    },
+    {
+      "id": "claude_skills_token_audit_skill",
+      "label": "token-audit/SKILL.md",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "token-audit",
+        "description": "Audit Claude Code configuration to measure fixed-context token overhead and produce a prioritized action plan. Use when hitting rate limits, experiencing early context compression, or after adding significant config files.",
+        "effort": "medium",
+        "allowed-tools": "Read Grep Glob Bash"
+      },
+      "node_kind": "page",
+      "norm_label": "token-audit/skill.md",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_interpreting_results",
+      "label": "Interpreting results",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "interpreting results",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L205"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_output_format",
+      "label": "Output format",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "output format",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L157"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_step_1_run_the_measurement",
+      "label": "Step 1 \u2014 run the measurement",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 1 \u2014 run the measurement",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L36"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_step_2_classify_rules_files",
+      "label": "Step 2 \u2014 classify rules files",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 2 \u2014 classify rules files",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L76"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_step_3_audit_hook_overhead",
+      "label": "Step 3 \u2014 audit hook overhead",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 3 \u2014 audit hook overhead",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L101"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_step_4_build_the_action_plan",
+      "label": "Step 4 \u2014 build the action plan",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 4 \u2014 build the action plan",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L133"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_step_5_the_rag_question",
+      "label": "Step 5 \u2014 the RAG question",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 5 \u2014 the rag question",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L147"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "label": "/token-audit: Context token audit",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "/token-audit: context token audit",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L8"
+    },
+    {
+      "id": "claude_skills_token_audit_skill_what_you_will_measure",
+      "label": "What you will measure",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "/token-audit: Context token audit",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what you will measure",
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L20"
+    },
+    {
+      "id": "claude_hooks_dangerous_actions_blocker",
+      "label": "dangerous-actions-blocker.sh",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "dangerous-actions-blocker.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "norm_label": "dangerous-actions-blocker.sh",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_hooks_dangerous_actions_blocker_canonicalize_path",
+      "label": "canonicalize_path()",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "dangerous-actions-blocker.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "norm_label": "canonicalize_path()",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L19"
+    },
+    {
+      "id": "claude_hooks_dangerous_actions_blocker_path_is_within",
+      "label": "path_is_within()",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "dangerous-actions-blocker.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "norm_label": "path_is_within()",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L43"
+    },
+    {
+      "id": "claude_hooks_dangerous_actions_blocker_sh__entry",
+      "label": "dangerous-actions-blocker.sh script",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "dangerous-actions-blocker.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "norm_label": "dangerous-actions-blocker.sh script",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_hooks_file_guard",
+      "label": "file-guard.sh",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "file-guard.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "norm_label": "file-guard.sh",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_hooks_file_guard_detect_bypass",
+      "label": "detect_bypass()",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "file-guard.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "norm_label": "detect_bypass()",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L80"
+    },
+    {
+      "id": "claude_hooks_file_guard_is_protected",
+      "label": "is_protected()",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "file-guard.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "norm_label": "is_protected()",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L51"
+    },
+    {
+      "id": "claude_hooks_file_guard_sh__entry",
+      "label": "file-guard.sh script",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "file-guard.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "norm_label": "file-guard.sh script",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_hooks_auto_format",
+      "label": "auto-format.sh",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "auto-format.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "norm_label": "auto-format.sh",
+      "source_file": ".claude/hooks/auto-format.sh",
+      "source_location": "L1"
+    },
+    {
+      "id": "claude_hooks_auto_format_sh__entry",
+      "label": "auto-format.sh script",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "auto-format.sh",
+      "file_type": "code",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "norm_label": "auto-format.sh script",
+      "source_file": ".claude/hooks/auto-format.sh",
       "source_location": "L1"
     },
     {
@@ -2406,6 +3288,38 @@
       "norm_label": "exclude",
       "source_file": "tsconfig.json",
       "source_location": "L20"
+    },
+    {
+      "id": "design_brand_book",
+      "label": "brand-book.md",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "brand-book.md",
+      "file_type": "document",
+      "frontmatter": {
+        "title": "Brand Book",
+        "tags": [
+          "design",
+          "tokens"
+        ],
+        "source": "components/NeumorphicMusicPlayer.vue (L232+)"
+      },
+      "node_kind": "page",
+      "norm_label": "brand-book.md",
+      "source_file": "design/brand-book.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "design_brand_book_brand_book_neumorphic",
+      "label": "Brand book (neumorphic)",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "brand-book.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "brand book (neumorphic)",
+      "source_file": "design/brand-book.md",
+      "source_location": "L7"
     },
     {
       "id": "package_scripts",
@@ -3001,6 +3915,54 @@
   ],
   "links": [
     {
+      "source": "claude_hooks_dangerous_actions_blocker_sh__entry",
+      "target": "claude_hooks_dangerous_actions_blocker_canonicalize_path",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L212",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_dangerous_actions_blocker_sh__entry",
+      "target": "claude_hooks_dangerous_actions_blocker_path_is_within",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L217",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_file_guard_sh__entry",
+      "target": "claude_hooks_file_guard_detect_bypass",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_file_guard_sh__entry",
+      "target": "claude_hooks_file_guard_is_protected",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L113",
+      "weight": 1.0
+    },
+    {
       "source": "components_neumorphicmusicplayer_startprogressanimation",
       "target": "components_neumorphicmusicplayer_updatecurrenttime",
       "relation": "calls",
@@ -3396,6 +4358,127 @@
       "weight": 1.0
     },
     {
+      "source": "claude",
+      "target": "claude_project",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer",
+      "target": "claude_agents_test_writer_test_writer_agent",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_generation_process",
+      "target": "claude_agents_test_writer_1_analyze_the_code",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_generation_process",
+      "target": "claude_agents_test_writer_2_create_test_plan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_generation_process",
+      "target": "claude_agents_test_writer_3_write_tests",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_templates",
+      "target": "claude_agents_test_writer_unit_test_jest_vitest",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_templates",
+      "target": "claude_agents_test_writer_integration_test",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_writer_agent",
+      "target": "claude_agents_test_writer_best_practices",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_writer_agent",
+      "target": "claude_agents_test_writer_testing_philosophy",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_writer_agent",
+      "target": "claude_agents_test_writer_test_generation_process",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_test_writer_test_writer_agent",
+      "target": "claude_agents_test_writer_test_templates",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/agents/test-writer.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
       "source": "claude_claude",
       "target": "claude_claude_graphify",
       "relation": "contains",
@@ -3404,6 +4487,204 @@
       "confidence_score": 1.0,
       "source_file": ".claude/CLAUDE.md",
       "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_auto_format",
+      "target": "claude_hooks_auto_format_sh__entry",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/auto-format.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_dangerous_actions_blocker",
+      "target": "claude_hooks_dangerous_actions_blocker_sh__entry",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_file_guard",
+      "target": "claude_hooks_file_guard_sh__entry",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill",
+      "target": "claude_skills_catchup_skill_context_catchup",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_context_catchup",
+      "target": "claude_skills_catchup_skill_usage_examples",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_context_catchup",
+      "target": "claude_skills_catchup_skill_pro_tips",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L125",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_context_catchup",
+      "target": "claude_skills_catchup_skill_purpose",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_context_catchup",
+      "target": "claude_skills_catchup_skill_instructions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_context_catchup",
+      "target": "claude_skills_catchup_skill_output_format",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_instructions",
+      "target": "claude_skills_catchup_skill_step_1_git_history_analysis",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_instructions",
+      "target": "claude_skills_catchup_skill_step_2_recent_changes_summary",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_instructions",
+      "target": "claude_skills_catchup_skill_step_3_todo_fixme_scan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_instructions",
+      "target": "claude_skills_catchup_skill_step_4_project_state_check",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_output_format",
+      "target": "claude_skills_catchup_skill_context_restored",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_output_format",
+      "target": "claude_skills_catchup_skill_recent_work_last_5_commits",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_output_format",
+      "target": "claude_skills_catchup_skill_uncommitted_changes",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_output_format",
+      "target": "claude_skills_catchup_skill_outstanding_todos",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_catchup_skill_output_format",
+      "target": "claude_skills_catchup_skill_suggested_next_steps",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/catchup/SKILL.md",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -4705,6 +5986,292 @@
       "weight": 1.0
     },
     {
+      "source": "claude_skills_session_save_skill",
+      "target": "claude_skills_session_save_skill_session_save",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_examples",
+      "target": "claude_skills_session_save_skill_example_2_context_pressure_save",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_examples",
+      "target": "claude_skills_session_save_skill_example_1_mid_feature_save",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_what_was_being_done",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_files_modified_this_session",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_key_decisions_made",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_current_status",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_next_steps_ordered",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_context_to_reload",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "target": "claude_skills_session_save_skill_blockers_open_questions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_notes",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_when_to_use",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_instructions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_session_handoff_timestamp",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_implementation",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_resume_pattern",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_session_save_skill_session_save",
+      "target": "claude_skills_session_save_skill_examples",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/session-save/SKILL.md",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill",
+      "target": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_step_3_audit_hook_overhead",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_step_4_build_the_action_plan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_step_5_the_rag_question",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_output_format",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_what_you_will_measure",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_interpreting_results",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_step_1_run_the_measurement",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_token_audit_skill_token_audit_context_token_audit",
+      "target": "claude_skills_token_audit_skill_step_2_classify_rules_files",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/skills/token-audit/SKILL.md",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
       "source": "components_neumorphicmusicplayer",
       "target": "components_neumorphicmusicplayer_data",
       "relation": "contains",
@@ -4856,6 +6423,17 @@
       "confidence_score": 1.0,
       "source_file": "components/NeumorphicMusicPlayer.vue",
       "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "design_brand_book",
+      "target": "design_brand_book_brand_book_neumorphic",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "design/brand-book.md",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -5541,6 +7119,17 @@
       "weight": 1.0
     },
     {
+      "source": "vault_decisions_0002_adopt_ultimate_guide_practices",
+      "target": "vault_decisions_0002_adopt_ultimate_guide_practices_adr_0002_adopt_ultimate_guide_practices",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vault/Decisions/0002-adopt-ultimate-guide-practices.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
       "source": "vault_project_overview",
       "target": "vault_project_overview_project_overview",
       "relation": "contains",
@@ -5571,6 +7160,50 @@
       "confidence_score": 1.0,
       "source_file": "vault/Project Overview.md",
       "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_dangerous_actions_blocker",
+      "target": "claude_hooks_dangerous_actions_blocker_canonicalize_path",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_dangerous_actions_blocker",
+      "target": "claude_hooks_dangerous_actions_blocker_path_is_within",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/dangerous-actions-blocker.sh",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_file_guard",
+      "target": "claude_hooks_file_guard_is_protected",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_hooks_file_guard",
+      "target": "claude_hooks_file_guard_detect_bypass",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".claude/hooks/file-guard.sh",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -5659,6 +7292,17 @@
       "confidence_score": 1.0,
       "source_file": "vault/Decisions/0001-use-graphify.md",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "vault_decisions_0002_adopt_ultimate_guide_practices",
+      "target": "vault_project_overview",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vault/Decisions/0002-adopt-ultimate-guide-practices.md",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -5842,5 +7486,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e6ca0d62065ebd659de10c89023aa51ac9fd3f08"
+  "built_at_commit": "18cb766053df886dac09bb57808ece7ed3b43640"
 }

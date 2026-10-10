@@ -1,9 +1,9 @@
 {
   ".claude/settings.json": {
-    "mtime": 1791654610.7535346,
-    "seen": 1791654611.6410458,
-    "ast_hash": "cbaf2b3390ea3e622938b2e9c1c65eed",
-    "semantic_hash": "cbaf2b3390ea3e622938b2e9c1c65eed"
+    "mtime": 1791655538.6649368,
+    "seen": 1791655566.6026273,
+    "ast_hash": "ab1081bb242738125b182a60dd5f2440",
+    "semantic_hash": ""
   },
   ".eslintrc.js": {
     "mtime": 1791415412.3416033,
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1791654610.658485,
-    "seen": 1791654671.1536884,
-    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "mtime": 1791655538.7031362,
+    "seen": 1791655566.6026993,
+    "ast_hash": "d9e0caae7921139f115a7bb984fcf860",
     "semantic_hash": ""
   },
   "LICENSE.txt": {
@@ -189,6 +189,60 @@
     "mtime": 1791654670.4530542,
     "seen": 1791654671.153696,
     "ast_hash": "6e04e9f5e14561ab61067ffd140b9003",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/auto-format.sh": {
+    "mtime": 1791655526.6010494,
+    "seen": 1791655566.6026137,
+    "ast_hash": "f77df40d74dc71fabd6cf92aeef3474f",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/dangerous-actions-blocker.sh": {
+    "mtime": 1791655526.6010056,
+    "seen": 1791655566.6026204,
+    "ast_hash": "56b73975ada8e6a301caec008272d54c",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/file-guard.sh": {
+    "mtime": 1791655526.6033325,
+    "seen": 1791655566.6026235,
+    "ast_hash": "26696aeb0992ebd117fa083808de8905",
+    "semantic_hash": ""
+  },
+  ".claude/agents/test-writer.md": {
+    "mtime": 1791655526.6150966,
+    "seen": 1791655566.6026597,
+    "ast_hash": "8ce17cd4d9e47a2939691665589107b2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/catchup/SKILL.md": {
+    "mtime": 1791655526.6076362,
+    "seen": 1791655566.6026616,
+    "ast_hash": "f778f98c2185e365454c018cbe03ec0c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/session-save/SKILL.md": {
+    "mtime": 1791655526.6094637,
+    "seen": 1791655566.6026955,
+    "ast_hash": "0c5ae36ba3500cb21db4f3244fc73dd2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/token-audit/SKILL.md": {
+    "mtime": 1791655526.612988,
+    "seen": 1791655566.6026974,
+    "ast_hash": "2cb5a8c8a7ecad03613d233a42d7e760",
+    "semantic_hash": ""
+  },
+  "design/brand-book.md": {
+    "mtime": 1791655562.1551375,
+    "seen": 1791655566.6027074,
+    "ast_hash": "8d2e10725b08bab677c3a5df5962b310",
+    "semantic_hash": ""
+  },
+  "vault/Decisions/0002-adopt-ultimate-guide-practices.md": {
+    "mtime": 1791655548.9828897,
+    "seen": 1791655566.602718,
+    "ast_hash": "37f6bebf9cad38ceda316988bac2533e",
     "semantic_hash": ""
   }
 }

@@ -60,16 +60,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>codesandbox-template-nuxt — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 251 nodes, 254 edges, 23 communities. Commit: e6ca0d6</p>
+<p class="subtitle">Generated from graphify knowledge graph: 321 nodes, 320 edges, 31 communities. Commit: 18cb766</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
     <a href="#build-graph">Graph Build</a>
     <a href="#cli-skills">CLI &amp; Skill Installers</a>
+    <a href="#tests-fixtures">Tests &amp; Fixtures</a>
     <a href="#neumorphicmusicplayer-vue">NeumorphicMusicPlayer.vue</a>
     <a href="#project-overview-md">Project Overview.md</a>
     <a href="#nuxt">Nuxt</a>
     <a href="#store-readme-md">store/README.md</a>
+    <a href="#brand-book-md">brand-book.md</a>
     <a href="#nuxt-config-js">nuxt.config.js</a>
     <a href="#tutorial-vue">Tutorial.vue</a>
     <a href="#eslintrc-js">.eslintrc.js</a>
@@ -85,16 +87,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 flowchart LR
     BUILD_GRAPH_321CBB04("Graph Build<br/><small>79 nodes</small>")
     class BUILD_GRAPH_321CBB04 module;
-    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>133 nodes</small>")
+    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>188 nodes</small>")
     class CLI_SKILLS_9964CBB8 module;
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>11 nodes</small>")
+    class TESTS_FIXTURES_B84B1DCC module;
     NEUMORPHICMUSICPLAYER_VUE_94674EEE("NeumorphicMusicPlayer.vue<br/><small>21 nodes</small>")
     class NEUMORPHICMUSICPLAYER_VUE_94674EEE module;
-    PROJECT_OVERVIEW_MD_29B06877("Project Overview.md<br/><small>9 nodes</small>")
+    PROJECT_OVERVIEW_MD_29B06877("Project Overview.md<br/><small>11 nodes</small>")
     class PROJECT_OVERVIEW_MD_29B06877 module;
     NUXT_676879CE("Nuxt<br/><small>3 nodes</small>")
     class NUXT_676879CE module;
     STORE_README_MD_239904A2("store/README.md<br/><small>2 nodes</small>")
     class STORE_README_MD_239904A2 module;
+    BRAND_BOOK_MD_DE82D686("brand-book.md<br/><small>2 nodes</small>")
+    class BRAND_BOOK_MD_DE82D686 module;
     NUXT_CONFIG_JS_C24AD9CE("nuxt.config.js<br/><small>1 nodes</small>")
     class NUXT_CONFIG_JS_C24AD9CE module;
     TUTORIAL_VUE_5ACDFDB6("Tutorial.vue<br/><small>1 nodes</small>")
@@ -121,24 +127,24 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Graph Build</td><td>79</td><td><code>0, 2, 3, 4, 5</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>133</td><td><code>6, 11, 12, 13, 14, 15, 17, 18, 20, 21</code></td></tr><tr><td>NeumorphicMusicPlayer.vue</td><td>21</td><td><code>1</code></td></tr><tr><td>Project Overview.md</td><td>9</td><td><code>16</code></td></tr><tr><td>Nuxt</td><td>3</td><td><code>19</code></td></tr><tr><td>store/README.md</td><td>2</td><td><code>22</code></td></tr><tr><td>nuxt.config.js</td><td>1</td><td><code>10</code></td></tr><tr><td>Tutorial.vue</td><td>1</td><td><code>7</code></td></tr><tr><td>.eslintrc.js</td><td>1</td><td><code>8</code></td></tr><tr><td>jest.config.js</td><td>1</td><td><code>9</code></td></tr>
+      <tr><td>Graph Build</td><td>79</td><td><code>0, 2, 3, 4, 5</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>188</td><td><code>6, 11, 12, 23, 24, 13, 14, 15, 26, 17, 18, 27, 28, 20, 21, 29</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>11</td><td><code>25</code></td></tr><tr><td>NeumorphicMusicPlayer.vue</td><td>21</td><td><code>1</code></td></tr><tr><td>Project Overview.md</td><td>11</td><td><code>16</code></td></tr><tr><td>Nuxt</td><td>3</td><td><code>19</code></td></tr><tr><td>store/README.md</td><td>2</td><td><code>22</code></td></tr><tr><td>brand-book.md</td><td>2</td><td><code>30</code></td></tr><tr><td>nuxt.config.js</td><td>1</td><td><code>10</code></td></tr><tr><td>Tutorial.vue</td><td>1</td><td><code>7</code></td></tr><tr><td>.eslintrc.js</td><td>1</td><td><code>8</code></td></tr><tr><td>jest.config.js</td><td>1</td><td><code>9</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">Graph Build -&gt; NeumorphicMusicPlayer.vue -&gt; CLI &amp; Skill Installers -&gt; Project Overview.md -&gt; Nuxt -&gt; store/README.md -&gt; nuxt.config.js</div>
+    <div class="arrow-chain">Graph Build -&gt; NeumorphicMusicPlayer.vue -&gt; CLI &amp; Skill Installers -&gt; Tests &amp; Fixtures -&gt; Project Overview.md -&gt; Nuxt -&gt; store/README.md</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>251 nodes · 254 edges · 23 communities (15 shown, 8 thin omitted)</li>
-      <li>Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.95)</li>
+      <li>321 nodes · 320 edges · 31 communities (21 shown, 10 thin omitted)</li>
+      <li>Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.95)</li>
       <li>Token cost: 0 input · 0 output</li>
-      <li>1. `compilerOptions` - 14 edges</li>
-      <li>2. `Obsidian Bases Skill` - 14 edges</li>
-      <li>3. `Obsidian Flavored Markdown Skill` - 14 edges</li>
+      <li>1. `Obsidian Flavored Markdown Skill` - 14 edges</li>
+      <li>2. `compilerOptions` - 14 edges</li>
+      <li>3. `Obsidian Bases Skill` - 14 edges</li>
     </ul>
   </div>
 </div>
@@ -490,62 +496,65 @@ flowchart LR
 
 <!-- ====== 3. CLI & Skill Installers ====== -->
 <h2 id="cli-skills">3. CLI &amp; Skill Installers</h2>
-<p>CLI &amp; Skill Installers groups implementation around claude, skills, obsidian, skillmd, mostly in skills/obsidian-bases/SKILL.md, skills/json-canvas/SKILL.md, skills/obsidian-markdown/SKILL.md. This section covers 133 nodes and 125 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>CLI &amp; Skill Installers groups implementation around claude, skills, skillmd, obsidian, mostly in skills/obsidian-bases/SKILL.md, skills/json-canvas/SKILL.md, skills/session-save/SKILL.md. This section covers 188 nodes and 178 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: CLI &amp; Skill Installers (133 nodes, 125 edges)
-    subgraph cli_skills_skills_obsidian_bases_SKILL_md_e4a87888["skills/obsidian-bases/SKILL.md"]
-        claude_skills_obsidian_bases_skill_obsidian_base_8155bb83("Obsidian Bases Skill<br/><small>skills/obsidian-bases/SKILL.md</small>")
-        claude_skills_obsidian_bases_skill_view_types_58726fe2("View Types<br/><small>skills/obsidian-bases/SKILL.md</small>")
-        claude_skills_obsidian_bases_skill_complete_exam_75aae0a0("Complete Examples<br/><small>skills/obsidian-bases/SKILL.md</small>")
-        claude_skills_obsidian_bases_skill_properties_a4189438("Properties<br/><small>skills/obsidian-bases/SKILL.md</small>")
-        claude_skills_obsidian_bases_skill_filter_syntax_412a3b0e("Filter Syntax<br/><small>skills/obsidian-bases/SKILL.md</small>")
+    %% Section: CLI &amp; Skill Installers (188 nodes, 178 edges)
+    subgraph cli_skills_claude_hooks_dangerous_actions_blocke_5f91f650[".claude/hooks/dangerous-actions-blocker.sh"]
+        claude_hooks_dangerous_actions_blocker_sh_entry_95aa3ff2("dangerous-actions-blocker.sh script<br/><small>.claude/hooks/dangerous-actions-blocker.sh</small>")
+        claude_hooks_dangerous_actions_blocker_canonical_c23250cc("canonicalize_path()<br/><small>.claude/hooks/dangerous-actions-blocker.sh</small>")
+        claude_hooks_dangerous_actions_blocker_path_is_w_e408e867("path_is_within()<br/><small>.claude/hooks/dangerous-actions-blocker.sh</small>")
+        claude_hooks_dangerous_actions_blocker_d6526a81("dangerous-actions-blocker.sh")
     end
-    subgraph cli_skills_skills_json_canvas_SKILL_md_7a5289ec["skills/json-canvas/SKILL.md"]
-        claude_skills_json_canvas_skill_json_canvas_skil_ff4dc68a("JSON Canvas Skill<br/><small>skills/json-canvas/SKILL.md</small>")
-        claude_skills_json_canvas_skill_nodes_9f9de110("Nodes<br/><small>skills/json-canvas/SKILL.md</small>")
-        claude_skills_json_canvas_skill_common_workflows_fa31d432("Common Workflows<br/><small>skills/json-canvas/SKILL.md</small>")
+    subgraph cli_skills_claude_hooks_file_guard_sh_3918a958[".claude/hooks/file-guard.sh"]
+        claude_hooks_file_guard_sh_entry_b95f118e("file-guard.sh script<br/><small>.claude/hooks/file-guard.sh</small>")
+        claude_hooks_file_guard_detect_bypass_321ef3b5("detect_bypass()<br/><small>.claude/hooks/file-guard.sh</small>")
+        claude_hooks_file_guard_is_protected_3daea2c3("is_protected()<br/><small>.claude/hooks/file-guard.sh</small>")
+        claude_hooks_file_guard_87cc91d0("file-guard.sh")
     end
-    subgraph cli_skills_skills_obsidian_markdown_SKILL_md_b4a008e1["skills/obsidian-markdown/SKILL.md"]
-        claude_skills_obsidian_markdown_skill_obsidian_f_b9a11d8d("Obsidian Flavored Markdown Skill<br/><small>skills/obsidian-markdown/SKILL.md</small>")
-        claude_skills_obsidian_markdown_skill_3587fab6("obsidian-markdown/SKILL.md")
+    subgraph cli_skills_CLAUDE_md_27387765["CLAUDE.md"]
+        claude_f1dda22f("CLAUDE.md")
+        claude_project_520eb5c1("Project<br/><small>CLAUDE.md</small>")
+        claude_graphify_a0b0e4f3("graphify<br/><small>CLAUDE.md</small>")
     end
-    claude_skills_json_canvas_references_examples_js_22bc02cf("JSON Canvas Complete Examples<br/><small>json-canvas/references/EXAMPLES.md</small>")
-    claude_skills_obsidian_bases_references_function_718f344e("Functions Reference<br/><small>obsidian-bases/references/FUNCTIONS_REFERENCE.md</small>")
-    claude_skills_obsidian_markdown_references_callo_5332f8db("Callouts Reference<br/><small>obsidian-markdown/references/CALLOUTS.md</small>")
-    claude_skills_obsidian_markdown_references_embed_f5d9cb30("Embeds Reference<br/><small>obsidian-markdown/references/EMBEDS.md</small>")
-    claude_skills_obsidian_markdown_references_prope_6b4cda81("Properties (Frontmatter) Reference<br/><small>obsidian-markdown/references/PROPERTIES.md</small>")
-    claude_skills_defuddle_skill_defuddle_ec423c2b("Defuddle<br/><small>skills/defuddle/SKILL.md</small>")
-    claude_skills_knap_skill_knap_01a4f4dd("Knap<br/><small>skills/knap/SKILL.md</small>")
-    claude_skills_obsidian_cli_skill_obsidian_cli_e99e52ba("Obsidian CLI<br/><small>skills/obsidian-cli/SKILL.md</small>")
-    claude_skills_json_canvas_skill_json_canvas_skil_ff4dc68a -->|contains| claude_skills_json_canvas_skill_common_workflows_fa31d432
-    claude_skills_json_canvas_skill_json_canvas_skil_ff4dc68a -->|contains| claude_skills_json_canvas_skill_nodes_9f9de110
-    claude_skills_obsidian_markdown_skill_3587fab6 -->|contains| claude_skills_obsidian_markdown_skill_obsidian_f_b9a11d8d
-    claude_skills_obsidian_bases_skill_obsidian_base_8155bb83 -->|contains| claude_skills_obsidian_bases_skill_properties_a4189438
-    claude_skills_obsidian_bases_skill_obsidian_base_8155bb83 -->|contains| claude_skills_obsidian_bases_skill_view_types_58726fe2
-    claude_skills_obsidian_bases_skill_obsidian_base_8155bb83 -->|contains| claude_skills_obsidian_bases_skill_complete_exam_75aae0a0
-    claude_skills_obsidian_bases_skill_obsidian_base_8155bb83 -->|contains| claude_skills_obsidian_bases_skill_filter_syntax_412a3b0e
-    %% Omitted for readability: 115 nodes, 0 edges
-    class claude_skills_obsidian_bases_skill_obsidian_base_8155bb83 concept;
-    class claude_skills_obsidian_bases_skill_view_types_58726fe2 concept;
-    class claude_skills_obsidian_bases_skill_complete_exam_75aae0a0 concept;
-    class claude_skills_obsidian_bases_skill_properties_a4189438 concept;
-    class claude_skills_obsidian_bases_skill_filter_syntax_412a3b0e concept;
-    class claude_skills_json_canvas_skill_json_canvas_skil_ff4dc68a concept;
-    class claude_skills_json_canvas_skill_nodes_9f9de110 concept;
-    class claude_skills_json_canvas_skill_common_workflows_fa31d432 concept;
-    class claude_skills_obsidian_markdown_skill_obsidian_f_b9a11d8d concept;
-    class claude_skills_obsidian_markdown_skill_3587fab6 concept;
+    subgraph cli_skills_json_canvas_references_EXAMPLES_md_9511e648["json-canvas/references/EXAMPLES.md"]
+        claude_skills_json_canvas_references_examples_b940959e("EXAMPLES.md")
+        claude_skills_json_canvas_references_examples_fl_e4df01fc("Flowchart<br/><small>json-canvas/references/EXAMPLES.md</small>")
+        claude_skills_json_canvas_references_examples_js_22bc02cf("JSON Canvas Complete Examples<br/><small>json-canvas/references/EXAMPLES.md</small>")
+    end
+    subgraph cli_skills_claude_CLAUDE_md_35e21cb1[".claude/CLAUDE.md"]
+        claude_claude_9ef4adc3(".claude/CLAUDE.md")
+        claude_claude_graphify_9b6bfb1a("graphify<br/><small>.claude/CLAUDE.md</small>")
+    end
+    subgraph cli_skills_claude_hooks_auto_format_sh_9393ccae[".claude/hooks/auto-format.sh"]
+        claude_hooks_auto_format_eaa83b5f("auto-format.sh")
+        claude_hooks_auto_format_sh_entry_edbf4868("auto-format.sh script<br/><small>.claude/hooks/auto-format.sh</small>")
+    end
+    claude_hooks_dangerous_actions_blocker_sh_entry_95aa3ff2 -->|calls| claude_hooks_dangerous_actions_blocker_canonical_c23250cc
+    claude_hooks_dangerous_actions_blocker_sh_entry_95aa3ff2 -->|calls| claude_hooks_dangerous_actions_blocker_path_is_w_e408e867
+    claude_hooks_file_guard_sh_entry_b95f118e -->|calls| claude_hooks_file_guard_detect_bypass_321ef3b5
+    claude_hooks_file_guard_sh_entry_b95f118e -->|calls| claude_hooks_file_guard_is_protected_3daea2c3
+    %% Omitted for readability: 170 nodes, 0 edges
+    class claude_hooks_dangerous_actions_blocker_sh_entry_95aa3ff2 function;
+    class claude_hooks_dangerous_actions_blocker_canonical_c23250cc function;
+    class claude_hooks_dangerous_actions_blocker_path_is_w_e408e867 function;
+    class claude_hooks_dangerous_actions_blocker_d6526a81 function;
+    class claude_hooks_file_guard_sh_entry_b95f118e function;
+    class claude_hooks_file_guard_detect_bypass_321ef3b5 function;
+    class claude_hooks_file_guard_is_protected_3daea2c3 function;
+    class claude_hooks_file_guard_87cc91d0 function;
+    class claude_f1dda22f concept;
+    class claude_project_520eb5c1 concept;
+    class claude_graphify_a0b0e4f3 concept;
+    class claude_skills_json_canvas_references_examples_b940959e concept;
+    class claude_skills_json_canvas_references_examples_fl_e4df01fc concept;
     class claude_skills_json_canvas_references_examples_js_22bc02cf concept;
-    class claude_skills_obsidian_bases_references_function_718f344e concept;
-    class claude_skills_obsidian_markdown_references_callo_5332f8db concept;
-    class claude_skills_obsidian_markdown_references_embed_f5d9cb30 concept;
-    class claude_skills_obsidian_markdown_references_prope_6b4cda81 concept;
-    class claude_skills_defuddle_skill_defuddle_ec423c2b concept;
-    class claude_skills_knap_skill_knap_01a4f4dd concept;
-    class claude_skills_obsidian_cli_skill_obsidian_cli_e99e52ba concept;
+    class claude_claude_9ef4adc3 concept;
+    class claude_claude_graphify_9b6bfb1a concept;
+    class claude_hooks_auto_format_eaa83b5f function;
+    class claude_hooks_auto_format_sh_entry_edbf4868 function;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -816,23 +825,189 @@ flowchart LR
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>skills/obsidian-bases/SKILL.md</code></td><td>31 nodes</td></tr>
 <tr><td><code>skills/json-canvas/SKILL.md</code></td><td>21 nodes</td></tr>
+<tr><td><code>skills/session-save/SKILL.md</code></td><td>18 nodes</td></tr>
+<tr><td><code>skills/catchup/SKILL.md</code></td><td>16 nodes</td></tr>
 <tr><td><code>skills/obsidian-markdown/SKILL.md</code></td><td>15 nodes</td></tr>
 <tr><td><code>obsidian-bases/references/FUNCTIONS_REFERENCE.md</code></td><td>14 nodes</td></tr>
 <tr><td><code>skills/obsidian-cli/SKILL.md</code></td><td>10 nodes</td></tr>
 <tr><td><code>obsidian-markdown/references/EMBEDS.md</code></td><td>10 nodes</td></tr>
-<tr><td><code>obsidian-markdown/references/CALLOUTS.md</code></td><td>7 nodes</td></tr>
-<tr><td><code>json-canvas/references/EXAMPLES.md</code></td><td>6 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x120, references x5. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x165, references x5, defines x4, calls x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
-<!-- ====== 4. NeumorphicMusicPlayer.vue ====== -->
-<h2 id="neumorphicmusicplayer-vue">4. NeumorphicMusicPlayer.vue</h2>
+<!-- ====== 4. Tests & Fixtures ====== -->
+<h2 id="tests-fixtures">4. Tests &amp; Fixtures</h2>
+<p>Tests &amp; Fixtures groups implementation around test, writermd, claude, agents, mostly in .claude/agents/test-writer.md. This section covers 11 nodes and 10 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Tests &amp; Fixtures (11 nodes, 10 edges)
+    claude_agents_test_writer_test_writer_agent_3d65d143("Test writer agent<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_test_generation_proces_a8edc889("Test generation process<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_test_templates_9ca4a8bd("Test templates<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_841ef35a("test-writer.md")
+    claude_agents_test_writer_1_analyze_the_code_23b4c5a4("1. Analyze the code<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_2_create_test_plan_967bebf5("2. Create test plan<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_3_write_tests_f7924d9b("3. Write tests<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_best_practices_5ddf7746("Best practices<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_integration_test_95eab616("Integration test<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_testing_philosophy_13b58652("Testing philosophy<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_unit_test_jest_vitest_b1567a4f("Unit test (jest/vitest)<br/><small>.claude/agents/test-writer.md</small>")
+    claude_agents_test_writer_841ef35a -->|contains| claude_agents_test_writer_test_writer_agent_3d65d143
+    claude_agents_test_writer_test_generation_proces_a8edc889 -->|contains| claude_agents_test_writer_1_analyze_the_code_23b4c5a4
+    claude_agents_test_writer_test_generation_proces_a8edc889 -->|contains| claude_agents_test_writer_2_create_test_plan_967bebf5
+    claude_agents_test_writer_test_generation_proces_a8edc889 -->|contains| claude_agents_test_writer_3_write_tests_f7924d9b
+    claude_agents_test_writer_test_templates_9ca4a8bd -->|contains| claude_agents_test_writer_unit_test_jest_vitest_b1567a4f
+    claude_agents_test_writer_test_templates_9ca4a8bd -->|contains| claude_agents_test_writer_integration_test_95eab616
+    claude_agents_test_writer_test_writer_agent_3d65d143 -->|contains| claude_agents_test_writer_best_practices_5ddf7746
+    claude_agents_test_writer_test_writer_agent_3d65d143 -->|contains| claude_agents_test_writer_testing_philosophy_13b58652
+    claude_agents_test_writer_test_writer_agent_3d65d143 -->|contains| claude_agents_test_writer_test_generation_proces_a8edc889
+    claude_agents_test_writer_test_writer_agent_3d65d143 -->|contains| claude_agents_test_writer_test_templates_9ca4a8bd
+    class claude_agents_test_writer_test_writer_agent_3d65d143 concept;
+    class claude_agents_test_writer_test_generation_proces_a8edc889 concept;
+    class claude_agents_test_writer_test_templates_9ca4a8bd concept;
+    class claude_agents_test_writer_841ef35a concept;
+    class claude_agents_test_writer_1_analyze_the_code_23b4c5a4 concept;
+    class claude_agents_test_writer_2_create_test_plan_967bebf5 concept;
+    class claude_agents_test_writer_3_write_tests_f7924d9b concept;
+    class claude_agents_test_writer_best_practices_5ddf7746 concept;
+    class claude_agents_test_writer_integration_test_95eab616 concept;
+    class claude_agents_test_writer_testing_philosophy_13b58652 concept;
+    class claude_agents_test_writer_unit_test_jest_vitest_b1567a4f concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>test-writer.md</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing test-writer.md.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>1. Analyze the code</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 1. Analyze the code.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>2. Create test plan</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 2. Create test plan.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>3. Write tests</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 3. Write tests.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>Best practices</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Best practices.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>Integration test</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Integration test.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>Test generation process</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Test generation process.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>Test templates</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Test templates.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>Test writer agent</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Test writer agent.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>Testing philosophy</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Testing philosophy.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>Unit test (jest/vitest)</code><br><small style="color:var(--muted)">.claude/agents/test-writer.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Unit test (jest/vitest).</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>.claude/agents/test-writer.md</code></td><td>11 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x10. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 5. NeumorphicMusicPlayer.vue ====== -->
+<h2 id="neumorphicmusicplayer-vue">5. NeumorphicMusicPlayer.vue</h2>
 <p>NeumorphicMusicPlayer.vue groups implementation around components, neumorphicmusicplayervue, vault, neumorphicmusicplayermd, mostly in components/NeumorphicMusicPlayer.vue, vault/Components/NeumorphicMusicPlayer.md, pages/index.vue. This section covers 21 nodes and 38 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1094,14 +1269,14 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 5. Project Overview.md ====== -->
-<h2 id="project-overview-md">5. Project Overview.md</h2>
-<p>Project Overview.md groups implementation around vault, project, overviewmd, 0001, mostly in vault/Project Overview.md, vault/Architecture.md, vault/Decisions/0001-use-graphify.md. This section covers 9 nodes and 9 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<!-- ====== 6. Project Overview.md ====== -->
+<h2 id="project-overview-md">6. Project Overview.md</h2>
+<p>Project Overview.md groups implementation around vault, project, overviewmd, 0002, mostly in vault/Project Overview.md, vault/Architecture.md, vault/Decisions/0002-adopt-ultimate-guide-practices.md. This section covers 11 nodes and 11 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Project Overview.md (9 nodes, 9 edges)
+    %% Section: Project Overview.md (11 nodes, 11 edges)
     subgraph project_overview_md_vault_Project_Overview_md_adc83018["vault/Project Overview.md"]
         vault_project_overview_project_overview_d4e5d968("Project Overview<br/><small>vault/Project Overview.md</small>")
         vault_project_overview_87c8908d("Project Overview.md")
@@ -1116,13 +1291,19 @@ flowchart LR
         vault_decisions_0001_use_graphify_4bfb41f3("0001-use-graphify.md")
         vault_decisions_0001_use_graphify_adr_0001_use_g_bb5c8672("ADR 0001: Use Graphify for code context<br/><small>vault/Decisions/0001-use-graphify.md</small>")
     end
+    subgraph project_overview_md_vault_Decisions_0002_adopt_u_8b208205["vault/Decisions/0002-adopt-ultimate-guide-practices.md"]
+        vault_decisions_0002_adopt_ultimate_guide_practi_c8a85da0("0002-adopt-ultimate-guide-practices.md")
+        vault_decisions_0002_adopt_ultimate_guide_practi_dfcf9f2f("ADR 0002: Adopt Ultimate Guide practices<br/><small>vault/Decisions/0002-adopt-ultimate-guide-practices.md</small>")
+    end
     vault_components_neumorphicmusicplayer_fbb0f3c8("NeumorphicMusicPlayer.md")
     vault_project_overview_87c8908d -->|references| vault_components_neumorphicmusicplayer_fbb0f3c8
     vault_architecture_240565f7 -->|references| vault_components_neumorphicmusicplayer_fbb0f3c8
     vault_architecture_240565f7 -->|references| vault_project_overview_87c8908d
+    vault_decisions_0002_adopt_ultimate_guide_practi_c8a85da0 -->|references| vault_project_overview_87c8908d
     vault_decisions_0001_use_graphify_4bfb41f3 -->|references| vault_project_overview_87c8908d
     vault_project_overview_87c8908d -->|contains| vault_project_overview_project_overview_d4e5d968
     vault_architecture_240565f7 -->|contains| vault_architecture_architecture_f7e2c5d8
+    vault_decisions_0002_adopt_ultimate_guide_practi_c8a85da0 -->|contains| vault_decisions_0002_adopt_ultimate_guide_practi_dfcf9f2f
     vault_decisions_0001_use_graphify_4bfb41f3 -->|contains| vault_decisions_0001_use_graphify_adr_0001_use_g_bb5c8672
     vault_project_overview_project_overview_d4e5d968 -->|contains| vault_project_overview_map_366cfc86
     vault_project_overview_project_overview_d4e5d968 -->|contains| vault_project_overview_code_graph_1646ac3f
@@ -1134,6 +1315,8 @@ flowchart LR
     class vault_architecture_architecture_f7e2c5d8 concept;
     class vault_decisions_0001_use_graphify_4bfb41f3 concept;
     class vault_decisions_0001_use_graphify_adr_0001_use_g_bb5c8672 concept;
+    class vault_decisions_0002_adopt_ultimate_guide_practi_c8a85da0 concept;
+    class vault_decisions_0002_adopt_ultimate_guide_practi_dfcf9f2f concept;
     class vault_components_neumorphicmusicplayer_fbb0f3c8 concept;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
@@ -1182,6 +1365,14 @@ flowchart LR
 </tr>
 <tr>
   <td>4</td>
+  <td><code>0002-adopt-ultimate-guide-practices.md</code><br><small style="color:var(--muted)">vault/Decisions/0002-adopt-ultimate-guide-practices.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing 0002-adopt-ultimate-guide-practices.md.</td>
+</tr>
+<tr>
+  <td>5</td>
   <td><code>0001-use-graphify.md</code><br><small style="color:var(--muted)">vault/Decisions/0001-use-graphify.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1189,7 +1380,7 @@ flowchart LR
   <td>Documentation node describing 0001-use-graphify.md.</td>
 </tr>
 <tr>
-  <td>5</td>
+  <td>6</td>
   <td><code>Architecture</code><br><small style="color:var(--muted)">vault/Architecture.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1197,7 +1388,7 @@ flowchart LR
   <td>Documentation node describing Architecture.</td>
 </tr>
 <tr>
-  <td>6</td>
+  <td>7</td>
   <td><code>ADR 0001: Use Graphify for code context</code><br><small style="color:var(--muted)">vault/Decisions/0001-use-graphify.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1205,7 +1396,15 @@ flowchart LR
   <td>Documentation node describing ADR 0001: Use Graphify for code context.</td>
 </tr>
 <tr>
-  <td>7</td>
+  <td>8</td>
+  <td><code>ADR 0002: Adopt Ultimate Guide practices</code><br><small style="color:var(--muted)">vault/Decisions/0002-adopt-ultimate-guide-practices.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing ADR 0002: Adopt Ultimate Guide practices.</td>
+</tr>
+<tr>
+  <td>9</td>
   <td><code>Code graph</code><br><small style="color:var(--muted)">vault/Project Overview.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1213,7 +1412,7 @@ flowchart LR
   <td>Documentation node describing Code graph.</td>
 </tr>
 <tr>
-  <td>8</td>
+  <td>10</td>
   <td><code>Map</code><br><small style="color:var(--muted)">vault/Project Overview.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1221,7 +1420,7 @@ flowchart LR
   <td>Documentation node describing Map.</td>
 </tr>
 <tr>
-  <td>9</td>
+  <td>11</td>
   <td><code>Project Overview</code><br><small style="color:var(--muted)">vault/Project Overview.md</small></td>
   <td><span class="tag tag-func">Concept</span></td>
   <td>External entry / no inbound edge</td>
@@ -1238,18 +1437,19 @@ flowchart LR
       <tr><td><code>vault/Project Overview.md</code></td><td>4 nodes</td></tr>
 <tr><td><code>vault/Architecture.md</code></td><td>2 nodes</td></tr>
 <tr><td><code>vault/Decisions/0001-use-graphify.md</code></td><td>2 nodes</td></tr>
+<tr><td><code>vault/Decisions/0002-adopt-ultimate-guide-practices.md</code></td><td>2 nodes</td></tr>
 <tr><td><code>vault/Components/NeumorphicMusicPlayer.md</code></td><td>1 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x5, references x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x6, references x5. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
-<!-- ====== 6. Nuxt ====== -->
-<h2 id="nuxt">6. Nuxt</h2>
+<!-- ====== 7. Nuxt ====== -->
+<h2 id="nuxt">7. Nuxt</h2>
 <p>Nuxt groups implementation around readmemd, nuxt, resources, mostly in README.md. This section covers 3 nodes and 2 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1326,8 +1526,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 7. store/README.md ====== -->
-<h2 id="store-readme-md">7. store/README.md</h2>
+<!-- ====== 8. store/README.md ====== -->
+<h2 id="store-readme-md">8. store/README.md</h2>
 <p>store/README.md groups implementation around store, readmemd, mostly in store/README.md. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1393,8 +1593,75 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 8. nuxt.config.js ====== -->
-<h2 id="nuxt-config-js">8. nuxt.config.js</h2>
+<!-- ====== 9. brand-book.md ====== -->
+<h2 id="brand-book-md">9. brand-book.md</h2>
+<p>brand-book.md groups implementation around brand, bookmd, design, book, mostly in design/brand-book.md. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: brand-book.md (2 nodes, 1 edges)
+    design_brand_book_96af403c("brand-book.md")
+    design_brand_book_brand_book_neumorphic_abbd367c("Brand book (neumorphic)<br/><small>design/brand-book.md</small>")
+    design_brand_book_96af403c -->|contains| design_brand_book_brand_book_neumorphic_abbd367c
+    class design_brand_book_96af403c concept;
+    class design_brand_book_brand_book_neumorphic_abbd367c concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>brand-book.md</code><br><small style="color:var(--muted)">design/brand-book.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing brand-book.md.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>Brand book (neumorphic)</code><br><small style="color:var(--muted)">design/brand-book.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Brand book (neumorphic).</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>design/brand-book.md</code></td><td>2 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 10. nuxt.config.js ====== -->
+<h2 id="nuxt-config-js">10. nuxt.config.js</h2>
 <p>nuxt.config.js groups implementation around nuxtconfigjs, mostly in nuxt.config.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1449,8 +1716,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 9. Tutorial.vue ====== -->
-<h2 id="tutorial-vue">9. Tutorial.vue</h2>
+<!-- ====== 11. Tutorial.vue ====== -->
+<h2 id="tutorial-vue">11. Tutorial.vue</h2>
 <p>Tutorial.vue groups implementation around tutorialvue, components, mostly in components/Tutorial.vue. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1505,8 +1772,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 10. .eslintrc.js ====== -->
-<h2 id="eslintrc-js">10. .eslintrc.js</h2>
+<!-- ====== 12. .eslintrc.js ====== -->
+<h2 id="eslintrc-js">12. .eslintrc.js</h2>
 <p>.eslintrc.js groups implementation around eslintrcjs, mostly in .eslintrc.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1561,8 +1828,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 11. jest.config.js ====== -->
-<h2 id="jest-config-js">11. jest.config.js</h2>
+<!-- ====== 13. jest.config.js ====== -->
+<h2 id="jest-config-js">13. jest.config.js</h2>
 <p>jest.config.js groups implementation around jestconfigjs, mostly in jest.config.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -1623,17 +1890,17 @@ flowchart LR
   <div class="card">
     <h4>Graph</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>Nodes</td><td>251</td></tr>
-      <tr><td>Edges</td><td>254</td></tr>
+      <tr><td>Nodes</td><td>321</td></tr>
+      <tr><td>Edges</td><td>320</td></tr>
       <tr><td>Hyperedges</td><td>0</td></tr>
-      <tr><td>Communities</td><td>23</td></tr>
-      <tr><td>Documented Sections</td><td>10</td></tr>
+      <tr><td>Communities</td><td>31</td></tr>
+      <tr><td>Documented Sections</td><td>12</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Edge Confidence</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>EXTRACTED</td><td>240</td></tr>
+      <tr><td>EXTRACTED</td><td>306</td></tr>
       <tr><td>INFERRED</td><td>14</td></tr>
       <tr><td>AMBIGUOUS</td><td>0</td></tr>
     </table>
@@ -1642,7 +1909,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>codesandbox-template-nuxt — Architecture Documentation</p>
-  <p>Generated: 2026-10-10 17:51 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-10-10 18:06 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->
