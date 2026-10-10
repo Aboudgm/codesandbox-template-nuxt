@@ -1,0 +1,22 @@
+filters:
+  and:
+    - 'file.hasTag("component")'
+formulas:
+  method_count: 'if(methods, methods, 0)'
+properties:
+  type:
+    displayName: Type
+  source:
+    displayName: Source
+  formula.method_count:
+    displayName: Methods
+views:
+  - type: table
+    name: Components
+    order:
+      - file.name
+      - source
+      - formula.method_count
+    sort:
+      - property: file.name
+        direction: ASC
