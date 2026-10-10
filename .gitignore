@@ -89,7 +89,5 @@ sw.*
 # Vim swap files
 *.swp
 
-# graphify
-graphify-out/cache/
-graphify-out/.graphify_*
-graphify-out/20*/
+# graphify (generated; rebuilt by .claude/hooks/session-start.sh)
+graphify-out/
