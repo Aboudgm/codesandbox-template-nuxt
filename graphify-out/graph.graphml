@@ -1,0 +1,1746 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d16" for="edge" attr.name="context" attr.type="string"/>
+<key id="d15" for="edge" attr.name="weight" attr.type="double"/>
+<key id="d14" for="edge" attr.name="source_location" attr.type="string"/>
+<key id="d13" for="edge" attr.name="source_file" attr.type="string"/>
+<key id="d12" for="edge" attr.name="confidence_score" attr.type="double"/>
+<key id="d11" for="edge" attr.name="confidence" attr.type="string"/>
+<key id="d10" for="edge" attr.name="relation" attr.type="string"/>
+<key id="d9" for="node" attr.name="source_location" attr.type="string"/>
+<key id="d8" for="node" attr.name="source_file" attr.type="string"/>
+<key id="d7" for="node" attr.name="norm_label" attr.type="string"/>
+<key id="d6" for="node" attr.name="file_type" attr.type="string"/>
+<key id="d5" for="node" attr.name="community_name" attr.type="string"/>
+<key id="d4" for="node" attr.name="community" attr.type="long"/>
+<key id="d3" for="node" attr.name="label" attr.type="string"/>
+<key id="d2" for="graph" attr.name="hyperedges" attr.type="string"/>
+<key id="d1" for="graph" attr.name="graphify_version" attr.type="string"/>
+<key id="d0" for="graph" attr.name="schema_version" attr.type="long"/>
+<graph edgedefault="undirected"><data key="d0">1</data>
+<data key="d1">0.9.84</data>
+<data key="d2">[]</data>
+<node id="components_neumorphicmusicplayer_data">
+  <data key="d3">data()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">data()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L126</data>
+</node>
+<node id="components_neumorphicmusicplayer_goback">
+  <data key="d3">goBack()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">goback()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L184</data>
+</node>
+<node id="components_neumorphicmusicplayer_mounted">
+  <data key="d3">mounted()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">mounted()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L149</data>
+</node>
+<node id="components_neumorphicmusicplayer_nexttrack">
+  <data key="d3">nextTrack()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">nexttrack()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L180</data>
+</node>
+<node id="components_neumorphicmusicplayer_openmenu">
+  <data key="d3">openMenu()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">openmenu()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L188</data>
+</node>
+<node id="components_neumorphicmusicplayer_previoustrack">
+  <data key="d3">previousTrack()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">previoustrack()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L176</data>
+</node>
+<node id="components_neumorphicmusicplayer_progressvalue">
+  <data key="d3">progressValue()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">progressvalue()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L141</data>
+</node>
+<node id="components_neumorphicmusicplayer_startprogressanimation">
+  <data key="d3">startProgressAnimation()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">startprogressanimation()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L192</data>
+</node>
+<node id="components_neumorphicmusicplayer_stopprogressanimation">
+  <data key="d3">stopProgressAnimation()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">stopprogressanimation()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L212</data>
+</node>
+<node id="components_neumorphicmusicplayer_toggleplaypause">
+  <data key="d3">togglePlayPause()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">toggleplaypause()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L157</data>
+</node>
+<node id="components_neumorphicmusicplayer_togglerepeat">
+  <data key="d3">toggleRepeat()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">togglerepeat()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L172</data>
+</node>
+<node id="components_neumorphicmusicplayer_toggleshuffle">
+  <data key="d3">toggleShuffle()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">toggleshuffle()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L168</data>
+</node>
+<node id="components_neumorphicmusicplayer_updatecurrenttime">
+  <data key="d3">updateCurrentTime()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">updatecurrenttime()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L216</data>
+</node>
+<node id="components_neumorphicmusicplayer_updateprogressoffset">
+  <data key="d3">updateProgressOffset()</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">updateprogressoffset()</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L225</data>
+</node>
+<node id="package">
+  <data key="d3">package.json</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">code</data>
+  <data key="d7">package.json</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L1</data>
+</node>
+<node id="package_name">
+  <data key="d3">name</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">code</data>
+  <data key="d7">name</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L2</data>
+</node>
+<node id="package_private">
+  <data key="d3">private</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">code</data>
+  <data key="d7">private</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L4</data>
+</node>
+<node id="package_version">
+  <data key="d3">version</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">code</data>
+  <data key="d7">version</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L3</data>
+</node>
+<node id="ref_babel_core">
+  <data key="d3">babel-core</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">babel-core</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L32</data>
+</node>
+<node id="ref_babel_eslint_parser">
+  <data key="d3">@babel/eslint-parser</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@babel/eslint-parser</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L26</data>
+</node>
+<node id="ref_babel_jest">
+  <data key="d3">babel-jest</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">babel-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L33</data>
+</node>
+<node id="ref_core_js">
+  <data key="d3">core-js</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">core-js</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L18</data>
+</node>
+<node id="ref_eslint">
+  <data key="d3">eslint</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">eslint</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L34</data>
+</node>
+<node id="ref_eslint_config_prettier">
+  <data key="d3">eslint-config-prettier</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">eslint-config-prettier</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L35</data>
+</node>
+<node id="ref_eslint_plugin_nuxt">
+  <data key="d3">eslint-plugin-nuxt</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">eslint-plugin-nuxt</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L36</data>
+</node>
+<node id="ref_eslint_plugin_vue">
+  <data key="d3">eslint-plugin-vue</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">eslint-plugin-vue</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L37</data>
+</node>
+<node id="ref_jest">
+  <data key="d3">jest</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L38</data>
+</node>
+<node id="ref_nuxt">
+  <data key="d3">nuxt</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">nuxt</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L19</data>
+</node>
+<node id="ref_nuxt_types">
+  <data key="d3">@nuxt/types</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@nuxt/types</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L27</data>
+</node>
+<node id="ref_nuxt_typescript_build">
+  <data key="d3">@nuxt/typescript-build</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@nuxt/typescript-build</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L28</data>
+</node>
+<node id="ref_nuxtjs_axios">
+  <data key="d3">@nuxtjs/axios</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@nuxtjs/axios</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L17</data>
+</node>
+<node id="ref_nuxtjs_eslint_config_typescript">
+  <data key="d3">@nuxtjs/eslint-config-typescript</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@nuxtjs/eslint-config-typescript</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L29</data>
+</node>
+<node id="ref_nuxtjs_eslint_module">
+  <data key="d3">@nuxtjs/eslint-module</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">@nuxtjs/eslint-module</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L30</data>
+</node>
+<node id="ref_prettier">
+  <data key="d3">prettier</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">prettier</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L39</data>
+</node>
+<node id="ref_ts_jest">
+  <data key="d3">ts-jest</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">ts-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L40</data>
+</node>
+<node id="ref_vue_jest">
+  <data key="d3">vue-jest</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">vue-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L41</data>
+</node>
+<node id="ref_vue_server_renderer">
+  <data key="d3">vue-server-renderer</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">vue-server-renderer</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L21</data>
+</node>
+<node id="ref_vue_template_compiler">
+  <data key="d3">vue-template-compiler</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">vue-template-compiler</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L22</data>
+</node>
+<node id="ref_webpack">
+  <data key="d3">webpack</data>
+  <data key="d4">0</data>
+  <data key="d5">Community 0</data>
+  <data key="d6">concept</data>
+  <data key="d7">webpack</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L23</data>
+</node>
+<node id="components_neumorphicmusicplayer">
+  <data key="d3">NeumorphicMusicPlayer.vue</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">neumorphicmusicplayer.vue</data>
+  <data key="d8">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d9">L1</data>
+</node>
+<node id="pages_index">
+  <data key="d3">index.vue</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">code</data>
+  <data key="d7">index.vue</data>
+  <data key="d8">pages/index.vue</data>
+  <data key="d9">L1</data>
+</node>
+<node id="ref_vue">
+  <data key="d3">vue</data>
+  <data key="d4">1</data>
+  <data key="d5">Community 1</data>
+  <data key="d6">concept</data>
+  <data key="d7">vue</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L20</data>
+</node>
+<node id="nuxt_config">
+  <data key="d3">nuxt.config.js</data>
+  <data key="d4">10</data>
+  <data key="d5">Community 10</data>
+  <data key="d6">code</data>
+  <data key="d7">nuxt.config.js</data>
+  <data key="d8">nuxt.config.js</data>
+  <data key="d9">L1</data>
+</node>
+<node id="package_devdependencies">
+  <data key="d3">devDependencies</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">devdependencies</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L25</data>
+</node>
+<node id="package_devdependencies_babel_core">
+  <data key="d3">babel-core</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">babel-core</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L32</data>
+</node>
+<node id="package_devdependencies_babel_eslint_parser">
+  <data key="d3">@babel/eslint-parser</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@babel/eslint-parser</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L26</data>
+</node>
+<node id="package_devdependencies_babel_jest">
+  <data key="d3">babel-jest</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">babel-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L33</data>
+</node>
+<node id="package_devdependencies_eslint">
+  <data key="d3">eslint</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">eslint</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L34</data>
+</node>
+<node id="package_devdependencies_eslint_config_prettier">
+  <data key="d3">eslint-config-prettier</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">eslint-config-prettier</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L35</data>
+</node>
+<node id="package_devdependencies_eslint_plugin_nuxt">
+  <data key="d3">eslint-plugin-nuxt</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">eslint-plugin-nuxt</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L36</data>
+</node>
+<node id="package_devdependencies_eslint_plugin_vue">
+  <data key="d3">eslint-plugin-vue</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">eslint-plugin-vue</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L37</data>
+</node>
+<node id="package_devdependencies_jest">
+  <data key="d3">jest</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L38</data>
+</node>
+<node id="package_devdependencies_nuxt_types">
+  <data key="d3">@nuxt/types</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@nuxt/types</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L27</data>
+</node>
+<node id="package_devdependencies_nuxt_typescript_build">
+  <data key="d3">@nuxt/typescript-build</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@nuxt/typescript-build</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L28</data>
+</node>
+<node id="package_devdependencies_nuxtjs_eslint_config_typescript">
+  <data key="d3">@nuxtjs/eslint-config-typescript</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@nuxtjs/eslint-config-typescript</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L29</data>
+</node>
+<node id="package_devdependencies_nuxtjs_eslint_module">
+  <data key="d3">@nuxtjs/eslint-module</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@nuxtjs/eslint-module</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L30</data>
+</node>
+<node id="package_devdependencies_prettier">
+  <data key="d3">prettier</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">prettier</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L39</data>
+</node>
+<node id="package_devdependencies_ts_jest">
+  <data key="d3">ts-jest</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">ts-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L40</data>
+</node>
+<node id="package_devdependencies_vue_jest">
+  <data key="d3">vue-jest</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">vue-jest</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L41</data>
+</node>
+<node id="package_devdependencies_vue_test_utils">
+  <data key="d3">@vue/test-utils</data>
+  <data key="d4">2</data>
+  <data key="d5">Community 2</data>
+  <data key="d6">code</data>
+  <data key="d7">@vue/test-utils</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L31</data>
+</node>
+<node id="tsconfig">
+  <data key="d3">tsconfig.json</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">tsconfig.json</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L1</data>
+</node>
+<node id="tsconfig_compileroptions">
+  <data key="d3">compilerOptions</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">compileroptions</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L2</data>
+</node>
+<node id="tsconfig_compileroptions_allowjs">
+  <data key="d3">allowJs</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">allowjs</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L8</data>
+</node>
+<node id="tsconfig_compileroptions_baseurl">
+  <data key="d3">baseUrl</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">baseurl</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L13</data>
+</node>
+<node id="tsconfig_compileroptions_esmoduleinterop">
+  <data key="d3">esModuleInterop</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">esmoduleinterop</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L7</data>
+</node>
+<node id="tsconfig_compileroptions_experimentaldecorators">
+  <data key="d3">experimentalDecorators</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">experimentaldecorators</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L12</data>
+</node>
+<node id="tsconfig_compileroptions_lib">
+  <data key="d3">lib</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">lib</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L6</data>
+</node>
+<node id="tsconfig_compileroptions_module">
+  <data key="d3">module</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">module</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L4</data>
+</node>
+<node id="tsconfig_compileroptions_moduleresolution">
+  <data key="d3">moduleResolution</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">moduleresolution</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L5</data>
+</node>
+<node id="tsconfig_compileroptions_noemit">
+  <data key="d3">noEmit</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">noemit</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L11</data>
+</node>
+<node id="tsconfig_compileroptions_paths">
+  <data key="d3">paths</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">paths</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L14</data>
+</node>
+<node id="tsconfig_compileroptions_sourcemap">
+  <data key="d3">sourceMap</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">sourcemap</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L9</data>
+</node>
+<node id="tsconfig_compileroptions_strict">
+  <data key="d3">strict</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">strict</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L10</data>
+</node>
+<node id="tsconfig_compileroptions_target">
+  <data key="d3">target</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">target</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L3</data>
+</node>
+<node id="tsconfig_compileroptions_types">
+  <data key="d3">types</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">types</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L18</data>
+</node>
+<node id="tsconfig_exclude">
+  <data key="d3">exclude</data>
+  <data key="d4">3</data>
+  <data key="d5">Community 3</data>
+  <data key="d6">code</data>
+  <data key="d7">exclude</data>
+  <data key="d8">tsconfig.json</data>
+  <data key="d9">L20</data>
+</node>
+<node id="package_scripts">
+  <data key="d3">scripts</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">scripts</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L5</data>
+</node>
+<node id="package_scripts_build">
+  <data key="d3">build</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">build</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L7</data>
+</node>
+<node id="package_scripts_dev">
+  <data key="d3">dev</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">dev</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L6</data>
+</node>
+<node id="package_scripts_generate">
+  <data key="d3">generate</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">generate</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L9</data>
+</node>
+<node id="package_scripts_lint">
+  <data key="d3">lint</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">lint</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L12</data>
+</node>
+<node id="package_scripts_lint_js">
+  <data key="d3">lint:js</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">lint:js</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L10</data>
+</node>
+<node id="package_scripts_lint_prettier">
+  <data key="d3">lint:prettier</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">lint:prettier</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L11</data>
+</node>
+<node id="package_scripts_lintfix">
+  <data key="d3">lintfix</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">lintfix</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L13</data>
+</node>
+<node id="package_scripts_start">
+  <data key="d3">start</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">start</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L8</data>
+</node>
+<node id="package_scripts_test">
+  <data key="d3">test</data>
+  <data key="d4">4</data>
+  <data key="d5">Community 4</data>
+  <data key="d6">code</data>
+  <data key="d7">test</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L14</data>
+</node>
+<node id="package_dependencies">
+  <data key="d3">dependencies</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">dependencies</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L16</data>
+</node>
+<node id="package_dependencies_core_js">
+  <data key="d3">core-js</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">core-js</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L18</data>
+</node>
+<node id="package_dependencies_nuxt">
+  <data key="d3">nuxt</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">nuxt</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L19</data>
+</node>
+<node id="package_dependencies_nuxtjs_axios">
+  <data key="d3">@nuxtjs/axios</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">@nuxtjs/axios</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L17</data>
+</node>
+<node id="package_dependencies_vue">
+  <data key="d3">vue</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">vue</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L20</data>
+</node>
+<node id="package_dependencies_vue_server_renderer">
+  <data key="d3">vue-server-renderer</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">vue-server-renderer</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L21</data>
+</node>
+<node id="package_dependencies_vue_template_compiler">
+  <data key="d3">vue-template-compiler</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">vue-template-compiler</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L22</data>
+</node>
+<node id="package_dependencies_webpack">
+  <data key="d3">webpack</data>
+  <data key="d4">5</data>
+  <data key="d5">Community 5</data>
+  <data key="d6">code</data>
+  <data key="d7">webpack</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L23</data>
+</node>
+<node id="components_nuxtlogo">
+  <data key="d3">NuxtLogo.vue</data>
+  <data key="d4">6</data>
+  <data key="d5">Community 6</data>
+  <data key="d6">code</data>
+  <data key="d7">nuxtlogo.vue</data>
+  <data key="d8">components/NuxtLogo.vue</data>
+  <data key="d9">L1</data>
+</node>
+<node id="test_nuxtlogo_spec">
+  <data key="d3">NuxtLogo.spec.js</data>
+  <data key="d4">6</data>
+  <data key="d5">Community 6</data>
+  <data key="d6">code</data>
+  <data key="d7">nuxtlogo.spec.js</data>
+  <data key="d8">test/NuxtLogo.spec.js</data>
+  <data key="d9">L1</data>
+</node>
+<node id="ref_vue_test_utils">
+  <data key="d3">@vue/test-utils</data>
+  <data key="d4">6</data>
+  <data key="d5">Community 6</data>
+  <data key="d6">concept</data>
+  <data key="d7">@vue/test-utils</data>
+  <data key="d8">package.json</data>
+  <data key="d9">L31</data>
+</node>
+<node id="components_tutorial">
+  <data key="d3">Tutorial.vue</data>
+  <data key="d4">7</data>
+  <data key="d5">Community 7</data>
+  <data key="d6">code</data>
+  <data key="d7">tutorial.vue</data>
+  <data key="d8">components/Tutorial.vue</data>
+  <data key="d9">L1</data>
+</node>
+<node id="eslintrc">
+  <data key="d3">.eslintrc.js</data>
+  <data key="d4">8</data>
+  <data key="d5">Community 8</data>
+  <data key="d6">code</data>
+  <data key="d7">.eslintrc.js</data>
+  <data key="d8">.eslintrc.js</data>
+  <data key="d9">L1</data>
+</node>
+<node id="jest_config">
+  <data key="d3">jest.config.js</data>
+  <data key="d4">9</data>
+  <data key="d5">Community 9</data>
+  <data key="d6">code</data>
+  <data key="d7">jest.config.js</data>
+  <data key="d8">jest.config.js</data>
+  <data key="d9">L1</data>
+</node>
+<edge source="components_neumorphicmusicplayer_data" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L126</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_goback" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L184</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_mounted" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L149</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_nexttrack" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L180</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_openmenu" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L188</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_previoustrack" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L176</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_progressvalue" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L141</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_startprogressanimation" target="components_neumorphicmusicplayer_updatecurrenttime">
+  <data key="d10">calls</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">call</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L203</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_startprogressanimation" target="components_neumorphicmusicplayer_updateprogressoffset">
+  <data key="d10">calls</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">call</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L204</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_startprogressanimation" target="components_neumorphicmusicplayer_toggleplaypause">
+  <data key="d10">calls</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">call</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L162</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_startprogressanimation" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L192</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_stopprogressanimation" target="components_neumorphicmusicplayer_toggleplaypause">
+  <data key="d10">calls</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">call</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L164</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_stopprogressanimation" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L212</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_toggleplaypause" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L157</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_togglerepeat" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L172</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_toggleshuffle" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L168</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_updatecurrenttime" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L216</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer_updateprogressoffset" target="components_neumorphicmusicplayer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L225</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxtjs_axios">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L17</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_core_js">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L18</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxt">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L19</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_vue">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L20</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_vue_server_renderer">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L21</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_vue_template_compiler">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L22</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_webpack">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L23</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_babel_eslint_parser">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L26</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxt_types">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L27</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxt_typescript_build">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L28</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxtjs_eslint_config_typescript">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L29</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_nuxtjs_eslint_module">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L30</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_vue_test_utils">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L31</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_babel_core">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L32</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_babel_jest">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L33</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_eslint">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L34</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_eslint_config_prettier">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L35</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_eslint_plugin_nuxt">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L36</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_eslint_plugin_vue">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L37</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_jest">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L38</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_prettier">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L39</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_ts_jest">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L40</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="ref_vue_jest">
+  <data key="d10">imports</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L41</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_dependencies">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L16</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_name">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L2</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_devdependencies">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L25</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_version">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L3</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_private">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L4</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package" target="package_scripts">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L5</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer" target="ref_vue">
+  <data key="d10">imports_from</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">components/NeumorphicMusicPlayer.vue</data>
+  <data key="d14">L121</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_neumorphicmusicplayer" target="pages_index">
+  <data key="d10">imports_from</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">pages/index.vue</data>
+  <data key="d14">L7</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="pages_index" target="ref_vue">
+  <data key="d10">imports_from</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">pages/index.vue</data>
+  <data key="d14">L6</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_babel_eslint_parser">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L26</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_nuxt_types">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L27</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_nuxt_typescript_build">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L28</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_nuxtjs_eslint_config_typescript">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L29</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_nuxtjs_eslint_module">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L30</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_vue_test_utils">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L31</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_babel_core">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L32</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_babel_jest">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L33</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_eslint">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L34</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_eslint_config_prettier">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L35</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_eslint_plugin_nuxt">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L36</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_eslint_plugin_vue">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L37</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_jest">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L38</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_prettier">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L39</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_ts_jest">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L40</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_devdependencies" target="package_devdependencies_vue_jest">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L41</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig" target="tsconfig_compileroptions">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L2</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig" target="tsconfig_exclude">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L20</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_strict">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L10</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_noemit">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L11</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_experimentaldecorators">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L12</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_baseurl">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L13</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_paths">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L14</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_types">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L18</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_target">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L3</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_module">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L4</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_moduleresolution">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L5</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_lib">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L6</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_esmoduleinterop">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L7</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_allowjs">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L8</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="tsconfig_compileroptions" target="tsconfig_compileroptions_sourcemap">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">tsconfig.json</data>
+  <data key="d14">L9</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_lint_js">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L10</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_lint_prettier">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L11</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_lint">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L12</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_lintfix">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L13</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_test">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L14</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_dev">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L6</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_build">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L7</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_start">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L8</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_scripts" target="package_scripts_generate">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L9</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_nuxtjs_axios">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L17</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_core_js">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L18</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_nuxt">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L19</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_vue">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L20</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_vue_server_renderer">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L21</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_vue_template_compiler">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L22</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="package_dependencies" target="package_dependencies_webpack">
+  <data key="d10">contains</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d13">package.json</data>
+  <data key="d14">L23</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="components_nuxtlogo" target="test_nuxtlogo_spec">
+  <data key="d10">imports_from</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">test/NuxtLogo.spec.js</data>
+  <data key="d14">L2</data>
+  <data key="d15">1.0</data>
+</edge>
+<edge source="test_nuxtlogo_spec" target="ref_vue_test_utils">
+  <data key="d10">imports_from</data>
+  <data key="d11">EXTRACTED</data>
+  <data key="d12">1.0</data>
+  <data key="d16">import</data>
+  <data key="d13">test/NuxtLogo.spec.js</data>
+  <data key="d14">L1</data>
+  <data key="d15">1.0</data>
+</edge>
+</graph></graphml>
