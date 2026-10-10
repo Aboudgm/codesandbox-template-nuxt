@@ -1,0 +1,6 @@
+# Protected from Claude reads/edits (used by .claude/hooks/file-guard.sh)
+.env
+.env.*
+*.pem
+*.key
+credentials.json
