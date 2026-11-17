@@ -1,10 +1,18 @@
 // Raw WebGL2 engine for the "small light in an empty room" scene.
-// No dependencies. GPU particle physics (ping-pong float textures), a
-// distance-binned point-light shadow cube (soft shadows + light shafts),
-// gather DOF for the big cubes, scatter bokeh sprites for the dust,
-// HDR bloom, and a photographic grade.
+// No dependencies.
+// - 32^3 stable-fluids air (heat plume, swirl, vorticity confinement,
+//   pressure projection) that the dust rides
+// - GPU particle physics (ping-pong float textures), per-body weight
+// - distance-binned point-light shadow cube (soft shadows + light shafts)
+// - gather DOF for the big cubes, motion-blurred bokeh streaks for the dust
+// - HDR bloom, heat shimmer, photographic grade
 import {
   FULLSCREEN_VS,
+  AIR_ADVECT_FS,
+  AIR_CURL_FS,
+  AIR_DIV_FS,
+  AIR_JACOBI_FS,
+  AIR_GRAD_FS,
   UPDATE_FS,
   SHADOWPT_VS,
   SHADOWPT_FS,
@@ -17,6 +25,7 @@ import {
   SPRITE_VS,
   SPRITE_FS,
   BULB_VS,
+  BULB_FS,
   BLOOM_DOWN_FS,
   BLOOM_UP_FS,
   COMPOSITE_FS,
@@ -75,11 +84,20 @@ function mul(a, b) {
   return o
 }
 
+function project(m, p) {
+  const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12]
+  const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13]
+  const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15]
+  const ww = Math.max(w, 1e-3)
+  return [x / ww / 2 + 0.5, y / ww / 2 + 0.5]
+}
+
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x))
 const smoothstep = (a, b, x) => {
   const t = clamp((x - a) / (b - a), 0, 1)
   return t * t * (3 - 2 * t)
 }
+const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt))
 
 // ---------------------------------------------------------------- GL utils
 class Prog {
@@ -113,11 +131,8 @@ class Prog {
       const ctx = m
         ? lines.slice(Math.max(0, +m[1] - 3), +m[1] + 1).join('\n')
         : ''
-      throw new Error(
-        `compile ${this.name} ${
-          type === gl.VERTEX_SHADER ? 'VS' : 'FS'
-        }: ${log}\n${ctx}`
-      )
+      const kind = type === gl.VERTEX_SHADER ? 'VS' : 'FS'
+      throw new Error(`compile ${this.name} ${kind}: ${log}\n${ctx}`)
     }
     return s
   }
@@ -154,6 +169,11 @@ const FACES = [
 const FLOOR_Y = -1.55
 const CYC_R = 2.6
 const CYC_Z = -2.2
+// air grid: 32^3 cells over this box, packed in a 256x128 atlas
+const G_MIN = [-6.5, FLOOR_Y, -5.0]
+const G_SIZE = [13, 8, 9.5]
+const G_W = 256
+const G_H = 128
 
 export class LightRoom {
   constructor(canvas, opts = {}) {
@@ -181,20 +201,37 @@ export class LightRoom {
       matchMedia('(pointer: coarse)').matches
     this.texSize = opts.tex || (coarse ? 128 : 256)
     this.N = this.texSize * this.texSize
-    this.nBig = Math.round(this.N * 0.02)
+    this.nBig = Math.round(this.N * 0.03)
     this.nMid = Math.round(this.N * 0.12)
     this.shadowRes = coarse ? 128 : 192
-    this.pointMax = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]
+    this.jacobiIters = coarse ? 10 : 16
 
     this.scale = opts.scale || (coarse ? 0.7 : 1)
     this.maxPixels = coarse ? 1.4e6 : 2.6e6
+    this.tune = {
+      lightI: 9,
+      haze: 0.011,
+      exposure: 1.25,
+      bloomK: 0.55,
+      shK: 3.2,
+      amb: 0.007,
+      cycFall: 1.12,
+      grav: 1.25,
+      heat: 2.4,
+      swirl: 1.7,
+      vort: 0.8,
+      noise: 0.3,
+      airDamp: 0.8,
+      shutter: 0.022,
+      shimmer: 1,
+      lift: 0.03,
+    }
     this.state = {
       t: 0,
       intro: 0,
       light: [0.2, 0.5, 0.4],
       lightPrev: [0.2, 0.5, 0.4],
       lightVel: [0, 0, 0],
-      pointer: [0, 0],
       pointerTarget: null,
       lastPointerAt: -1e9,
       hold: 0,
@@ -203,41 +240,32 @@ export class LightRoom {
       focus: 7,
       parX: 0,
       parY: 0,
-    }
-    this.tune = {
-      lightI: 9,
-      haze: 0.009,
-      exposure: 1.2,
-      bloomK: 0.55,
-      shK: 3.2,
-      amb: 0.006,
-      fog: 1,
-      scene: 1,
+      swirlAxis: [0.25, 0.45, 1],
+      focusOff: 0,
+      shockT: 9,
+      shockAmp: 0,
     }
     this.ema = 1 / 60
     this.slowFrames = 0
     this.fastFrames = 0
     this.frameNo = 0
 
-    canvas.addEventListener(
-      'webglcontextlost',
-      (this.onLost = (e) => {
-        e.preventDefault()
-        this.lost = true
-        this.stop()
-        if (opts.onLost) opts.onLost()
-      })
-    )
-    canvas.addEventListener(
-      'webglcontextrestored',
-      (this.onRestored = () => {
-        if (opts.onRestored) opts.onRestored()
-      })
-    )
+    this.onLost = (e) => {
+      e.preventDefault()
+      this.lost = true
+      this.stop()
+      if (opts.onLost) opts.onLost()
+    }
+    this.onRestored = () => {
+      if (opts.onRestored) opts.onRestored()
+    }
+    canvas.addEventListener('webglcontextlost', this.onLost)
+    canvas.addEventListener('webglcontextrestored', this.onRestored)
 
     this.buildPrograms()
     this.buildGeometry()
     this.buildParticles()
+    this.buildAir()
     this.buildShadow()
     this.resize(true)
   }
@@ -246,6 +274,11 @@ export class LightRoom {
   buildPrograms() {
     const gl = this.gl
     const P = (vs, fs, n) => new Prog(gl, vs, fs, n)
+    this.pAdvect = P(FULLSCREEN_VS, AIR_ADVECT_FS, 'airAdvect')
+    this.pCurl = P(FULLSCREEN_VS, AIR_CURL_FS, 'airCurl')
+    this.pDiv = P(FULLSCREEN_VS, AIR_DIV_FS, 'airDiv')
+    this.pJacobi = P(FULLSCREEN_VS, AIR_JACOBI_FS, 'airJacobi')
+    this.pGrad = P(FULLSCREEN_VS, AIR_GRAD_FS, 'airGrad')
     this.pUpdate = P(FULLSCREEN_VS, UPDATE_FS, 'update')
     this.pShadow = P(SHADOWPT_VS, SHADOWPT_FS, 'shadow')
     this.pCyc = P(CYC_VS, CYC_FS, 'cyc')
@@ -253,7 +286,7 @@ export class LightRoom {
     this.pFog = P(FULLSCREEN_VS, FOG_FS, 'fog')
     this.pDof = P(FULLSCREEN_VS, DOF_FS, 'dof')
     this.pSprite = P(SPRITE_VS, SPRITE_FS, 'sprite')
-    this.pBulb = P(BULB_VS, SPRITE_FS, 'bulb')
+    this.pBulb = P(BULB_VS, BULB_FS, 'bulb')
     this.pDown = P(FULLSCREEN_VS, BLOOM_DOWN_FS, 'bloomDown')
     this.pUp = P(FULLSCREEN_VS, BLOOM_UP_FS, 'bloomUp')
     this.pComp = P(FULLSCREEN_VS, COMPOSITE_FS, 'composite')
@@ -393,7 +426,6 @@ export class LightRoom {
       const big = i < this.nBig
       const mid = !big && i < this.nBig + this.nMid
       const R = big ? 2.7 : mid ? 2.5 : 2.3
-      // random direction on a sphere
       const z = rand() * 2 - 1
       const a = rand() * Math.PI * 2
       const s = Math.sqrt(1 - z * z)
@@ -404,48 +436,49 @@ export class LightRoom {
       y = Math.max(y, FLOOR_Y + 0.2)
       pos.set([x, y, zz, rand() * 6.28], i * 4)
       const sw = 0.55 / (0.6 + r * 0.4)
-      vel.set(
-        [
-          -zz * sw + (rand() - 0.5) * 0.3,
-          (rand() - 0.5) * 0.3,
-          x * sw + (rand() - 0.5) * 0.3,
-          0,
-        ],
-        i * 4
-      )
+      const j = () => (rand() - 0.5) * 0.3
+      vel.set([-zz * sw + j(), j(), x * sw + j(), 0], i * 4)
     }
+    const { RGBA32F, RGBA, FLOAT, NEAREST } = gl
     this.posTex = []
     this.velTex = []
     this.simFbo = []
     for (let k = 0; k < 2; k++) {
-      this.posTex[k] = this.tex2D(
-        T,
-        T,
-        gl.RGBA32F,
-        gl.RGBA,
-        gl.FLOAT,
-        gl.NEAREST,
-        k === 0 ? pos : null
-      )
-      this.velTex[k] = this.tex2D(
-        T,
-        T,
-        gl.RGBA32F,
-        gl.RGBA,
-        gl.FLOAT,
-        gl.NEAREST,
-        k === 0 ? vel : null
-      )
+      const p0 = k === 0 ? pos : null
+      const v0 = k === 0 ? vel : null
+      this.posTex[k] = this.tex2D(T, T, RGBA32F, RGBA, FLOAT, NEAREST, p0)
+      this.velTex[k] = this.tex2D(T, T, RGBA32F, RGBA, FLOAT, NEAREST, v0)
       this.simFbo[k] = this.fbo([this.posTex[k], this.velTex[k]], null, 'sim')
     }
     this.cur = 0
   }
 
+  buildAir() {
+    const gl = this.gl
+    const mk = (filter) => {
+      const t = this.tex2D(G_W, G_H, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, filter)
+      return { tex: t, fbo: this.fbo([t], null, 'air') }
+    }
+    this.air = {
+      vel: [mk(gl.LINEAR), mk(gl.LINEAR)],
+      p: [mk(gl.NEAREST), mk(gl.NEAREST)],
+      curl: mk(gl.NEAREST),
+      div: mk(gl.NEAREST),
+      cur: 0,
+      pcur: 0,
+    }
+    for (const t of [...this.air.vel, ...this.air.p, this.air.curl]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo)
+      gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0])
+    }
+  }
+
   buildShadow() {
     const gl = this.gl
     const S = this.shadowRes
+    const CUBE = gl.TEXTURE_CUBE_MAP
     this.shadowTex = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.shadowTex)
+    gl.bindTexture(CUBE, this.shadowTex)
     for (let f = 0; f < 6; f++) {
       gl.texImage2D(
         gl.TEXTURE_CUBE_MAP_POSITIVE_X + f,
@@ -459,10 +492,10 @@ export class LightRoom {
         null
       )
     }
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(CUBE, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(CUBE, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(CUBE, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(CUBE, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     this.shadowFbo = []
     for (let f = 0; f < 6; f++) {
       const fb = gl.createFramebuffer()
@@ -474,9 +507,8 @@ export class LightRoom {
         this.shadowTex,
         0
       )
-      if (
-        gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE
-      ) {
+      const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (st !== gl.FRAMEBUFFER_COMPLETE) {
         throw new Error('shadow framebuffer incomplete')
       }
       this.shadowFbo.push(fb)
@@ -498,29 +530,32 @@ export class LightRoom {
     this.freeTargets()
     const textures = []
     const fbos = []
+    const { RGBA16F, RGBA, HALF_FLOAT, LINEAR } = gl
     const T = (w, h, ...rest) => {
       const x = this.tex2D(w, h, ...rest)
       textures.push(x)
       return x
     }
+    const F = (colors, depth, name) => {
+      const f = this.fbo(colors, depth, name)
+      fbos.push(f)
+      return f
+    }
     const depth = gl.createRenderbuffer()
     gl.bindRenderbuffer(gl.RENDERBUFFER, depth)
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, W, H)
 
-    const sceneTex = T(W, H, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR)
+    const sceneTex = T(W, H, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
     const distTex = T(W, H, gl.R32F, gl.RED, gl.FLOAT, gl.NEAREST)
-    const sceneFbo = this.fbo([sceneTex, distTex], depth, 'scene')
-    fbos.push(sceneFbo)
+    const sceneFbo = F([sceneTex, distTex], depth, 'scene')
 
     const fw = Math.max(2, W >> 1)
     const fh = Math.max(2, H >> 1)
-    const fogTex = T(fw, fh, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR)
-    const fogFbo = this.fbo([fogTex], null, 'fog')
-    fbos.push(fogFbo)
+    const fogTex = T(fw, fh, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+    const fogFbo = F([fogTex], null, 'fog')
 
-    const dofTex = T(W, H, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR)
-    const dofFbo = this.fbo([dofTex], depth, 'dof')
-    fbos.push(dofFbo)
+    const dofTex = T(W, H, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+    const dofFbo = F([dofTex], depth, 'dof')
 
     const bloom = []
     let bw = W
@@ -528,10 +563,8 @@ export class LightRoom {
     for (let i = 0; i < 6; i++) {
       bw = Math.max(2, bw >> 1)
       bh = Math.max(2, bh >> 1)
-      const tx = T(bw, bh, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR)
-      const fb = this.fbo([tx], null, 'bloom')
-      fbos.push(fb)
-      bloom.push({ tex: tx, fbo: fb, w: bw, h: bh })
+      const tx = T(bw, bh, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+      bloom.push({ tex: tx, fbo: F([tx], null, 'bloom'), w: bw, h: bh })
     }
     this.targets = {
       W, H, fw, fh, textures, fbos, depth,
@@ -552,8 +585,8 @@ export class LightRoom {
     }
     w = Math.max(64, Math.floor(w))
     h = Math.max(64, Math.floor(h))
-    if (!force && this.targets && this.targets.W === w && this.targets.H === h)
-      return
+    const t = this.targets
+    if (!force && t && t.W === w && t.H === h) return
     c.width = w
     c.height = h
     this.allocTargets(w, h)
@@ -567,8 +600,19 @@ export class LightRoom {
 
   setHold(on) {
     const s = this.state
-    if (!on && s.holdTarget > 0) s.burst = 0.35 + 0.65 * s.hold
+    if (!on && s.holdTarget > 0) {
+      s.burst = 0.35 + 0.65 * s.hold
+      s.shockT = 0
+      s.shockAmp = s.burst
+    }
     s.holdTarget = on ? 1 : 0
+    s.lastPointerAt = s.t
+  }
+
+  // scroll = rack focus through the cloud (offset from the bulb)
+  rackFocus(deltaY) {
+    const s = this.state
+    s.focusOff = clamp(s.focusOff + deltaY * 0.0035, -3.5, 3.5)
     s.lastPointerAt = s.t
   }
 
@@ -605,9 +649,91 @@ export class LightRoom {
     if (ext && !this.lost) ext.loseContext()
   }
 
+  bind2D(unit, tex) {
+    const gl = this.gl
+    gl.activeTexture(gl.TEXTURE0 + unit)
+    gl.bindTexture(gl.TEXTURE_2D, tex)
+  }
+
+  fullscreen() {
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
+  }
+
+  // ---- air: advect + forces -> divergence -> pressure -> project -> curl
+  stepAir(dt) {
+    const gl = this.gl
+    const s = this.state
+    const tn = this.tune
+    const A = this.air
+    gl.viewport(0, 0, G_W, G_H)
+    const grid = (p) => {
+      p.v3('uGMin', G_MIN)
+      p.v3('uGSize', G_SIZE)
+    }
+
+    let p = this.pAdvect.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.vel[1 - A.cur].fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    this.bind2D(1, A.curl.tex)
+    p.i('uVel', 0)
+    p.i('uCurl', 1)
+    p.f('uDt', dt)
+    p.f('uTime', s.t)
+    p.v3('uLight', s.light)
+    p.v3('uLightVel', s.lightVel)
+    p.v3('uSwirlAxis', s.swirlAxis)
+    p.f('uHold', s.hold)
+    p.f('uBurst', s.burst)
+    p.f('uHeat', tn.heat * s.intro)
+    p.f('uSwirl', tn.swirl)
+    p.f('uVort', tn.vort)
+    p.f('uNoise', tn.noise)
+    p.f('uDamp', tn.airDamp)
+    this.fullscreen()
+    A.cur = 1 - A.cur
+
+    p = this.pDiv.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.div.fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    p.i('uVel', 0)
+    this.fullscreen()
+
+    p = this.pJacobi.use()
+    grid(p)
+    this.bind2D(1, A.div.tex)
+    p.i('uDiv', 1)
+    p.i('uP', 0)
+    for (let k = 0; k < this.jacobiIters; k++) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, A.p[1 - A.pcur].fbo)
+      this.bind2D(0, A.p[A.pcur].tex)
+      this.fullscreen()
+      A.pcur = 1 - A.pcur
+    }
+
+    p = this.pGrad.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.vel[1 - A.cur].fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    this.bind2D(1, A.p[A.pcur].tex)
+    p.i('uVel', 0)
+    p.i('uP', 1)
+    this.fullscreen()
+    A.cur = 1 - A.cur
+
+    p = this.pCurl.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.curl.fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    p.i('uVel', 0)
+    this.fullscreen()
+  }
+
   frame(now) {
     const gl = this.gl
     const s = this.state
+    const tn = this.tune
     const dtRaw = Math.min((now - this.last) / 1000, 0.1)
     this.last = now
     const dt = Math.min(dtRaw, 1 / 30)
@@ -624,8 +750,8 @@ export class LightRoom {
     const fovY = 2 * Math.atan(tanH)
     const px = s.pointerTarget ? s.pointerTarget[0] : 0
     const py = s.pointerTarget ? s.pointerTarget[1] : 0
-    s.parX += (px - s.parX) * (1 - Math.exp(-dt * 1.6))
-    s.parY += (py - s.parY) * (1 - Math.exp(-dt * 1.6))
+    s.parX = damp(s.parX, px, 1.6, dt)
+    s.parY = damp(s.parY, py, 1.6, dt)
     const sway = Math.sin(s.t * 0.21) * 0.12
     const eye = [
       s.parX * 0.55 + sway,
@@ -672,43 +798,59 @@ export class LightRoom {
     if (stepLen > maxStep) step = v3.scale(step, maxStep / stepLen)
     s.light = v3.add(s.light, step)
     const lv = v3.scale(v3.sub(s.light, s.lightPrev), 1 / Math.max(dt, 1e-3))
-    const lvk = 1 - Math.exp(-dt * 10)
-    s.lightVel = [
-      s.lightVel[0] + (lv[0] - s.lightVel[0]) * lvk,
-      s.lightVel[1] + (lv[1] - s.lightVel[1]) * lvk,
-      s.lightVel[2] + (lv[2] - s.lightVel[2]) * lvk,
-    ]
-    s.hold += (s.holdTarget - s.hold) * (1 - Math.exp(-dt * 6))
-    s.burst *= Math.exp(-dt * 7)
+    s.lightVel = s.lightVel.map((x, i) => damp(x, lv[i], 10, dt))
+    s.hold = damp(s.hold, s.holdTarget, 4, dt)
+    s.burst *= Math.exp(-dt * 6)
+    s.shockT += dt
     s.intro = smoothstep(0.15, 2.4, s.t)
-    const lightI = this.tune.lightI * s.intro
+
+    // vortex axis: mostly facing the camera (spiral arms read on screen),
+    // precessing slowly, and tipped by the light's motion
+    const base = [
+      0.3 * Math.sin(s.t * 0.13),
+      0.45 + 0.2 * Math.sin(s.t * 0.07),
+      1,
+    ]
+    const tip = v3.scale(v3.cross(s.lightVel, [0, 0, 1]), 0.18)
+    const axT = v3.norm(v3.add(base, tip))
+    s.swirlAxis = v3.norm(s.swirlAxis.map((x, i) => damp(x, axT[i], 1.5, dt)))
+
+    const lightI = tn.lightI * s.intro
     const beamDir = v3.norm(v3.sub([1.9, -1.1, -4.2], s.light))
-    const focusT = v3.len(v3.sub(s.light, eye))
-    s.focus += (focusT - s.focus) * (1 - Math.exp(-dt * 2.4))
+    const focusT = Math.max(1.5, v3.len(v3.sub(s.light, eye)) + s.focusOff)
+    s.focus = damp(s.focus, focusT, 2.4, dt)
     const cocScale = 0.034 * H
-    const maxCoc = Math.min(cocScale, this.pointMax / 2)
+    const maxCoc = cocScale
+    const focalPx = (0.5 * H) / tanH
 
     gl.bindVertexArray(this.emptyVao)
     gl.disable(gl.BLEND)
     gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.CULL_FACE)
 
-    // ---- 1. physics (2 substeps)
+    // ---- 0. air
+    this.stepAir(dt)
+
+    // ---- 1. particles (2 substeps), riding the air
     {
       const T = this.texSize
       const p = this.pUpdate.use()
       p.i('uTex', T)
       p.i('uNBig', this.nBig)
       p.i('uNMid', this.nMid)
+      p.v3('uGMin', G_MIN)
+      p.v3('uGSize', G_SIZE)
       p.f('uDt', dt / 2)
       p.f('uTime', s.t)
       p.v3('uLight', s.light)
-      p.v3('uLightVel', s.lightVel)
       p.f('uHold', s.hold)
       p.f('uBurst', s.burst)
       p.f('uFloorY', FLOOR_Y)
       p.f('uCycZ', CYC_Z)
       p.f('uCycR', CYC_R)
+      p.f('uGrav', tn.grav)
+      this.bind2D(2, this.air.vel[this.air.cur].tex)
+      p.i('uAir', 2)
       gl.viewport(0, 0, T, T)
       for (let k = 0; k < 2; k++) {
         const nxt = 1 - this.cur
@@ -718,7 +860,7 @@ export class LightRoom {
         this.bind2D(1, this.velTex[this.cur])
         p.i('uPosT', 0)
         p.i('uVelT', 1)
-        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        this.fullscreen()
         this.cur = nxt
       }
     }
@@ -758,14 +900,23 @@ export class LightRoom {
       p.v3('uBeamDir', beamDir)
       p.v3('uCam', eye)
       p.f('uFloorY', FLOOR_Y)
-      p.f('uShK', this.tune.shK)
+      p.f('uShK', tn.shK)
       p.f('uFocus', s.focus)
       p.f('uCocScale', cocScale)
       p.f('uMaxCoc', maxCoc)
-      p.f('uAmb', this.tune.amb)
+      p.f('uAmb', tn.amb)
       gl.activeTexture(gl.TEXTURE5)
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.shadowTex)
       p.i('uShadow', 5)
+    }
+    const setBodies = (p) => {
+      p.i('uTex', this.texSize)
+      p.i('uNBig', this.nBig)
+      p.i('uNMid', this.nMid)
+      this.bind2D(0, posT)
+      this.bind2D(1, velT)
+      p.i('uPosT', 0)
+      p.i('uVelT', 1)
     }
 
     // ---- 3. opaque scene: cyclorama + big cubes -> HDR color(+coc) / dist
@@ -782,20 +933,15 @@ export class LightRoom {
       const p = this.pCyc.use()
       p.m4('uVP', vp)
       setLight(p)
+      p.f('uCycFall', tn.cycFall)
       gl.bindVertexArray(this.cycVao)
       gl.drawElements(gl.TRIANGLES, this.cycCount, gl.UNSIGNED_SHORT, 0)
     }
     {
       const p = this.pCube.use()
-      p.i('uTex', this.texSize)
-      p.i('uNBig', this.nBig)
-      p.i('uNMid', this.nMid)
       p.m4('uVP', vp)
       setLight(p)
-      this.bind2D(0, posT)
-      this.bind2D(1, velT)
-      p.i('uPosT', 0)
-      p.i('uVelT', 1)
+      setBodies(p)
       gl.enable(gl.CULL_FACE)
       gl.bindVertexArray(this.cubeVao)
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, this.nBig)
@@ -818,9 +964,9 @@ export class LightRoom {
       p.f('uTanH', tanH)
       p.f('uAspect', aspect)
       p.f('uTime', s.t)
-      p.f('uHaze', this.tune.haze * this.tune.fog)
+      p.f('uHaze', tn.haze)
       p.v2('uScaleInv', W / tg.fw, H / tg.fh)
-      gl.drawArrays(gl.TRIANGLES, 0, 3)
+      this.fullscreen()
     }
 
     // ---- 5. gather DOF (+ fog) into dof target
@@ -834,40 +980,36 @@ export class LightRoom {
       p.i('uFog', 1)
       p.v2('uRes', W, H)
       p.f('uMaxCoc', maxCoc)
-      gl.drawArrays(gl.TRIANGLES, 0, 3)
+      this.fullscreen()
     }
 
-    // ---- 6. scatter bokeh sprites for mid shards + dust (depth tested)
+    // ---- 6. motion-blurred bokeh streaks + bulb (additive, depth tested)
+    gl.enable(gl.DEPTH_TEST)
+    gl.depthMask(false)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.ONE, gl.ONE)
     {
       const p = this.pSprite.use()
-      p.i('uTex', this.texSize)
-      p.i('uNBig', this.nBig)
-      p.i('uNMid', this.nMid)
       p.m4('uVP', vp)
       setLight(p)
-      p.f('uFocalPx', (0.5 * H) / tanH)
-      p.f('uPxMax', Math.min(this.pointMax, maxCoc * 2))
-      this.bind2D(0, posT)
-      this.bind2D(1, velT)
-      p.i('uPosT', 0)
-      p.i('uVelT', 1)
-      gl.enable(gl.DEPTH_TEST)
-      gl.depthMask(false)
-      gl.enable(gl.BLEND)
-      gl.blendFunc(gl.ONE, gl.ONE)
-      gl.drawArrays(gl.POINTS, 0, this.N - this.nBig)
-      {
-        const b = this.pBulb.use()
-        b.m4('uVP', vp)
-        setLight(b)
-        b.f('uFocalPx', (0.5 * H) / tanH)
-        b.f('uPxMax', Math.min(this.pointMax, maxCoc * 2))
-        gl.drawArrays(gl.POINTS, 0, 1)
-      }
-      gl.disable(gl.BLEND)
-      gl.depthMask(true)
-      gl.disable(gl.DEPTH_TEST)
+      setBodies(p)
+      p.f('uFocalPx', focalPx)
+      p.f('uPxMax', maxCoc * 2)
+      p.v2('uRes', W, H)
+      p.f('uShutter', tn.shutter)
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.N - this.nBig)
     }
+    {
+      const p = this.pBulb.use()
+      p.m4('uVP', vp)
+      setLight(p)
+      p.f('uFocalPx', focalPx)
+      p.f('uPxMax', maxCoc * 2)
+      gl.drawArrays(gl.POINTS, 0, 1)
+    }
+    gl.disable(gl.BLEND)
+    gl.depthMask(true)
+    gl.disable(gl.DEPTH_TEST)
 
     // ---- 7. bloom chain
     {
@@ -881,7 +1023,7 @@ export class LightRoom {
         this.bind2D(0, i === 0 ? tg.dofTex : B[i - 1].tex)
         pd.i('uSrc', 0)
         pd.f('uFirst', i === 0 ? 1 : 0)
-        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        this.fullscreen()
       }
       const pu = this.pUp.use()
       gl.enable(gl.BLEND)
@@ -892,12 +1034,13 @@ export class LightRoom {
         this.bind2D(0, B[i].tex)
         pu.i('uSrc', 0)
         pu.f('uW', 0.9)
-        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        this.fullscreen()
       }
       gl.disable(gl.BLEND)
     }
 
     // ---- 8. composite to screen
+    const luv = project(vp, s.light)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     gl.viewport(0, 0, W, H)
     {
@@ -910,19 +1053,19 @@ export class LightRoom {
       p.i('uBloomWide', 2)
       p.v2('uRes', W, H)
       p.f('uTime', s.t)
-      p.f('uExposure', this.tune.exposure)
-      p.f('uBloomK', this.tune.bloomK)
-      gl.drawArrays(gl.TRIANGLES, 0, 3)
+      p.f('uExposure', tn.exposure)
+      p.f('uBloomK', tn.bloomK)
+      p.v2('uLightUv', luv[0], luv[1])
+      p.f('uAspect', aspect)
+      p.f('uShimmer', tn.shimmer * s.intro)
+      p.f('uLift', tn.lift)
+      p.f('uShockT', s.shockT)
+      p.f('uShockAmp', s.shockAmp)
+      this.fullscreen()
     }
   }
 
-  bind2D(unit, tex) {
-    const gl = this.gl
-    gl.activeTexture(gl.TEXTURE0 + unit)
-    gl.bindTexture(gl.TEXTURE_2D, tex)
-  }
-
-  // diagnostics: summary of the particle state (reads back the sim texture)
+  // diagnostics: particle + air state summary (reads back GPU textures)
   debugStats() {
     const gl = this.gl
     const T = this.texSize
@@ -947,7 +1090,31 @@ export class LightRoom {
       maxR = Math.max(maxR, Math.hypot(x, y, z))
     }
     const n = Math.max(1, T * T - nan)
-    return { nan, mean: mean.map((m) => m / n), maxR, light: this.state.light }
+    const ab = new Float32Array(G_W * G_H * 4)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.air.vel[this.air.cur].fbo)
+    gl.readBuffer(gl.COLOR_ATTACHMENT0)
+    gl.readPixels(0, 0, G_W, G_H, gl.RGBA, gl.FLOAT, ab)
+    let airMax = 0
+    let airSum = 0
+    let airNan = 0
+    for (let i = 0; i < G_W * G_H; i++) {
+      const sp = Math.hypot(ab[i * 4], ab[i * 4 + 1], ab[i * 4 + 2])
+      if (!isFinite(sp)) {
+        airNan++
+        continue
+      }
+      airMax = Math.max(airMax, sp)
+      airSum += sp
+    }
+    return {
+      nan,
+      mean: mean.map((m) => m / n),
+      maxR,
+      light: this.state.light,
+      airMax,
+      airMean: airSum / (G_W * G_H),
+      airNan,
+    }
   }
 
   // dynamic resolution: back off when slow, creep back up when fast

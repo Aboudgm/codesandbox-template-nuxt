@@ -8,6 +8,7 @@
       @pointerup="onUp"
       @pointercancel="onUp"
       @pointerleave="onUp"
+      @wheel.prevent="onWheel"
       @contextmenu.prevent
     />
     <p v-if="failure" class="light-room__fallback">{{ failure }}</p>
@@ -89,6 +90,9 @@ export default {
       const [x, y] = this.ndc(e)
       this.engine.setPointer(x, y)
       this.engine.setHold(true)
+    },
+    onWheel(e) {
+      if (this.engine) this.engine.rackFocus(e.deltaY)
     },
     onUp() {
       if (this.engine) this.engine.setHold(false)
