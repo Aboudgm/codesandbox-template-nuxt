@@ -1,0 +1,3270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Flame Room</title>
+<style>
+  /* One visual world: a small flame hanging in a dark studio. Dark-only by design. */
+  :root { --void:#000; --whisper:rgba(255,255,255,.46); --ink:#fff; --edge:rgba(255,255,255,.16); color-scheme:dark; }
+  html, body { height:100%; margin:0; overflow:hidden; background:#000; }
+  body { background:var(--void); color:var(--ink); touch-action:none; -webkit-user-select:none; user-select:none; }
+  canvas { position:fixed; inset:0; width:100%; height:100%; display:block; cursor:none; }
+  #hint { position:fixed; left:0; right:0; bottom:calc(6vh + env(safe-area-inset-bottom, 0px));
+          padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
+          text-align:center; font:500 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+          letter-spacing:.05em; color:var(--whisper); transition:opacity .9s; pointer-events:none;
+          max-width:56ch; margin:0 auto; text-wrap:balance; }
+  #hint.gone { opacity:0; }
+  .ask { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(11vh + env(safe-area-inset-bottom, 0px));
+         width:min(440px, calc(100% - 32px)); box-sizing:border-box; padding:10px 14px; border-radius:20px;
+         border:1px solid var(--edge); background:rgba(0,0,0,.35); color:var(--ink);
+         font:400 14px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; outline:none; }
+  .ask:focus-visible { border-color:rgba(255,255,255,.45); }
+  .ask::placeholder { color:rgba(255,255,255,.32); }
+  @media (prefers-reduced-motion: reduce) { #hint { transition:none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="A small flame in a dark studio: your AI agent. Tap to talk, hold to gather the dust, scroll to focus."></canvas>
+<div id="hint" role="status" aria-live="polite">Tap to talk &middot; hold to gather the dust</div>
+<script>
+'use strict'
+// ======================= room shaders =======================
+// GLSL for the "small light in an empty room" scene.
+// Pipeline per frame:
+//   air (3D stable-fluids: advect + heat/swirl/vorticity -> pressure project)
+//   -> particles (ride the air, gravity, shield) -> light shadow cube
+//   -> opaque scene -> volumetric fog -> gather DOF
+//   -> motion-blurred bokeh streaks -> bulb -> bloom -> grade.
+
+const HEAD = `#version 300 es
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp samplerCube;
+`
+
+const NOISE = `
+uint pcg(uint v){uint s=v*747796405u+2891336453u;uint w=((s>>((s>>28u)+4u))^s)*277803737u;return (w>>22u)^w;}
+float rnd(int i,int k){return float(pcg(uint(i)*2654435761u^pcg(uint(k)+1013904223u)))*(1.0/4294967295.0);}
+float hash21(vec2 p){vec3 p3=fract(vec3(p.xyx)*.1031);p3+=dot(p3,p3.yzx+33.33);return fract((p3.x+p3.y)*p3.z);}
+`
+
+const BODY = `
+uniform int uTex;
+uniform int uNBig;
+uniform int uNMid;
+int cls(int i){return i<uNBig?0:(i<uNBig+uNMid?1:2);}
+float bodySize(int i){
+  int c=cls(i);float r=rnd(i,1);
+  if(c==0)return mix(0.035,0.16,pow(r,1.8));
+  if(c==1)return mix(0.012,0.034,r*r);
+  return mix(0.0035,0.0095,r);
+}
+float bodyMass(int i){
+  int c=cls(i);float r=rnd(i,2);
+  if(c==0)return mix(1.6,5.5,r);
+  if(c==1)return mix(0.6,1.6,r);
+  return mix(0.08,0.35,r);
+}
+mat3 rotAxis(vec3 a,float t){
+  float c=cos(t),s=sin(t),k=1.-c;
+  return mat3(
+    c+a.x*a.x*k, a.y*a.x*k+a.z*s, a.z*a.x*k-a.y*s,
+    a.x*a.y*k-a.z*s, c+a.y*a.y*k, a.z*a.y*k+a.x*s,
+    a.x*a.z*k+a.y*s, a.y*a.z*k-a.x*s, c+a.z*a.z*k);
+}
+`
+
+const LIGHT = `
+uniform vec3 uLight;
+uniform float uLightI;
+uniform vec3 uBeamDir;
+uniform vec3 uCam;
+uniform float uFloorY;
+uniform samplerCube uShadow;
+uniform float uShK;
+uniform vec3 uTint;
+vec3 lightCol(vec3 dirFromLight){
+  float c=clamp(dot(dirFromLight,uBeamDir),0.,1.);
+  float cone=c*c*c;
+  return mix(vec3(1.0,.94,.84),vec3(1.0,.70,.38),cone*.85)*mix(.5,1.45,cone)*uTint;
+}
+float atten(float d2){return uLightI/pow(.18+d2,1.35);}
+const vec4 EDGE_LO=vec4(0.,.8,1.8,3.2);
+const vec4 EDGE_W=vec4(.8,1.,1.4,3.6);
+float occl(vec3 P,float k){
+  vec3 d=P-uLight;float dl=length(d);vec3 dir=d/max(dl,1e-3);
+  vec4 c=textureLod(uShadow,dir,0.);
+  vec4 f=clamp((vec4(dl)-EDGE_LO)/EDGE_W,0.,1.);
+  return exp(-dot(c,f)*k);
+}
+float occlSoft(vec3 P,float k,float rad){
+  vec3 d=P-uLight;float dl=length(d);vec3 dir=d/max(dl,1e-3);
+  vec3 t=normalize(cross(dir,abs(dir.y)<.9?vec3(0.,1.,0.):vec3(1.,0.,0.)));
+  vec3 b=cross(dir,t);
+  vec4 f=clamp((vec4(dl)-EDGE_LO)/EDGE_W,0.,1.);
+  float s=dot(textureLod(uShadow,dir,0.),f)*.28;
+  s+=dot(textureLod(uShadow,normalize(dir+t*rad),0.),f)*.18;
+  s+=dot(textureLod(uShadow,normalize(dir-t*rad),0.),f)*.18;
+  s+=dot(textureLod(uShadow,normalize(dir+b*rad),0.),f)*.18;
+  s+=dot(textureLod(uShadow,normalize(dir-b*rad),0.),f)*.18;
+  return exp(-s*k);
+}
+`
+
+const COC = `
+uniform float uFocus;
+uniform float uCocScale;
+uniform float uMaxCoc;
+float cocOf(float z){return clamp(uCocScale*(z-uFocus)/max(z,.05),-uMaxCoc,uMaxCoc);}
+`
+
+// 32^3 air grid packed into a 256x128 atlas (8x4 tiles of 32x32 z-slices)
+const FLUID = `
+uniform vec3 uGMin;
+uniform vec3 uGSize;
+const float GN=32.;
+const float GT=8.;
+vec2 gAtlas(vec2 xy,float z){
+  float tx=mod(z,GT),ty=floor(z/GT);
+  return (vec2(tx,ty)*GN+xy)/vec2(GN*GT,GN*GN/GT);
+}
+vec4 gSample(sampler2D t,vec3 g){
+  g=clamp(g,vec3(.5),vec3(GN-.5));
+  float z=g.z-.5;float z0=floor(z);float f=z-z0;float z1=min(z0+1.,GN-1.);
+  return mix(textureLod(t,gAtlas(g.xy,z0),0.),textureLod(t,gAtlas(g.xy,z1),0.),f);
+}
+vec3 gOf(vec3 p){return (p-uGMin)/uGSize*GN;}
+`
+
+const FLUIDCELL = `
+ivec3 gCell(){ivec2 f=ivec2(gl_FragCoord.xy);return ivec3(f.x%32,f.y%32,(f.y/32)*8+f.x/32);}
+vec4 gFetch(sampler2D t,ivec3 c){
+  c=clamp(c,ivec3(0),ivec3(31));
+  return texelFetch(t,ivec2((c.z%8)*32+c.x,(c.z/8)*32+c.y),0);
+}
+const ivec3 GX=ivec3(1,0,0);
+const ivec3 GY=ivec3(0,1,0);
+const ivec3 GZ=ivec3(0,0,1);
+`
+
+const FULLSCREEN_VS = `${HEAD}
+out vec2 vUv;
+void main(){
+  vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));
+  vUv=p;gl_Position=vec4(p*2.-1.,0.,1.);
+}`
+
+// ------------------------------------------------------------------- air
+// semi-Lagrangian advection + forces: heat plume, light wake, swirl,
+// vorticity confinement (keeps the curls alive), divergence-free noise
+const AIR_ADVECT_FS = `${HEAD}${FLUID}${FLUIDCELL}
+uniform sampler2D uVel;
+uniform sampler2D uCurl;
+uniform float uDt;
+uniform float uTime;
+uniform vec3 uLight;
+uniform vec3 uLightVel;
+uniform vec3 uSwirlAxis;
+uniform float uHold;
+uniform float uBurst;
+uniform float uHeat;
+uniform float uSwirl;
+uniform float uVort;
+uniform float uNoise;
+uniform float uDamp;
+out vec4 o;
+vec3 psi(vec3 p,float t){
+  return vec3(sin(p.y*1.3+t*.6)+sin(p.z*2.1-t*.4),
+              sin(p.z*1.7+t*.5)+sin(p.x*2.3+t*.3),
+              sin(p.x*1.9-t*.45)+sin(p.y*1.1+t*.55));
+}
+vec3 curlNoise(vec3 p,float t){
+  const float e=.08;
+  vec3 dx=vec3(e,0.,0.),dy=vec3(0.,e,0.),dz=vec3(0.,0.,e);
+  vec3 x0=psi(p-dx,t),x1=psi(p+dx,t),y0=psi(p-dy,t),y1=psi(p+dy,t),z0=psi(p-dz,t),z1=psi(p+dz,t);
+  return vec3((y1.z-y0.z)-(z1.y-z0.y),(z1.x-z0.x)-(x1.z-x0.z),(x1.y-x0.y)-(y1.x-y0.x))/(2.*e);
+}
+void main(){
+  ivec3 c=gCell();
+  vec3 cs=uGSize/GN;
+  vec3 pw=uGMin+(vec3(c)+.5)*cs;
+  vec3 u=gFetch(uVel,c).xyz;
+  vec3 ua=gSample(uVel,gOf(pw-u*uDt)).xyz;
+  ua*=exp(-uDt*uDamp);
+
+  vec3 d=pw-uLight;float r2=dot(d,d);float r=sqrt(r2)+1e-4;vec3 n=d/r;
+  // warm air rises off the bulb
+  ua.y+=uHeat*exp(-r2/.9)*uDt;
+  // the moving light drags air with it
+  ua+=uLightVel*exp(-r2/.5)*uDt*4.;
+  // slow vortex around an axis through the light: spiral arms
+  vec3 ax=uSwirlAxis;vec3 dp=d-ax*dot(d,ax);float rp=length(dp)+1e-4;
+  ua+=cross(ax,dp)/rp*uSwirl*smoothstep(.2,.9,rp)*exp(-r2/4.5)*uDt;
+  // release: radial gust. hold: gentle inflow
+  ua+=n*uBurst*exp(-r2/2.5)*uDt*55.;
+  ua-=n*uHold*smoothstep(.3,1.5,r)*exp(-r2/7.)*uDt*1.8;
+  // vorticity confinement: eps*h*(N x w)
+  vec4 wc=gFetch(uCurl,c);
+  vec3 eta=vec3(gFetch(uCurl,c+GX).w-gFetch(uCurl,c-GX).w,
+                gFetch(uCurl,c+GY).w-gFetch(uCurl,c-GY).w,
+                gFetch(uCurl,c+GZ).w-gFetch(uCurl,c-GZ).w)/(2.*cs);
+  float el=length(eta);
+  if(el>1e-5)ua+=uVort*cross(eta/el,wc.xyz)*cs.x*uDt;
+  ua+=curlNoise(pw*.45,uTime*.6)*uNoise*uDt;
+
+  if(c.x==0||c.x==31)ua.x=0.;
+  if(c.y==0||c.y==31)ua.y=0.;
+  if(c.z==0||c.z==31)ua.z=0.;
+  float L=length(ua);if(L>8.)ua*=8./L;
+  o=vec4(ua,0.);
+}`
+
+const AIR_CURL_FS = `${HEAD}${FLUID}${FLUIDCELL}
+uniform sampler2D uVel;
+out vec4 o;
+void main(){
+  ivec3 c=gCell();vec3 cs=uGSize/GN;
+  vec3 xp=gFetch(uVel,c+GX).xyz,xm=gFetch(uVel,c-GX).xyz;
+  vec3 yp=gFetch(uVel,c+GY).xyz,ym=gFetch(uVel,c-GY).xyz;
+  vec3 zp=gFetch(uVel,c+GZ).xyz,zm=gFetch(uVel,c-GZ).xyz;
+  vec3 w=vec3((yp.z-ym.z)/(2.*cs.y)-(zp.y-zm.y)/(2.*cs.z),
+              (zp.x-zm.x)/(2.*cs.z)-(xp.z-xm.z)/(2.*cs.x),
+              (xp.y-xm.y)/(2.*cs.x)-(yp.x-ym.x)/(2.*cs.y));
+  o=vec4(w,length(w));
+}`
+
+const AIR_DIV_FS = `${HEAD}${FLUID}${FLUIDCELL}
+uniform sampler2D uVel;
+out vec4 o;
+void main(){
+  ivec3 c=gCell();vec3 cs=uGSize/GN;
+  float dv=(gFetch(uVel,c+GX).x-gFetch(uVel,c-GX).x)/(2.*cs.x)
+          +(gFetch(uVel,c+GY).y-gFetch(uVel,c-GY).y)/(2.*cs.y)
+          +(gFetch(uVel,c+GZ).z-gFetch(uVel,c-GZ).z)/(2.*cs.z);
+  o=vec4(dv,0.,0.,0.);
+}`
+
+const AIR_JACOBI_FS = `${HEAD}${FLUID}${FLUIDCELL}
+uniform sampler2D uP;
+uniform sampler2D uDiv;
+out vec4 o;
+void main(){
+  ivec3 c=gCell();vec3 cs=uGSize/GN;vec3 ih=1./(cs*cs);
+  float p=((gFetch(uP,c+GX).x+gFetch(uP,c-GX).x)*ih.x
+          +(gFetch(uP,c+GY).x+gFetch(uP,c-GY).x)*ih.y
+          +(gFetch(uP,c+GZ).x+gFetch(uP,c-GZ).x)*ih.z
+          -gFetch(uDiv,c).x)/(2.*(ih.x+ih.y+ih.z));
+  o=vec4(p,0.,0.,0.);
+}`
+
+const AIR_GRAD_FS = `${HEAD}${FLUID}${FLUIDCELL}
+uniform sampler2D uVel;
+uniform sampler2D uP;
+out vec4 o;
+void main(){
+  ivec3 c=gCell();vec3 cs=uGSize/GN;
+  vec3 g=vec3(gFetch(uP,c+GX).x-gFetch(uP,c-GX).x,
+              gFetch(uP,c+GY).x-gFetch(uP,c-GY).x,
+              gFetch(uP,c+GZ).x-gFetch(uP,c-GZ).x)/(2.*cs);
+  vec3 u=gFetch(uVel,c).xyz-g;
+  if(c.x==0||c.x==31)u.x=0.;
+  if(c.y==0||c.y==31)u.y=0.;
+  if(c.z==0||c.z==31)u.z=0.;
+  o=vec4(u,0.);
+}`
+
+// ------------------------------------------------------------- particles
+const UPDATE_FS = `${HEAD}${NOISE}${BODY}${FLUID}
+layout(location=0) out vec4 oPos;
+layout(location=1) out vec4 oVel;
+uniform sampler2D uPosT;
+uniform sampler2D uVelT;
+uniform sampler2D uAir;
+uniform float uDt;
+uniform float uTime;
+uniform vec3 uLight;
+uniform float uHold;
+uniform float uBurst;
+uniform float uFloorY;
+uniform float uCycZ;
+uniform float uCycR;
+uniform float uGrav;
+uniform float uJit;
+
+vec3 jitter(vec3 p,float t){
+  vec3 q=p*3.1+vec3(0.,t*.4,t*.2);
+  return vec3(sin(q.y*1.7+t*1.9)+sin(q.z*2.3-t*1.3),
+              sin(q.z*1.9+t*1.6)+sin(q.x*2.1+t*1.1),
+              sin(q.x*1.5-t*1.4)+sin(q.y*2.7+t*.9))*.5;
+}
+
+void main(){
+  ivec2 c=ivec2(gl_FragCoord.xy);
+  int i=c.y*uTex+c.x;
+  vec4 P=texelFetch(uPosT,c,0);
+  vec4 V=texelFetch(uVelT,c,0);
+  vec3 p=P.xyz;vec3 v=V.xyz;
+  int k=cls(i);
+  float m=bodyMass(i);
+  float rad=bodySize(i)*(k==0?1.45:1.0);
+  float dt=uDt;
+  float R0=.55;
+
+  vec3 d=p-uLight;float r=length(d)+1e-4;vec3 n=d/r;
+  vec3 a=vec3(0.);
+  // gravity: a soft pull toward the light (bodies orbit it in a loose
+  // shell against the shield) plus a slight settling, heavier = lower
+  float rT=mix(1.25,3.6,pow(rnd(i,7),.8));   // each body's preferred orbit
+  a-=n*uGrav*clamp((r-rT)*.9,-.5,1.6);
+  a.y-=(k==0?.55:(k==1?.35:.18));
+
+  // repulsive shield around the light
+  float sh=pow(clamp(1.-r/(R0*3.4),0.,1.),2.)*22.;
+  a+=n*sh*(1.-.85*uHold)/pow(m,.5);
+  // hold: a soft pull, mostly carried by the air
+  a-=n*uHold*3.5*smoothstep(.25,2.6,r)/pow(m,.4);
+  // release burst
+  a+=n*uBurst*120./(.4+r)/pow(m,.5);
+  // per-body flutter (small scale, the air does the big flow)
+  a+=jitter(p+rnd(i,5)*7.,uTime)*uJit/pow(m,.7);
+
+  // air drag relative to the local wind: light bodies ride the flow
+  vec3 air=gSample(uAir,gOf(p)).xyz;
+  float cD=.5+6.5/(1.+m*m*1.5);
+  v+=a*dt;
+  v=air+(v-air)*exp(-cD*dt);
+  float vmax=(k==0?3.0:(k==1?4.2:5.5))*(1.+1.6*uBurst+.6*uHold);
+  float sp=length(v);
+  if(sp>vmax)v*=vmax/sp;
+  p+=v*dt;
+
+  // ---- cyclorama collision: floor, quarter-pipe, back wall
+  float rest=k==0?.38:(k==1?.22:.1);
+  float fric=k==0?2.2:5.5;
+  float yc=uFloorY+uCycR;
+  if(p.z>=uCycZ){
+    float fy=uFloorY+rad;
+    if(p.y<fy){p.y=fy;if(v.y<0.)v.y*=-rest;v.xz*=1.-min(.9,dt*fric);}
+  }else if(p.y<yc){
+    vec2 q=vec2(p.y-yc,p.z-uCycZ);
+    float dd=length(q);float lim=uCycR-rad;
+    if(dd>lim){
+      vec2 nn=q/dd;vec2 qq=nn*lim;
+      p.y=yc+qq.x;p.z=uCycZ+qq.y;
+      float vn=dot(v.yz,nn);
+      if(vn>0.)v.yz-=(1.+rest)*vn*nn;
+      v.xz*=1.-min(.9,dt*fric*.5);
+    }
+  }else{
+    float lim=uCycZ-uCycR+rad;
+    if(p.z<lim){p.z=lim;if(v.z<0.)v.z*=-rest;}
+  }
+  if(abs(p.x)>6.){p.x=sign(p.x)*6.;v.x*=-.3;}
+  if(p.y>5.2){p.y=5.2;v.y=-abs(v.y)*.3;}
+  if(p.z>4.2){p.z=4.2;v.z=-abs(v.z)*.3;}
+
+  if(!(length(p-uLight)<16.)){
+    vec3 rv=normalize(vec3(rnd(i,20),rnd(i,21),rnd(i,22))*2.-1.+1e-3);
+    p=uLight+rv*1.6;v=vec3(0.);
+  }
+
+  float spin=(rnd(i,30)*2.-1.)*2.4;
+  float w=P.w+dt*spin*(.35+length(v)*.9);
+  float hot=smoothstep(R0*3.4,R0*1.1,r);
+  float ex=max(V.w-dt*.9,hot);
+
+  oPos=vec4(p,w);
+  oVel=vec4(v,ex);
+}`
+
+// ------------------------------------------------------------ light shadow
+const SHADOWPT_VS = `${HEAD}${NOISE}${BODY}
+uniform sampler2D uPosT;
+uniform mat4 uFace;
+uniform vec3 uLight;
+uniform float uFocalPx;
+uniform float uSoft;
+out vec4 vBins;
+void main(){
+  int i=gl_VertexID;
+  ivec2 c=ivec2(i%uTex,i/uTex);
+  vec3 p=texelFetch(uPosT,c,0).xyz;
+  float dl=length(p-uLight);
+  vec4 cp=uFace*vec4(p,1.);
+  float s=bodySize(i)*(cls(i)==0?1.45:1.);
+  float phys=2.*s*uFocalPx/max(cp.w,.05);
+  float ps=clamp(max(phys,uSoft),1.,48.);
+  float cov=clamp(phys*phys/(ps*ps),0.,1.);
+  vBins=vec4(float(dl<.8),float(dl>=.8&&dl<1.8),float(dl>=1.8&&dl<3.2),float(dl>=3.2))*cov;
+  gl_Position=cp;
+  gl_PointSize=ps;
+}`
+
+const SHADOWPT_FS = `${HEAD}
+in vec4 vBins;
+out vec4 o;
+void main(){
+  float r=length(gl_PointCoord*2.-1.);
+  float f=smoothstep(1.,.15,r);
+  o=vBins*f*1.6;
+}`
+
+// ----------------------------------------------------------------- cyclorama
+const CYC_VS = `${HEAD}
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNrm;
+uniform mat4 uVP;
+out vec3 vW;
+out vec3 vN;
+void main(){vW=aPos;vN=aNrm;gl_Position=uVP*vec4(aPos,1.);}`
+
+const CYC_FS = `${HEAD}${NOISE}${LIGHT}${COC}
+in vec3 vW;
+in vec3 vN;
+layout(location=0) out vec4 oCol;
+layout(location=1) out vec4 oDist;
+uniform float uAmb;
+uniform float uCycFall;
+void main(){
+  vec3 N=normalize(vN);
+  vec3 L=uLight-vW;float d2=dot(L,L);vec3 l=L*inversesqrt(d2);
+  float ndl=max(dot(N,l),0.);
+  // the backdrop catches a broad, soft wash of the light
+  float att=uLightI/pow(.18+d2,uCycFall);
+  vec3 lc=lightCol(-l);
+  float sh=occlSoft(vW,uShK,.028);
+  float mott=.92+.08*sin(vW.x*3.1+sin(vW.y*2.3))*sin(vW.z*2.7+vW.x*1.7);
+  vec3 alb=vec3(.42,.39,.35)*mott;
+  vec3 V=normalize(uCam-vW);vec3 H=normalize(l+V);
+  // satin floor: a pool of light under a low bulb
+  float gloss=N.y>.9?1.:.35;
+  float spec=pow(max(dot(N,H),0.),26.)*.34*gloss;
+  vec3 col=(alb*ndl+spec)*att*lc*sh;
+  col+=alb*uAmb*(.6+.4*N.y)*uLightI/(1.+.04*d2);
+  float z=length(vW-uCam);
+  oCol=vec4(col,cocOf(z));
+  oDist=vec4(z,0.,0.,1.);
+}`
+
+// ---------------------------------------------------------- opaque big cubes
+const CUBE_VS = `${HEAD}${NOISE}${BODY}
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNrm;
+uniform sampler2D uPosT;
+uniform sampler2D uVelT;
+uniform mat4 uVP;
+out vec3 vW;
+out vec3 vN;
+out vec3 vAlb;
+out float vGloss;
+out float vHot;
+void main(){
+  int i=gl_InstanceID;
+  ivec2 c=ivec2(i%uTex,i/uTex);
+  vec4 P=texelFetch(uPosT,c,0);
+  vec4 V=texelFetch(uVelT,c,0);
+  float s=bodySize(i);
+  vec3 ax=normalize(vec3(rnd(i,10),rnd(i,11),rnd(i,12))*2.-1.+1e-3);
+  float ang=P.w+rnd(i,13)*6.2831;
+  mat3 R=rotAxis(ax,ang);
+  vec3 sc=vec3(1.,mix(.5,1.,rnd(i,14)),mix(.6,1.,rnd(i,15)))*s;
+  vec3 w=P.xyz+R*(aPos*sc);
+  vN=R*aNrm;vW=w;
+  float t=rnd(i,16);
+  vec3 alb=vec3(.13,.12,.105)*mix(.55,1.9,rnd(i,17));
+  if(t<.025)alb=vec3(.02,.20,.17);
+  else if(t<.045)alb=vec3(.30,.03,.025);
+  else if(t<.06)alb=vec3(.26,.17,.05);
+  vAlb=alb;vGloss=rnd(i,18);vHot=V.w;
+  gl_Position=uVP*vec4(w,1.);
+}`
+
+const CUBE_FS = `${HEAD}${NOISE}${LIGHT}${COC}
+in vec3 vW;
+in vec3 vN;
+in vec3 vAlb;
+in float vGloss;
+in float vHot;
+layout(location=0) out vec4 oCol;
+layout(location=1) out vec4 oDist;
+uniform float uAmb;
+void main(){
+  vec3 N=normalize(vN);
+  vec3 L=uLight-vW;float d2=dot(L,L);vec3 l=L*inversesqrt(d2);
+  float ndl=max(dot(N,l),0.);
+  float att=atten(d2);
+  vec3 lc=lightCol(-l);
+  float sh=occl(vW,uShK*.3);
+  vec3 V=normalize(uCam-vW);vec3 H=normalize(l+V);
+  float spec=pow(max(dot(N,H),0.),mix(30.,160.,vGloss))*mix(.15,1.1,vGloss);
+  float fres=pow(1.-max(dot(N,V),0.),4.)*.25;
+  vec3 col=(vAlb*ndl+spec+fres*ndl)*att*lc*sh;
+  col+=vAlb*uAmb*(.5+.5*N.y)*uLightI/(1.+.04*d2)*2.;
+  col+=vec3(1.,.55,.2)*vHot*vHot*.06;
+  float z=length(vW-uCam);
+  oCol=vec4(col,cocOf(z));
+  oDist=vec4(z,0.,0.,1.);
+}`
+
+// -------------------------------------------------------------- volumetric
+const FOG_FS = `${HEAD}${NOISE}${LIGHT}
+uniform sampler2D uDist;
+uniform vec3 uRight;
+uniform vec3 uUp;
+uniform vec3 uFwd;
+uniform float uTanH;
+uniform float uAspect;
+uniform float uTime;
+uniform float uHaze;
+uniform vec2 uScaleInv;
+uniform float uCore;
+in vec2 vUv;
+out vec4 o;
+float hg(float c,float g){float g2=g*g;return (1.-g2)/(12.566*pow(1.+g2-2.*g*c,1.5));}
+void main(){
+  vec2 ndc=vUv*2.-1.;
+  vec3 D=normalize(uFwd+uRight*ndc.x*uTanH*uAspect+uUp*ndc.y*uTanH);
+  float tmax=min(texelFetch(uDist,ivec2(gl_FragCoord.xy*uScaleInv),0).r,22.);
+  const int N=30;
+  float dt=tmax/float(N);
+  float j=hash21(gl_FragCoord.xy+fract(uTime)*91.7);
+  vec3 acc=vec3(0.);
+  for(int s=0;s<N;s++){
+    float t=(float(s)+j)*dt;
+    vec3 P=uCam+D*t;
+    vec3 dL=P-uLight;float dl=length(dL);
+    vec3 dirL=dL/max(dl,1e-3);
+    vec3 lc=lightCol(dirL);
+    float cone=pow(clamp(dot(dirL,uBeamDir),0.,1.),7.);
+    float dens=uHaze*(.35+exp(-max(P.y-uFloorY,0.)*.45))*(1.+2.2*cone);
+    float ph=hg(dot(-dirL,D),.45)*12.566*.22+.35;
+    float vis=occl(P,uShK*.5);
+    // the near field thins out when something else (a flame) is the bulb
+    acc+=lc*(uLightI*ph*dens*vis/pow(.12+dl*dl,1.35))*dt*mix(uCore,1.,smoothstep(.15,.85,dl));
+  }
+  vec3 toL=uLight-uCam;
+  float tc=dot(toL,D);
+  float h=max(length(uCam+D*tc-uLight),.05);
+  float core=uLightI*.0016*(atan((tmax-tc)/h)-atan(-tc/h))/(h*h+.02);
+  acc+=vec3(1.,.9,.74)*max(core,0.)*uCore;
+  o=vec4(acc,1.);
+}`
+
+// ------------------------------------------------------------- gather DOF
+const DOF_FS = `${HEAD}${NOISE}
+uniform sampler2D uScene;
+uniform sampler2D uFog;
+uniform vec2 uRes;
+uniform float uMaxCoc;
+in vec2 vUv;
+out vec4 o;
+void main(){
+  vec4 c0=texelFetch(uScene,ivec2(gl_FragCoord.xy),0);
+  float cc=c0.a;
+  float w0=1./max(1.,cc*cc);
+  vec3 acc=c0.rgb*w0;float ws=w0;
+  const int NS=56;
+  float rot=hash21(gl_FragCoord.xy)*6.2831;
+  float R=uMaxCoc;
+  for(int i=0;i<NS;i++){
+    float fi=float(i);
+    float rr=sqrt((fi+.5)/float(NS))*R;
+    float th=fi*2.39996+rot;
+    vec2 off=vec2(cos(th),sin(th))*rr;
+    vec4 s=textureLod(uScene,(gl_FragCoord.xy+off)/uRes,0.);
+    float eff=abs(s.a);
+    if(s.a>cc)eff=min(eff,abs(cc)+1.5);
+    float w=clamp(eff-rr+1.,0.,1.)/max(1.,eff*eff);
+    acc+=s.rgb*w;ws+=w;
+  }
+  vec3 col=acc/max(ws,1e-6);
+  col+=texture(uFog,vUv).rgb;
+  o=vec4(col,1.);
+}`
+
+// ---------------------- motion-blurred bokeh streaks (mid shards + dust)
+// One instanced quad per body, stretched along its screen-space motion over
+// the shutter interval; the fragment shader draws a capsule-shaped disc.
+const SPRITE_VS = `${HEAD}${NOISE}${BODY}${LIGHT}${COC}
+uniform sampler2D uPosT;
+uniform sampler2D uVelT;
+uniform mat4 uVP;
+uniform float uFocalPx;
+uniform float uPxMax;
+uniform vec2 uRes;
+uniform float uShutter;
+out vec3 vCol;
+out vec2 vLocal;
+out float vHalfSeg;
+out float vR;
+const vec2 CORNERS[6]=vec2[6](vec2(-1.,-1.),vec2(1.,-1.),vec2(1.,1.),vec2(-1.,-1.),vec2(1.,1.),vec2(-1.,1.));
+void main(){
+  int i=uNBig+gl_InstanceID;
+  ivec2 c=ivec2(i%uTex,i/uTex);
+  vec4 P=texelFetch(uPosT,c,0);
+  vec4 V=texelFetch(uVelT,c,0);
+  vec3 w=P.xyz;
+  vec4 cp=uVP*vec4(w,1.);
+  if(cp.w<.12){gl_Position=vec4(2.,2.,2.,1.);return;}
+  float z=length(w-uCam);
+  float coc=cocOf(z);
+  float s=bodySize(i);
+  float phys=max(2.*s*uFocalPx/cp.w,1.4);
+  float diam=clamp(max(2.*abs(coc),phys),1.5,uPxMax);
+  float energy=clamp(phys*phys/(diam*diam),0.,1.);
+
+  vec3 L=uLight-w;float d2=dot(L,L);vec3 l=L*inversesqrt(d2);
+  float att=atten(d2);
+  vec3 lc=lightCol(-l);
+  float sh=occl(w,uShK*.5);
+  vec3 Vv=normalize(uCam-w);
+  float kind=float(cls(i));
+  vec3 ax=normalize(vec3(rnd(i,10),rnd(i,11),rnd(i,12))*2.-1.+1e-3);
+  float ang=P.w+rnd(i,13)*6.2831;
+  vec3 n0=normalize(vec3(rnd(i,40),rnd(i,41),rnd(i,42))*2.-1.+1e-3);
+  vec3 n=n0*cos(ang)+cross(ax,n0)*sin(ang)+ax*dot(ax,n0)*(1.-cos(ang));
+  float ndl=max(dot(n,l),0.);
+  vec3 alb=mix(vec3(.20,.19,.17),vec3(.82,.78,.70),rnd(i,17));
+  float t=rnd(i,16);
+  if(t<.025)alb=vec3(.1,.8,.7);else if(t<.045)alb=vec3(.9,.12,.09);
+  vec3 H=normalize(l+Vv);
+  float glint=pow(max(dot(n,H),0.),90.)*(kind<1.5?14.:5.);
+  float body=kind<1.5?(.12+.9*ndl):(.45+.55*ndl);
+  vec3 col=(alb*body+glint)*att*lc*sh;
+  col+=vec3(1.,.55,.2)*V.w*V.w*.9*(kind>1.5?1.:.3);
+  col+=alb*.012*uLightI/(1.+.04*d2);
+
+  // screen-space streak over the shutter interval
+  vec4 cq=uVP*vec4(w-V.xyz*uShutter,1.);
+  vec2 s0=cp.xy/cp.w*.5*uRes;
+  vec2 dv=vec2(0.);
+  if(cq.w>.12)dv=s0-cq.xy/cq.w*.5*uRes;
+  float seg=length(dv);
+  if(seg>40.){dv*=40./seg;seg=40.;}
+  vec2 dir=seg>.01?dv/seg:vec2(1.,0.);
+  vec2 perp=vec2(-dir.y,dir.x);
+  float R=diam*.5+.75;
+  vec2 cr=CORNERS[gl_VertexID];
+  float hx=R+seg*.5;
+  vec2 offPx=dir*cr.x*hx+perp*cr.y*R-dv*.5;
+  vLocal=vec2(cr.x*hx,cr.y*R);
+  vHalfSeg=seg*.5;
+  vR=diam*.5;
+  vCol=col*energy*diam/(diam+seg);
+  gl_Position=cp+vec4(offPx/(.5*uRes)*cp.w,0.,0.);
+}`
+
+const SPRITE_FS = `${HEAD}
+in vec3 vCol;
+in vec2 vLocal;
+in float vHalfSeg;
+in float vR;
+out vec4 o;
+void main(){
+  float dx=max(abs(vLocal.x)-vHalfSeg,0.);
+  float d=length(vec2(dx,vLocal.y))/max(vR,.5);
+  if(d>1.)discard;
+  float soft=clamp(1.1/vR,.04,.6);
+  float edge=smoothstep(1.,1.-soft,d);
+  // onion-ring rim on large still discs, like an uncorrected lens
+  float big=smoothstep(3.,11.,vR)*(1.-smoothstep(0.,5.,vHalfSeg));
+  float rim=1.+big*(.9*smoothstep(.55,.97,d)-.25);
+  o=vec4(vCol*edge*rim*(1.+.3*big),0.);
+}`
+
+// the bulb itself: one emissive disc, blurs like any other point
+const BULB_VS = `${HEAD}${LIGHT}${COC}
+uniform mat4 uVP;
+uniform float uFocalPx;
+uniform float uPxMax;
+out vec3 vCol;
+out vec2 vNdc;
+out float vDiam;
+void main(){
+  vec4 cp=uVP*vec4(uLight,1.);
+  float z=length(uLight-uCam);
+  float coc=cocOf(z);
+  float phys=max(2.*.045*uFocalPx/max(cp.w,.05),3.);
+  float diam=clamp(max(2.*abs(coc),phys),2.,uPxMax);
+  float energy=clamp(phys*phys/(diam*diam),0.,1.);
+  vCol=vec3(1.,.92,.76)*uLightI*16.*energy;
+  vNdc=cp.xy/max(cp.w,.001);
+  vDiam=diam;
+  gl_Position=cp;
+  gl_PointSize=diam;
+}`
+
+const BULB_FS = `${HEAD}
+in vec3 vCol;
+in vec2 vNdc;
+in float vDiam;
+out vec4 o;
+void main(){
+  vec2 q=gl_PointCoord*2.-1.;
+  float r=length(q);
+  if(r>1.)discard;
+  float edge=smoothstep(1.,1.-clamp(2.2/vDiam,.04,.6),r);
+  o=vec4(vCol*edge,0.);
+}`
+
+// ------------------------------------------------------------------- bloom
+const BLOOM_DOWN_FS = `${HEAD}
+uniform sampler2D uSrc;
+uniform float uThr;
+uniform float uKnee;
+uniform float uFirst;
+in vec2 vUv;
+out vec4 o;
+vec3 tap(vec2 uv){
+  vec3 c=textureLod(uSrc,uv,0.).rgb;
+  if(uFirst>.5){
+    c=min(c,vec3(24.));
+    float br=max(c.r,max(c.g,c.b));
+    float soft=clamp(br-uThr+uKnee,0.,2.*uKnee);
+    soft=soft*soft/(4.*uKnee+1e-4);
+    c*=max(soft,br-uThr)/max(br,1e-4);
+  }
+  return c;
+}
+void main(){
+  vec2 t=1./vec2(textureSize(uSrc,0));
+  vec3 a=tap(vUv+t*vec2(-2.,2.)),b=tap(vUv+t*vec2(0.,2.)),c=tap(vUv+t*vec2(2.,2.));
+  vec3 d=tap(vUv+t*vec2(-2.,0.)),e=tap(vUv),f=tap(vUv+t*vec2(2.,0.));
+  vec3 g=tap(vUv+t*vec2(-2.,-2.)),h=tap(vUv+t*vec2(0.,-2.)),i=tap(vUv+t*vec2(2.,-2.));
+  vec3 j=tap(vUv+t*vec2(-1.,1.)),k=tap(vUv+t*vec2(1.,1.));
+  vec3 l=tap(vUv+t*vec2(-1.,-1.)),m=tap(vUv+t*vec2(1.,-1.));
+  vec3 col=e*.125+(a+c+g+i)*.03125+(b+d+f+h)*.0625+(j+k+l+m)*.125;
+  o=vec4(col,1.);
+}`
+
+const BLOOM_UP_FS = `${HEAD}
+uniform sampler2D uSrc;
+uniform float uW;
+in vec2 vUv;
+out vec4 o;
+void main(){
+  vec2 t=1./vec2(textureSize(uSrc,0));
+  vec3 c=textureLod(uSrc,vUv,0.).rgb*4.;
+  c+=(textureLod(uSrc,vUv+t*vec2(-1.,0.),0.).rgb+textureLod(uSrc,vUv+t*vec2(1.,0.),0.).rgb
+     +textureLod(uSrc,vUv+t*vec2(0.,-1.),0.).rgb+textureLod(uSrc,vUv+t*vec2(0.,1.),0.).rgb)*2.;
+  c+=textureLod(uSrc,vUv+t*vec2(-1.,-1.),0.).rgb+textureLod(uSrc,vUv+t*vec2(1.,-1.),0.).rgb
+    +textureLod(uSrc,vUv+t*vec2(-1.,1.),0.).rgb+textureLod(uSrc,vUv+t*vec2(1.,1.),0.).rgb;
+  o=vec4(c/16.*uW,1.);
+}`
+
+// --------------------------------------------------------------- composite
+const COMPOSITE_FS = `${HEAD}${NOISE}
+uniform sampler2D uBase;
+uniform sampler2D uBloom;
+uniform sampler2D uBloomWide;
+uniform vec2 uRes;
+uniform float uTime;
+uniform float uExposure;
+uniform float uBloomK;
+uniform vec2 uLightUv;
+uniform float uAspect;
+uniform float uShimmer;
+uniform float uLift;
+uniform float uShockT;
+uniform float uShockAmp;
+in vec2 vUv;
+out vec4 o;
+vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
+void main(){
+  vec2 c=vUv-.5;
+  float r2=dot(c,c);
+  vec2 uv=.5+c*(1.+.05*r2);          // subtle barrel
+  // heat shimmer: the air above the bulb wobbles
+  vec2 dl=(uv-uLightUv)*vec2(uAspect,1.);
+  // release shockwave: a refracting ring racing out from the bulb
+  float ds=length(dl);
+  float ring=exp(-pow((ds-uShockT*1.15)*13.,2.))*uShockAmp*exp(-uShockT*1.6);
+  uv+=dl/max(ds,1e-4)/vec2(uAspect,1.)*ring*.014;
+  float hot=exp(-dot(dl,dl)*14.)*smoothstep(-.04,.22,uv.y-uLightUv.y);
+  uv+=vec2(sin(uv.y*95.-uTime*7.)+.6*sin(uv.x*61.+uTime*4.3),
+           .7*sin(uv.x*83.+uTime*5.1))*.0011*hot*uShimmer;
+  vec2 ca=c*r2*.016;                  // lateral chromatic aberration
+  vec3 col;
+  col.r=texture(uBase,uv+ca).r;
+  col.g=texture(uBase,uv).g;
+  col.b=texture(uBase,uv-ca).b;
+
+  vec3 bl=texture(uBloom,uv).rgb*vec3(1.,.9,.78);   // warm halation
+  vec3 st=vec3(0.);float sw=0.;
+  for(int k=-7;k<=7;k++){
+    float w=exp(-float(k*k)/16.);
+    st+=texture(uBloomWide,uv+vec2(float(k)*.014,0.)).rgb*w;sw+=w;
+  }
+  st/=sw;
+  col+=bl*uBloomK+st*vec3(.55,.75,1.)*.09;
+
+  col*=uExposure;
+  col=aces(col);
+  float lum=dot(col,vec3(.2126,.7152,.0722));
+  col=mix(col*vec3(.90,.96,1.10),col*vec3(1.04,1.0,.94),smoothstep(.05,.6,lum));
+  col=pow(col,vec3(1./2.2));
+  // lifted, slightly warm blacks, like a print
+  col=col*(1.-uLift)+vec3(1.,.95,.88)*uLift;
+  col*=1.-smoothstep(.25,.95,r2*2.4)*.65;
+  vec2 gp=floor(gl_FragCoord.xy/1.4);
+  float n=hash21(gp+fract(uTime*7.31)*vec2(113.,71.))+hash21(gp.yx+fract(uTime*3.7)*vec2(57.,131.));
+  col+=(n-1.)*.036*(.55+(1.-lum)*.9);
+  col+=(hash21(gl_FragCoord.xy+uTime)-.5)/255.;
+  o=vec4(col,1.);
+}`
+
+// ======================= room engine ========================
+// Raw WebGL2 engine for the "small light in an empty room" scene.
+// No dependencies.
+// - 32^3 stable-fluids air (heat plume, swirl, vorticity confinement,
+//   pressure projection) that the dust rides
+// - GPU particle physics (ping-pong float textures), per-body weight
+// - distance-binned point-light shadow cube (soft shadows + light shafts)
+// - gather DOF for the big cubes, motion-blurred bokeh streaks for the dust
+// - HDR bloom, heat shimmer, photographic grade
+// ------------------------------------------------------------------ math
+const v3 = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  scale: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ],
+  len: (a) => Math.hypot(a[0], a[1], a[2]),
+  norm: (a) => {
+    const l = Math.hypot(a[0], a[1], a[2]) || 1
+    return [a[0] / l, a[1] / l, a[2] / l]
+  },
+}
+
+function perspective(fovy, aspect, n, f) {
+  const t = 1 / Math.tan(fovy / 2)
+  const o = new Float32Array(16)
+  o[0] = t / aspect
+  o[5] = t
+  o[10] = (f + n) / (n - f)
+  o[11] = -1
+  o[14] = (2 * f * n) / (n - f)
+  return o
+}
+
+function lookAt(eye, target, up) {
+  const z = v3.norm(v3.sub(eye, target))
+  const x = v3.norm(v3.cross(up, z))
+  const y = v3.cross(z, x)
+  return new Float32Array([
+    x[0], y[0], z[0], 0,
+    x[1], y[1], z[1], 0,
+    x[2], y[2], z[2], 0,
+    -v3.dot(x, eye), -v3.dot(y, eye), -v3.dot(z, eye), 1,
+  ]) // prettier-ignore
+}
+
+function mul(a, b) {
+  const o = new Float32Array(16)
+  for (let c = 0; c < 4; c++) {
+    for (let r = 0; r < 4; r++) {
+      let s = 0
+      for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]
+      o[c * 4 + r] = s
+    }
+  }
+  return o
+}
+
+function project(m, p) {
+  const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12]
+  const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13]
+  const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15]
+  const ww = Math.max(w, 1e-3)
+  return [x / ww / 2 + 0.5, y / ww / 2 + 0.5]
+}
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x))
+const smoothstep = (a, b, x) => {
+  const t = clamp((x - a) / (b - a), 0, 1)
+  return t * t * (3 - 2 * t)
+}
+const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt))
+
+// ---------------------------------------------------------------- GL utils
+class Prog {
+  constructor(gl, vsSrc, fsSrc, name) {
+    this.gl = gl
+    this.name = name
+    const vs = this.compile(gl.VERTEX_SHADER, vsSrc)
+    const fs = this.compile(gl.FRAGMENT_SHADER, fsSrc)
+    const p = gl.createProgram()
+    gl.attachShader(p, vs)
+    gl.attachShader(p, fs)
+    gl.linkProgram(p)
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      throw new Error(`link ${name}: ${gl.getProgramInfoLog(p)}`)
+    }
+    gl.deleteShader(vs)
+    gl.deleteShader(fs)
+    this.program = p
+    this.locs = {}
+  }
+
+  compile(type, src) {
+    const gl = this.gl
+    const s = gl.createShader(type)
+    gl.shaderSource(s, src)
+    gl.compileShader(s)
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(s)
+      const lines = src.split('\n')
+      const m = /ERROR: \d+:(\d+)/.exec(log || '')
+      const ctx = m
+        ? lines.slice(Math.max(0, +m[1] - 3), +m[1] + 1).join('\n')
+        : ''
+      const kind = type === gl.VERTEX_SHADER ? 'VS' : 'FS'
+      throw new Error(`compile ${this.name} ${kind}: ${log}\n${ctx}`)
+    }
+    return s
+  }
+
+  use() {
+    this.gl.useProgram(this.program)
+    return this
+  }
+
+  u(n) {
+    if (!(n in this.locs)) {
+      this.locs[n] = this.gl.getUniformLocation(this.program, n)
+    }
+    return this.locs[n]
+  }
+
+  f(n, v) { this.gl.uniform1f(this.u(n), v) } // prettier-ignore
+  i(n, v) { this.gl.uniform1i(this.u(n), v) } // prettier-ignore
+  v2(n, a, b) { this.gl.uniform2f(this.u(n), a, b) } // prettier-ignore
+  v3(n, a) { this.gl.uniform3f(this.u(n), a[0], a[1], a[2]) } // prettier-ignore
+  m4(n, m) { this.gl.uniformMatrix4fv(this.u(n), false, m) } // prettier-ignore
+}
+
+const FACES = [
+  { f: [1, 0, 0], u: [0, -1, 0] },
+  { f: [-1, 0, 0], u: [0, -1, 0] },
+  { f: [0, 1, 0], u: [0, 0, 1] },
+  { f: [0, -1, 0], u: [0, 0, -1] },
+  { f: [0, 0, 1], u: [0, -1, 0] },
+  { f: [0, 0, -1], u: [0, -1, 0] },
+]
+
+// room dimensions (world units)
+const FLOOR_Y = -1.55
+const CYC_R = 2.6
+const CYC_Z = -2.2
+// air grid: 32^3 cells over this box, packed in a 256x128 atlas
+const G_MIN = [-6.5, FLOOR_Y, -5.0]
+const G_SIZE = [13, 8, 9.5]
+const G_W = 256
+const G_H = 128
+
+class LightRoom {
+  constructor(canvas, opts = {}) {
+    this.canvas = canvas
+    this.opts = opts
+    const gl = canvas.getContext('webgl2', {
+      antialias: false,
+      alpha: false,
+      depth: false,
+      stencil: false,
+      powerPreference: 'high-performance',
+    })
+    if (!gl) throw new Error('WebGL2 is not available')
+    if (!gl.getExtension('EXT_color_buffer_float')) {
+      throw new Error('Float render targets are not available')
+    }
+    this.gl = gl
+    this.lost = false
+    this.running = false
+    this.raf = 0
+    this.disposed = false
+
+    const coarse =
+      typeof matchMedia === 'function' &&
+      matchMedia('(pointer: coarse)').matches
+    this.texSize = opts.tex || (coarse ? 128 : 256)
+    this.N = this.texSize * this.texSize
+    this.nBig = Math.round(this.N * 0.03)
+    this.nMid = Math.round(this.N * 0.12)
+    this.shadowRes = coarse ? 128 : 192
+    this.jacobiIters = coarse ? 10 : 16
+
+    this.scale = opts.scale || (coarse ? 0.7 : 1)
+    this.maxPixels = coarse ? 1.4e6 : 2.6e6
+    // optional hooks for a host that drives the light (e.g. an agent's body)
+    this.ext = {
+      tint: [1, 1, 1],
+      lightScale: 1,
+      holdBias: 0,
+      swirlScale: 1,
+      heatScale: 1,
+      hideBulb: false,
+      coreScale: 1,
+      // 1 = alive, 0 = still: scales air noise, flutter, camera sway
+      motion: 1,
+      // false: when the pointer rests, the light stays where it was left
+      autopilot: true,
+      overlay: null,
+    }
+    this.tune = {
+      lightI: 9,
+      haze: 0.011,
+      exposure: 1.25,
+      bloomK: 0.55,
+      shK: 3.2,
+      amb: 0.007,
+      cycFall: 1.12,
+      grav: 1.25,
+      heat: 2.4,
+      swirl: 1.7,
+      vort: 0.8,
+      noise: 0.3,
+      airDamp: 0.8,
+      shutter: 0.022,
+      shimmer: 1,
+      lift: 0.03,
+    }
+    this.state = {
+      t: 0,
+      intro: 0,
+      light: [0.2, 0.5, 0.4],
+      lightPrev: [0.2, 0.5, 0.4],
+      lightVel: [0, 0, 0],
+      pointerTarget: null,
+      lastPointerAt: -1e9,
+      hold: 0,
+      holdTarget: 0,
+      burst: 0,
+      focus: 7,
+      parX: 0,
+      parY: 0,
+      swirlAxis: [0.25, 0.45, 1],
+      focusOff: 0,
+      shockT: 9,
+      shockAmp: 0,
+    }
+    this.ema = 1 / 60
+    this.slowFrames = 0
+    this.fastFrames = 0
+    this.frameNo = 0
+
+    this.onLost = (e) => {
+      e.preventDefault()
+      this.lost = true
+      this.stop()
+      if (opts.onLost) opts.onLost()
+    }
+    this.onRestored = () => {
+      if (opts.onRestored) opts.onRestored()
+    }
+    canvas.addEventListener('webglcontextlost', this.onLost)
+    canvas.addEventListener('webglcontextrestored', this.onRestored)
+
+    this.buildPrograms()
+    this.buildGeometry()
+    this.buildParticles()
+    this.buildAir()
+    this.buildShadow()
+    this.resize(true)
+  }
+
+  // ----------------------------------------------------------------- setup
+  buildPrograms() {
+    const gl = this.gl
+    const P = (vs, fs, n) => new Prog(gl, vs, fs, n)
+    this.pAdvect = P(FULLSCREEN_VS, AIR_ADVECT_FS, 'airAdvect')
+    this.pCurl = P(FULLSCREEN_VS, AIR_CURL_FS, 'airCurl')
+    this.pDiv = P(FULLSCREEN_VS, AIR_DIV_FS, 'airDiv')
+    this.pJacobi = P(FULLSCREEN_VS, AIR_JACOBI_FS, 'airJacobi')
+    this.pGrad = P(FULLSCREEN_VS, AIR_GRAD_FS, 'airGrad')
+    this.pUpdate = P(FULLSCREEN_VS, UPDATE_FS, 'update')
+    this.pShadow = P(SHADOWPT_VS, SHADOWPT_FS, 'shadow')
+    this.pCyc = P(CYC_VS, CYC_FS, 'cyc')
+    this.pCube = P(CUBE_VS, CUBE_FS, 'cube')
+    this.pFog = P(FULLSCREEN_VS, FOG_FS, 'fog')
+    this.pDof = P(FULLSCREEN_VS, DOF_FS, 'dof')
+    this.pSprite = P(SPRITE_VS, SPRITE_FS, 'sprite')
+    this.pBulb = P(BULB_VS, BULB_FS, 'bulb')
+    this.pDown = P(FULLSCREEN_VS, BLOOM_DOWN_FS, 'bloomDown')
+    this.pUp = P(FULLSCREEN_VS, BLOOM_UP_FS, 'bloomUp')
+    this.pComp = P(FULLSCREEN_VS, COMPOSITE_FS, 'composite')
+    this.emptyVao = gl.createVertexArray()
+  }
+
+  buildGeometry() {
+    const gl = this.gl
+
+    // unit cube, 36 vertices, per-face normals
+    const axes = [
+      { n: [1, 0, 0], u: [0, 1, 0], v: [0, 0, 1] },
+      { n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
+      { n: [0, 1, 0], u: [0, 0, 1], v: [1, 0, 0] },
+      { n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
+      { n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+      { n: [0, 0, -1], u: [0, 1, 0], v: [1, 0, 0] },
+    ]
+    const pos = []
+    const nrm = []
+    for (const a of axes) {
+      const corner = (su, sv) => [
+        a.n[0] + a.u[0] * su + a.v[0] * sv,
+        a.n[1] + a.u[1] * su + a.v[1] * sv,
+        a.n[2] + a.u[2] * su + a.v[2] * sv,
+      ]
+      const c = [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)]
+      for (const k of [0, 1, 2, 0, 2, 3]) {
+        pos.push(...c[k])
+        nrm.push(...a.n)
+      }
+    }
+    this.cubeVao = gl.createVertexArray()
+    gl.bindVertexArray(this.cubeVao)
+    for (const [loc, data] of [
+      [0, pos],
+      [1, nrm],
+    ]) {
+      const b = gl.createBuffer()
+      gl.bindBuffer(gl.ARRAY_BUFFER, b)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW)
+      gl.enableVertexAttribArray(loc)
+      gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0)
+    }
+
+    // cyclorama: floor -> quarter pipe -> wall, extruded along x
+    const prof = [] // [y, z, ny, nz]
+    prof.push([FLOOR_Y, 40, 1, 0])
+    prof.push([FLOOR_Y, CYC_Z, 1, 0])
+    const seg = 48
+    const yc = FLOOR_Y + CYC_R
+    for (let s = 1; s <= seg; s++) {
+      const th = (s / seg) * Math.PI * 0.5
+      prof.push([
+        yc - CYC_R * Math.cos(th),
+        CYC_Z - CYC_R * Math.sin(th),
+        Math.cos(th),
+        Math.sin(th),
+      ])
+    }
+    prof.push([FLOOR_Y + CYC_R + 12, CYC_Z - CYC_R, 0, 1])
+    const XW = 30
+    const cp = []
+    const ci = []
+    prof.forEach((p, k) => {
+      cp.push(-XW, p[0], p[1], 0, p[2], p[3])
+      cp.push(XW, p[0], p[1], 0, p[2], p[3])
+      if (k > 0) {
+        const a = (k - 1) * 2
+        ci.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
+      }
+    })
+    this.cycVao = gl.createVertexArray()
+    gl.bindVertexArray(this.cycVao)
+    const vb = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cp), gl.STATIC_DRAW)
+    gl.enableVertexAttribArray(0)
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
+    gl.enableVertexAttribArray(1)
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
+    const ib = gl.createBuffer()
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ci), gl.STATIC_DRAW)
+    this.cycCount = ci.length
+    gl.bindVertexArray(null)
+  }
+
+  tex2D(w, h, internal, format, type, filter, data = null) {
+    const gl = this.gl
+    const t = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, t)
+    gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, data)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    return t
+  }
+
+  fbo(colors, depthRb = null, name = 'fbo') {
+    const gl = this.gl
+    const f = gl.createFramebuffer()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f)
+    colors.forEach((t, i) => {
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0 + i,
+        gl.TEXTURE_2D,
+        t,
+        0
+      )
+    })
+    if (depthRb) {
+      gl.framebufferRenderbuffer(
+        gl.FRAMEBUFFER,
+        gl.DEPTH_ATTACHMENT,
+        gl.RENDERBUFFER,
+        depthRb
+      )
+    }
+    const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+    if (st !== gl.FRAMEBUFFER_COMPLETE) {
+      throw new Error(`framebuffer ${name} incomplete: 0x${st.toString(16)}`)
+    }
+    return f
+  }
+
+  buildParticles() {
+    const gl = this.gl
+    const T = this.texSize
+    const N = this.N
+    const pos = new Float32Array(N * 4)
+    const vel = new Float32Array(N * 4)
+    const rand = Math.random
+    for (let i = 0; i < N; i++) {
+      const big = i < this.nBig
+      const mid = !big && i < this.nBig + this.nMid
+      const R = big ? 2.7 : mid ? 2.5 : 2.3
+      const z = rand() * 2 - 1
+      const a = rand() * Math.PI * 2
+      const s = Math.sqrt(1 - z * z)
+      const r = 0.75 + R * Math.pow(rand(), 0.62)
+      const x = s * Math.cos(a) * r
+      let y = z * r * 0.72 + 0.1
+      const zz = s * Math.sin(a) * r
+      y = Math.max(y, FLOOR_Y + 0.2)
+      pos.set([x, y, zz, rand() * 6.28], i * 4)
+      const sw = 0.55 / (0.6 + r * 0.4)
+      const j = () => (rand() - 0.5) * 0.3
+      vel.set([-zz * sw + j(), j(), x * sw + j(), 0], i * 4)
+    }
+    const { RGBA32F, RGBA, FLOAT, NEAREST } = gl
+    this.posTex = []
+    this.velTex = []
+    this.simFbo = []
+    for (let k = 0; k < 2; k++) {
+      const p0 = k === 0 ? pos : null
+      const v0 = k === 0 ? vel : null
+      this.posTex[k] = this.tex2D(T, T, RGBA32F, RGBA, FLOAT, NEAREST, p0)
+      this.velTex[k] = this.tex2D(T, T, RGBA32F, RGBA, FLOAT, NEAREST, v0)
+      this.simFbo[k] = this.fbo([this.posTex[k], this.velTex[k]], null, 'sim')
+    }
+    this.cur = 0
+  }
+
+  buildAir() {
+    const gl = this.gl
+    const mk = (filter) => {
+      const t = this.tex2D(G_W, G_H, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, filter)
+      return { tex: t, fbo: this.fbo([t], null, 'air') }
+    }
+    this.air = {
+      vel: [mk(gl.LINEAR), mk(gl.LINEAR)],
+      p: [mk(gl.NEAREST), mk(gl.NEAREST)],
+      curl: mk(gl.NEAREST),
+      div: mk(gl.NEAREST),
+      cur: 0,
+      pcur: 0,
+    }
+    for (const t of [...this.air.vel, ...this.air.p, this.air.curl]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo)
+      gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0])
+    }
+  }
+
+  buildShadow() {
+    const gl = this.gl
+    const S = this.shadowRes
+    const CUBE = gl.TEXTURE_CUBE_MAP
+    this.shadowTex = gl.createTexture()
+    gl.bindTexture(CUBE, this.shadowTex)
+    for (let f = 0; f < 6; f++) {
+      gl.texImage2D(
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X + f,
+        0,
+        gl.RGBA16F,
+        S,
+        S,
+        0,
+        gl.RGBA,
+        gl.HALF_FLOAT,
+        null
+      )
+    }
+    gl.texParameteri(CUBE, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(CUBE, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(CUBE, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(CUBE, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    this.shadowFbo = []
+    for (let f = 0; f < 6; f++) {
+      const fb = gl.createFramebuffer()
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X + f,
+        this.shadowTex,
+        0
+      )
+      const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (st !== gl.FRAMEBUFFER_COMPLETE) {
+        throw new Error('shadow framebuffer incomplete')
+      }
+      this.shadowFbo.push(fb)
+    }
+  }
+
+  freeTargets() {
+    const gl = this.gl
+    if (!this.targets) return
+    const t = this.targets
+    for (const x of t.textures) gl.deleteTexture(x)
+    for (const x of t.fbos) gl.deleteFramebuffer(x)
+    gl.deleteRenderbuffer(t.depth)
+    this.targets = null
+  }
+
+  allocTargets(W, H) {
+    const gl = this.gl
+    this.freeTargets()
+    const textures = []
+    const fbos = []
+    const { RGBA16F, RGBA, HALF_FLOAT, LINEAR } = gl
+    const T = (w, h, ...rest) => {
+      const x = this.tex2D(w, h, ...rest)
+      textures.push(x)
+      return x
+    }
+    const F = (colors, depth, name) => {
+      const f = this.fbo(colors, depth, name)
+      fbos.push(f)
+      return f
+    }
+    const depth = gl.createRenderbuffer()
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depth)
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, W, H)
+
+    const sceneTex = T(W, H, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+    const distTex = T(W, H, gl.R32F, gl.RED, gl.FLOAT, gl.NEAREST)
+    const sceneFbo = F([sceneTex, distTex], depth, 'scene')
+
+    const fw = Math.max(2, W >> 1)
+    const fh = Math.max(2, H >> 1)
+    const fogTex = T(fw, fh, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+    const fogFbo = F([fogTex], null, 'fog')
+
+    const dofTex = T(W, H, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+    const dofFbo = F([dofTex], depth, 'dof')
+
+    const bloom = []
+    let bw = W
+    let bh = H
+    for (let i = 0; i < 6; i++) {
+      bw = Math.max(2, bw >> 1)
+      bh = Math.max(2, bh >> 1)
+      const tx = T(bw, bh, RGBA16F, RGBA, HALF_FLOAT, LINEAR)
+      bloom.push({ tex: tx, fbo: F([tx], null, 'bloom'), w: bw, h: bh })
+    }
+    this.targets = {
+      W, H, fw, fh, textures, fbos, depth,
+      sceneTex, distTex, sceneFbo, fogTex, fogFbo, dofTex, dofFbo, bloom,
+    } // prettier-ignore
+  }
+
+  resize(force = false) {
+    const c = this.canvas
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.75)
+    let w = (c.clientWidth || 1) * dpr * this.scale
+    let h = (c.clientHeight || 1) * dpr * this.scale
+    const px = w * h
+    if (px > this.maxPixels) {
+      const k = Math.sqrt(this.maxPixels / px)
+      w *= k
+      h *= k
+    }
+    w = Math.max(64, Math.floor(w))
+    h = Math.max(64, Math.floor(h))
+    const t = this.targets
+    if (!force && t && t.W === w && t.H === h) return
+    c.width = w
+    c.height = h
+    this.allocTargets(w, h)
+  }
+
+  // ------------------------------------------------------------ interaction
+  setPointer(nx, ny) {
+    this.state.pointerTarget = [nx, ny]
+    this.state.lastPointerAt = this.state.t
+  }
+
+  setHold(on) {
+    const s = this.state
+    if (!on && s.holdTarget > 0) {
+      s.burst = 0.35 + 0.65 * s.hold
+      s.shockT = 0
+      s.shockAmp = s.burst
+    }
+    s.holdTarget = on ? 1 : 0
+    s.lastPointerAt = s.t
+  }
+
+  // the pointer left: the light drifts home and rests there
+  releasePointer() {
+    const s = this.state
+    s.pointerTarget = null
+    s.lastPointerAt = -1e9
+    s.restTarget = [0, 0.3, 0.5]
+  }
+
+  // scroll = rack focus through the cloud (offset from the bulb)
+  // a gust from the light plus a refracting ring (0..1)
+  pulse(amount) {
+    const s = this.state
+    s.burst = Math.max(s.burst, amount)
+    s.shockT = 0
+    s.shockAmp = Math.max(s.shockAmp * Math.exp(-s.shockT), amount)
+  }
+
+  rackFocus(deltaY) {
+    const s = this.state
+    s.focusOff = clamp(s.focusOff + deltaY * 0.0035, -3.5, 3.5)
+    s.lastPointerAt = s.t
+  }
+
+  // ------------------------------------------------------------------ loop
+  start() {
+    if (this.running || this.lost || this.disposed) return
+    this.running = true
+    this.last = performance.now()
+    const loop = (now) => {
+      if (!this.running) return
+      this.raf = requestAnimationFrame(loop)
+      try {
+        this.frame(now)
+      } catch (e) {
+        this.stop()
+        if (this.opts.onError) this.opts.onError(e)
+        else throw e
+      }
+    }
+    this.raf = requestAnimationFrame(loop)
+  }
+
+  stop() {
+    this.running = false
+    cancelAnimationFrame(this.raf)
+  }
+
+  dispose() {
+    this.disposed = true
+    this.stop()
+    this.canvas.removeEventListener('webglcontextlost', this.onLost)
+    this.canvas.removeEventListener('webglcontextrestored', this.onRestored)
+    const ext = this.gl.getExtension('WEBGL_lose_context')
+    if (ext && !this.lost) ext.loseContext()
+  }
+
+  bind2D(unit, tex) {
+    const gl = this.gl
+    gl.activeTexture(gl.TEXTURE0 + unit)
+    gl.bindTexture(gl.TEXTURE_2D, tex)
+  }
+
+  fullscreen() {
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
+  }
+
+  // ---- air: advect + forces -> divergence -> pressure -> project -> curl
+  stepAir(dt) {
+    const gl = this.gl
+    const s = this.state
+    const tn = this.tune
+    const A = this.air
+    gl.viewport(0, 0, G_W, G_H)
+    const grid = (p) => {
+      p.v3('uGMin', G_MIN)
+      p.v3('uGSize', G_SIZE)
+    }
+
+    let p = this.pAdvect.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.vel[1 - A.cur].fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    this.bind2D(1, A.curl.tex)
+    p.i('uVel', 0)
+    p.i('uCurl', 1)
+    p.f('uDt', dt)
+    p.f('uTime', s.t)
+    p.v3('uLight', s.light)
+    p.v3('uLightVel', s.lightVel)
+    p.v3('uSwirlAxis', s.swirlAxis)
+    p.f('uHold', s.hold)
+    p.f('uBurst', s.burst)
+    p.f('uHeat', tn.heat * s.intro * this.ext.heatScale)
+    p.f('uSwirl', tn.swirl * this.ext.swirlScale)
+    p.f('uVort', tn.vort)
+    p.f('uNoise', tn.noise * this.ext.motion)
+    p.f('uDamp', tn.airDamp)
+    this.fullscreen()
+    A.cur = 1 - A.cur
+
+    p = this.pDiv.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.div.fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    p.i('uVel', 0)
+    this.fullscreen()
+
+    p = this.pJacobi.use()
+    grid(p)
+    this.bind2D(1, A.div.tex)
+    p.i('uDiv', 1)
+    p.i('uP', 0)
+    for (let k = 0; k < this.jacobiIters; k++) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, A.p[1 - A.pcur].fbo)
+      this.bind2D(0, A.p[A.pcur].tex)
+      this.fullscreen()
+      A.pcur = 1 - A.pcur
+    }
+
+    p = this.pGrad.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.vel[1 - A.cur].fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    this.bind2D(1, A.p[A.pcur].tex)
+    p.i('uVel', 0)
+    p.i('uP', 1)
+    this.fullscreen()
+    A.cur = 1 - A.cur
+
+    p = this.pCurl.use()
+    grid(p)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.curl.fbo)
+    this.bind2D(0, A.vel[A.cur].tex)
+    p.i('uVel', 0)
+    this.fullscreen()
+  }
+
+  frame(now) {
+    const gl = this.gl
+    const s = this.state
+    const tn = this.tune
+    const dtRaw = Math.min((now - this.last) / 1000, 0.1)
+    this.last = now
+    const dt = Math.min(dtRaw, 1 / 30)
+    s.t += dt
+    this.frameNo++
+    this.adapt(dtRaw)
+    this.resize()
+    const tg = this.targets
+    const { W, H } = tg
+    const aspect = W / H
+
+    // ---- camera
+    const tanH = Math.tan((19 * Math.PI) / 180) * Math.max(1, 1.15 / aspect)
+    const fovY = 2 * Math.atan(tanH)
+    const px = s.pointerTarget ? s.pointerTarget[0] : 0
+    const py = s.pointerTarget ? s.pointerTarget[1] : 0
+    s.parX = damp(s.parX, px, 1.6, dt)
+    s.parY = damp(s.parY, py, 1.6, dt)
+    const mo = this.ext.motion
+    const sway = Math.sin(s.t * 0.21) * 0.12 * mo
+    const eye = [
+      s.parX * 0.55 + sway,
+      0.38 + s.parY * 0.18 + Math.sin(s.t * 0.17) * 0.04 * mo,
+      7.4,
+    ]
+    const target = [s.parX * -0.15, -0.15, 0]
+    const view = lookAt(eye, target, [0, 1, 0])
+    const proj = perspective(fovY, aspect, 0.1, 80)
+    const vp = mul(proj, view)
+    const fwd = v3.norm(v3.sub(target, eye))
+    const right = v3.norm(v3.cross(fwd, [0, 1, 0]))
+    const up = v3.cross(right, fwd)
+
+    // ---- light motion (pointer driven, drifts on its own when idle)
+    const idle = s.t - s.lastPointerAt > 3.5 || !s.pointerTarget
+    let tgt
+    if (idle && !this.ext.autopilot) {
+      tgt = (s.restTarget || [0, 0.35, 0.5]).slice()
+    } else if (idle) {
+      const k = s.t
+      tgt = [
+        2.3 * Math.sin(k * 0.31) + 0.6 * Math.sin(k * 0.83),
+        0.25 + 0.95 * Math.sin(k * 0.47 + 1.0),
+        0.5 + 0.9 * Math.sin(k * 0.23 + 0.5),
+      ]
+    } else {
+      const dir = v3.norm(
+        v3.add(
+          v3.add(fwd, v3.scale(right, s.pointerTarget[0] * tanH * aspect)),
+          v3.scale(up, s.pointerTarget[1] * tanH)
+        )
+      )
+      const zPlane = 0.5
+      const tt = (zPlane - eye[2]) / dir[2]
+      tgt = [eye[0] + dir[0] * tt, eye[1] + dir[1] * tt, zPlane]
+    }
+    tgt[0] = clamp(tgt[0], -4.6, 4.6)
+    tgt[1] = clamp(tgt[1], FLOOR_Y + 0.4, 3.4)
+    // where the light rests when the pointer does: never parked at the frame edge
+    if (!idle)
+      s.restTarget = [
+        clamp(tgt[0], -2.6, 2.6),
+        clamp(tgt[1], FLOOR_Y + 0.7, 2.0),
+        tgt[2],
+      ]
+    const lk = 1 - Math.exp(-dt * 5.2)
+    s.lightPrev = s.light.slice()
+    // spring toward the target, but the light has weight: capped speed
+    let step = v3.scale(v3.sub(tgt, s.light), lk)
+    const stepLen = v3.len(step)
+    const maxStep = 6.5 * dt
+    if (stepLen > maxStep) step = v3.scale(step, maxStep / stepLen)
+    s.light = v3.add(s.light, step)
+    const lv = v3.scale(v3.sub(s.light, s.lightPrev), 1 / Math.max(dt, 1e-3))
+    s.lightVel = s.lightVel.map((x, i) => damp(x, lv[i], 10, dt))
+    s.hold = damp(s.hold, Math.max(s.holdTarget, this.ext.holdBias), 4, dt)
+    s.burst *= Math.exp(-dt * 6)
+    s.shockT += dt
+    s.intro = smoothstep(0.15, 2.4, s.t)
+
+    // vortex axis: mostly facing the camera (spiral arms read on screen),
+    // precessing slowly, and tipped by the light's motion
+    const base = [
+      0.3 * Math.sin(s.t * 0.13),
+      0.45 + 0.2 * Math.sin(s.t * 0.07),
+      1,
+    ]
+    const tip = v3.scale(v3.cross(s.lightVel, [0, 0, 1]), 0.18)
+    const axT = v3.norm(v3.add(base, tip))
+    s.swirlAxis = v3.norm(s.swirlAxis.map((x, i) => damp(x, axT[i], 1.5, dt)))
+
+    const lightI = tn.lightI * s.intro * this.ext.lightScale
+    const beamDir = v3.norm(v3.sub([1.9, -1.1, -4.2], s.light))
+    const focusT = Math.max(1.5, v3.len(v3.sub(s.light, eye)) + s.focusOff)
+    s.focus = damp(s.focus, focusT, 2.4, dt)
+    const cocScale = 0.034 * H
+    const maxCoc = cocScale
+    const focalPx = (0.5 * H) / tanH
+
+    gl.bindVertexArray(this.emptyVao)
+    gl.disable(gl.BLEND)
+    gl.disable(gl.DEPTH_TEST)
+    gl.disable(gl.CULL_FACE)
+
+    // ---- 0. air
+    this.stepAir(dt)
+
+    // ---- 1. particles (2 substeps), riding the air
+    {
+      const T = this.texSize
+      const p = this.pUpdate.use()
+      p.i('uTex', T)
+      p.i('uNBig', this.nBig)
+      p.i('uNMid', this.nMid)
+      p.v3('uGMin', G_MIN)
+      p.v3('uGSize', G_SIZE)
+      p.f('uDt', dt / 2)
+      p.f('uTime', s.t)
+      p.v3('uLight', s.light)
+      p.f('uHold', s.hold)
+      p.f('uBurst', s.burst)
+      p.f('uFloorY', FLOOR_Y)
+      p.f('uCycZ', CYC_Z)
+      p.f('uCycR', CYC_R)
+      p.f('uGrav', tn.grav)
+      p.f('uJit', 0.55 * (0.2 + 0.8 * this.ext.motion))
+      this.bind2D(2, this.air.vel[this.air.cur].tex)
+      p.i('uAir', 2)
+      gl.viewport(0, 0, T, T)
+      for (let k = 0; k < 2; k++) {
+        const nxt = 1 - this.cur
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.simFbo[nxt])
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
+        this.bind2D(0, this.posTex[this.cur])
+        this.bind2D(1, this.velTex[this.cur])
+        p.i('uPosT', 0)
+        p.i('uVelT', 1)
+        this.fullscreen()
+        this.cur = nxt
+      }
+    }
+    const posT = this.posTex[this.cur]
+    const velT = this.velTex[this.cur]
+
+    // ---- 2. light shadow cube (distance-binned coverage)
+    {
+      const S = this.shadowRes
+      const p = this.pShadow.use()
+      p.i('uTex', this.texSize)
+      p.i('uNBig', this.nBig)
+      p.i('uNMid', this.nMid)
+      p.v3('uLight', s.light)
+      p.f('uFocalPx', S / 2)
+      p.f('uSoft', 3)
+      this.bind2D(0, posT)
+      p.i('uPosT', 0)
+      const fp = perspective(Math.PI / 2, 1, 0.02, 40)
+      gl.viewport(0, 0, S, S)
+      gl.enable(gl.BLEND)
+      gl.blendFunc(gl.ONE, gl.ONE)
+      for (let f = 0; f < 6; f++) {
+        const F = FACES[f]
+        const m = mul(fp, lookAt(s.light, v3.add(s.light, F.f), F.u))
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFbo[f])
+        gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0])
+        p.m4('uFace', m)
+        gl.drawArrays(gl.POINTS, 0, this.N)
+      }
+      gl.disable(gl.BLEND)
+    }
+
+    const setLight = (p) => {
+      p.v3('uLight', s.light)
+      p.f('uLightI', lightI)
+      p.v3('uBeamDir', beamDir)
+      p.v3('uCam', eye)
+      p.f('uFloorY', FLOOR_Y)
+      p.f('uShK', tn.shK)
+      p.f('uFocus', s.focus)
+      p.f('uCocScale', cocScale)
+      p.f('uMaxCoc', maxCoc)
+      p.f('uAmb', tn.amb)
+      p.v3('uTint', this.ext.tint)
+      gl.activeTexture(gl.TEXTURE5)
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.shadowTex)
+      p.i('uShadow', 5)
+    }
+    const setBodies = (p) => {
+      p.i('uTex', this.texSize)
+      p.i('uNBig', this.nBig)
+      p.i('uNMid', this.nMid)
+      this.bind2D(0, posT)
+      this.bind2D(1, velT)
+      p.i('uPosT', 0)
+      p.i('uVelT', 1)
+    }
+
+    // ---- 3. opaque scene: cyclorama + big cubes -> HDR color(+coc) / dist
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tg.sceneFbo)
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
+    gl.viewport(0, 0, W, H)
+    gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0])
+    gl.clearBufferfv(gl.COLOR, 1, [60, 0, 0, 1])
+    gl.clearBufferfv(gl.DEPTH, 0, [1])
+    gl.enable(gl.DEPTH_TEST)
+    gl.depthFunc(gl.LEQUAL)
+    gl.depthMask(true)
+    {
+      const p = this.pCyc.use()
+      p.m4('uVP', vp)
+      setLight(p)
+      p.f('uCycFall', tn.cycFall)
+      gl.bindVertexArray(this.cycVao)
+      gl.drawElements(gl.TRIANGLES, this.cycCount, gl.UNSIGNED_SHORT, 0)
+    }
+    {
+      const p = this.pCube.use()
+      p.m4('uVP', vp)
+      setLight(p)
+      setBodies(p)
+      gl.enable(gl.CULL_FACE)
+      gl.bindVertexArray(this.cubeVao)
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, this.nBig)
+      gl.disable(gl.CULL_FACE)
+    }
+    gl.bindVertexArray(this.emptyVao)
+    gl.disable(gl.DEPTH_TEST)
+
+    // ---- 4. volumetric haze + beam (half res)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tg.fogFbo)
+    gl.viewport(0, 0, tg.fw, tg.fh)
+    {
+      const p = this.pFog.use()
+      setLight(p)
+      this.bind2D(0, tg.distTex)
+      p.i('uDist', 0)
+      p.v3('uRight', right)
+      p.v3('uUp', up)
+      p.v3('uFwd', fwd)
+      p.f('uTanH', tanH)
+      p.f('uAspect', aspect)
+      p.f('uTime', s.t)
+      p.f('uHaze', tn.haze)
+      p.f('uCore', this.ext.coreScale)
+      p.v2('uScaleInv', W / tg.fw, H / tg.fh)
+      this.fullscreen()
+    }
+
+    // ---- 5. gather DOF (+ fog) into dof target
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tg.dofFbo)
+    gl.viewport(0, 0, W, H)
+    {
+      const p = this.pDof.use()
+      this.bind2D(0, tg.sceneTex)
+      this.bind2D(1, tg.fogTex)
+      p.i('uScene', 0)
+      p.i('uFog', 1)
+      p.v2('uRes', W, H)
+      p.f('uMaxCoc', maxCoc)
+      this.fullscreen()
+    }
+
+    // ---- 6. motion-blurred bokeh streaks + bulb (additive, depth tested)
+    gl.enable(gl.DEPTH_TEST)
+    gl.depthMask(false)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.ONE, gl.ONE)
+    {
+      const p = this.pSprite.use()
+      p.m4('uVP', vp)
+      setLight(p)
+      setBodies(p)
+      p.f('uFocalPx', focalPx)
+      p.f('uPxMax', maxCoc * 2)
+      p.v2('uRes', W, H)
+      p.f('uShutter', tn.shutter)
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.N - this.nBig)
+    }
+    if (!this.ext.hideBulb) {
+      const p = this.pBulb.use()
+      p.m4('uVP', vp)
+      setLight(p)
+      p.f('uFocalPx', focalPx)
+      p.f('uPxMax', maxCoc * 2)
+      gl.drawArrays(gl.POINTS, 0, 1)
+    }
+    gl.disable(gl.BLEND)
+    gl.depthMask(true)
+    gl.disable(gl.DEPTH_TEST)
+    if (this.ext.overlay) {
+      this.ext.overlay({
+        gl,
+        vp,
+        eye,
+        light: s.light,
+        W,
+        H,
+        focalPx,
+        tanH,
+        targets: tg,
+        dt,
+        t: s.t,
+      })
+      gl.bindVertexArray(this.emptyVao)
+      gl.disable(gl.BLEND)
+      gl.disable(gl.DEPTH_TEST)
+    }
+
+    // ---- 7. bloom chain
+    {
+      const B = tg.bloom
+      const pd = this.pDown.use()
+      pd.f('uThr', 0.9)
+      pd.f('uKnee', 0.6)
+      for (let i = 0; i < B.length; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, B[i].fbo)
+        gl.viewport(0, 0, B[i].w, B[i].h)
+        this.bind2D(0, i === 0 ? tg.dofTex : B[i - 1].tex)
+        pd.i('uSrc', 0)
+        pd.f('uFirst', i === 0 ? 1 : 0)
+        this.fullscreen()
+      }
+      const pu = this.pUp.use()
+      gl.enable(gl.BLEND)
+      gl.blendFunc(gl.ONE, gl.ONE)
+      for (let i = B.length - 1; i >= 1; i--) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, B[i - 1].fbo)
+        gl.viewport(0, 0, B[i - 1].w, B[i - 1].h)
+        this.bind2D(0, B[i].tex)
+        pu.i('uSrc', 0)
+        pu.f('uW', 0.9)
+        this.fullscreen()
+      }
+      gl.disable(gl.BLEND)
+    }
+
+    // ---- 8. composite to screen
+    const luv = project(vp, s.light)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    gl.viewport(0, 0, W, H)
+    {
+      const p = this.pComp.use()
+      this.bind2D(0, tg.dofTex)
+      this.bind2D(1, tg.bloom[0].tex)
+      this.bind2D(2, tg.bloom[2].tex)
+      p.i('uBase', 0)
+      p.i('uBloom', 1)
+      p.i('uBloomWide', 2)
+      p.v2('uRes', W, H)
+      p.f('uTime', s.t)
+      p.f('uExposure', tn.exposure)
+      p.f('uBloomK', tn.bloomK)
+      p.v2('uLightUv', luv[0], luv[1])
+      p.f('uAspect', aspect)
+      p.f('uShimmer', tn.shimmer * s.intro)
+      p.f('uLift', tn.lift)
+      p.f('uShockT', s.shockT)
+      p.f('uShockAmp', s.shockAmp)
+      this.fullscreen()
+    }
+  }
+
+  // diagnostics: particle + air state summary (reads back GPU textures)
+  debugStats() {
+    const gl = this.gl
+    const T = this.texSize
+    const buf = new Float32Array(T * T * 4)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.simFbo[this.cur])
+    gl.readBuffer(gl.COLOR_ATTACHMENT0)
+    gl.readPixels(0, 0, T, T, gl.RGBA, gl.FLOAT, buf)
+    let nan = 0
+    const mean = [0, 0, 0]
+    let maxR = 0
+    for (let i = 0; i < T * T; i++) {
+      const x = buf[i * 4]
+      const y = buf[i * 4 + 1]
+      const z = buf[i * 4 + 2]
+      if (!(isFinite(x) && isFinite(y) && isFinite(z))) {
+        nan++
+        continue
+      }
+      mean[0] += x
+      mean[1] += y
+      mean[2] += z
+      maxR = Math.max(maxR, Math.hypot(x, y, z))
+    }
+    const n = Math.max(1, T * T - nan)
+    const ab = new Float32Array(G_W * G_H * 4)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.air.vel[this.air.cur].fbo)
+    gl.readBuffer(gl.COLOR_ATTACHMENT0)
+    gl.readPixels(0, 0, G_W, G_H, gl.RGBA, gl.FLOAT, ab)
+    let airMax = 0
+    let airSum = 0
+    let airNan = 0
+    for (let i = 0; i < G_W * G_H; i++) {
+      const sp = Math.hypot(ab[i * 4], ab[i * 4 + 1], ab[i * 4 + 2])
+      if (!isFinite(sp)) {
+        airNan++
+        continue
+      }
+      airMax = Math.max(airMax, sp)
+      airSum += sp
+    }
+    return {
+      nan,
+      mean: mean.map((m) => m / n),
+      maxR,
+      light: this.state.light,
+      airMax,
+      airMean: airSum / (G_W * G_H),
+      airNan,
+    }
+  }
+
+  // dynamic resolution: back off when slow, creep back up when fast
+  adapt(dtRaw) {
+    if (this.opts.fixedScale || this.state.t < 2.5) return
+    this.ema += (dtRaw - this.ema) * 0.05
+    if (this.ema > 1 / 36) {
+      this.slowFrames++
+      this.fastFrames = 0
+    } else if (this.ema < 1 / 56) {
+      this.fastFrames++
+      this.slowFrames = 0
+    } else {
+      this.slowFrames = 0
+      this.fastFrames = 0
+    }
+    if (this.slowFrames > 45 && this.scale > 0.5) {
+      this.scale = Math.max(0.5, this.scale - 0.1)
+      this.slowFrames = 0
+    } else if (this.fastFrames > 300 && this.scale < 1) {
+      this.scale = Math.min(1, this.scale + 0.05)
+      this.fastFrames = 0
+    }
+  }
+}
+
+// ======================= flame shaders ======================
+const FLAME_SPLAT_VS = "precision highp float;\n  attribute vec4 aSeed;\n  uniform vec2  uRes;\n  uniform float uPx, uTime, uFlow, uTwist, uFold, uDisp, uLevel, uPitch, uBass;\n  uniform float uListen, uThink, uSpeak, uBirth, uShock, uZoom, uBob, uE;\n  uniform float uRing, uArc, uLat, uPulse;\n  uniform vec2  uRot;\n  uniform vec3  uPtr;           // pointer ndc xy, strength z\n  uniform vec3  uIco[60];       // icosahedron edge endpoints (30 edges)\n  varying vec3  vCol;\n\n  vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }\n  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }\n  float snoise(vec3 v){\n    const vec2 C = vec2(1.0/6.0, 1.0/3.0);\n    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);\n    vec3 i = floor(v + dot(v, C.yyy));\n    vec3 x0 = v - i + dot(i, C.xxx);\n    vec3 g = step(x0.yzx, x0.xyz);\n    vec3 l = 1.0 - g;\n    vec3 i1 = min(g.xyz, l.zxy);\n    vec3 i2 = max(g.xyz, l.zxy);\n    vec3 x1 = x0 - i1 + C.xxx;\n    vec3 x2 = x0 - i2 + C.yyy;\n    vec3 x3 = x0 - 0.5;\n    i = mod289(i);\n    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));\n    vec3 ns = 0.142857142857 * D.wyz - D.xzx;\n    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);\n    vec4 x_ = floor(j * ns.z);\n    vec4 y_ = floor(j - 7.0 * x_);\n    vec4 x = x_ * ns.x + ns.yyyy;\n    vec4 y = y_ * ns.x + ns.yyyy;\n    vec4 h = 1.0 - abs(x) - abs(y);\n    vec4 b0 = vec4(x.xy, y.xy);\n    vec4 b1 = vec4(x.zw, y.zw);\n    vec4 s0 = floor(b0)*2.0 + 1.0;\n    vec4 s1 = floor(b1)*2.0 + 1.0;\n    vec4 sh = -step(h, vec4(0.0));\n    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;\n    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;\n    vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y);\n    vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);\n    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));\n    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;\n    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n    m = m*m;\n    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));\n  }\n  float hash1(float n){ return fract(sin(n)*43758.5453); }\n  vec2 rot2(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c*p.x - s*p.y, s*p.x + c*p.y); }\n  vec3 sph(float u, float v){ float th = u*6.2831853, ph = acos(2.0*v - 1.0); return vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th)); }\n\n  // the flame body: a teardrop membrane folded by rising noise. ch = -1,0,1 (R,G,B):\n  // each channel folds with a slightly different amplitude, so folds split into RGB fringes.\n  vec3 flame(vec3 d, float ch, float wrinkle){\n    float taper = mix(1.0, 0.26, smoothstep(-0.25, 1.0, d.y));\n    vec3 P = vec3(d.x*taper, d.y*1.22 + 0.18*smoothstep(0.35, 1.0, d.y), d.z*taper);\n    vec3 q = d*1.25 + vec3(0.0, -uFlow*1.3, uFlow*0.45);\n    float n1 = snoise(q);\n    float n2 = snoise(q*2.2 + vec3(7.1, -uFlow*0.7, 3.3));\n    float fold = sin((n1*3.1 + n2*1.25) * (1.0 + 0.10*uThink)) ;\n    float amp = uFold * (1.0 + ch*uDisp);\n    P += d * fold * amp * mix(1.0, 0.55, smoothstep(0.4, 1.0, d.y));\n    P += d * snoise(q*7.5 + 11.0) * wrinkle;          // thinking: fine wrinkles\n    // the voice's pitch shapes it: high = tall and thin, low = squat and wide\n    P.y  *= 1.0 + (uPitch - 0.5)*0.8*uLevel;\n    P.xz *= 1.0 + (0.5 - uPitch)*0.55*uLevel;\n    return P;\n  }\n\n  void main(){\n    float w  = aSeed.w;\n    float fr = step(fract(aSeed.x*13.7 + aSeed.z*5.1), 0.42);         // 42% of splats carry fringe colour\n  float ch = fr * (floor(fract(aSeed.x*7.31 + aSeed.y*3.17)*2.0)*2.0 - 1.0);\n    vec3  P  = vec3(0.0);\n    float e  = 0.0;\n\n    if (w < 0.50) {                                   // main membrane\n      vec3 d = sph(aSeed.x, aSeed.y);\n      P = flame(d, ch, 0.025*uThink);\n      e = 1.0;\n    } else if (w < 0.62) {                            // inner knot (trefoil tube) with its own folds\n      float t = aSeed.x*6.2831853, a = aSeed.y*6.2831853;\n      vec3 c  = vec3(sin(t) + 2.0*sin(2.0*t), cos(t) - 2.0*cos(2.0*t), -sin(3.0*t));\n      vec3 tg = normalize(vec3(cos(t) + 4.0*cos(2.0*t), -sin(t) + 4.0*sin(2.0*t), -3.0*cos(3.0*t)));\n      vec3 n1 = normalize(cross(tg, vec3(0.0, 0.0, 1.0)));\n      vec3 n2 = cross(tg, n1);\n      float r = 0.16 + 0.09*snoise(c*0.8 + vec3(0.0, uFlow, 0.0))*(1.0 + ch*uDisp) + 0.05*uLevel;\n      P = c*0.15 + (cos(a)*n1 + sin(a)*n2)*r*0.42;\n      P.xz = rot2(P.xz, uTime*0.35);\n      P.xy = rot2(P.xy, 0.6);\n      P.y -= 0.12;\n      e = 0.6;\n    } else if (w < 0.74) {                            // outer shell: an almost invisible veil\n      vec3 d = sph(aSeed.x, aSeed.y);\n      float n = snoise(d*0.9 + vec3(uFlow*0.25, 0.0, -uFlow*0.2));\n      P = d*(1.72 + 0.20*sin(n*3.0)*(1.0 + ch*uDisp*1.5));\n      P.y *= 1.08;\n      e = 0.35;\n    } else if (w < 0.79) {                            // stalk: thin vertical spikes, above and below\n      float s = aSeed.x;\n      float up = step(0.62, aSeed.y);\n      float wob = 0.03*sin(s*9.0 + uTime*1.7)*(1.0 + uLevel);\n      vec2 j = (vec2(aSeed.z, fract(aSeed.z*13.7)) - 0.5) * mix(0.016, 0.008, up);\n      P = mix(vec3(j.x + wob, -1.08 - s*1.9, j.y), vec3(j.x - wob*0.6, 1.42 + s*s*1.45, j.y), up);\n      e = mix(0.75*(1.0 - s), 1.05*(1.0 - s)*(1.0 - s), up) * (0.6 + 0.6*uLevel + 0.5*uSpeak);\n    } else if (w < 0.87) {                            // wisps: smoke curling off the tip\n      float s = fract(aSeed.z + uFlow*0.42);\n      vec3 b = vec3((aSeed.x - 0.5)*0.12, 1.2, (aSeed.y - 0.5)*0.12);\n      vec3 q = b*2.0 + vec3(0.0, s*2.5 - uFlow, 0.0);\n      vec3 off = vec3(snoise(q), 0.0, snoise(q + 31.0))*0.55*s*s;\n      P = b + vec3(0.0, s*1.65, 0.0) + off;\n      e = (1.0 - s)*(1.0 - s)*0.55*(0.4 + uLevel + 0.4*uSpeak);\n    } else if (w < 0.915) {                           // gyro rings\n      float k = floor(aSeed.z*3.0);\n      float a = aSeed.x*6.2831853;\n      float R = 1.38 + 0.13*k + 0.06*uLevel;\n      float spd = (0.28 + 0.17*k)*(1.0 + 3.2*uThink + 1.2*uLevel);\n      vec3 rp = vec3(cos(a)*R, (aSeed.y - 0.5)*0.012, sin(a)*R);\n      rp.yz = rot2(rp.yz, 0.5 + 1.05*k + 0.25*sin(uTime*0.21 + k));\n      rp.xy = rot2(rp.xy, -0.4 + 0.9*k + uTime*spd*0.3);\n      rp.xz = rot2(rp.xz, uTime*spd*(k == 1.0 ? -1.0 : 1.0));\n      P = rp;\n      float gate = pow(0.5 + 0.5*sin(a*2.0 - uTime*spd*3.0 + k*2.1), 6.0 + 14.0*uThink);\n      e = 1.5 * uRing * (0.18 + gate) * (1.0 + 1.5*uThink);\n    } else if (w < 0.955) {                           // plasma arcs between points on the body (or to the finger)\n      float j = floor(aSeed.z*5.0);\n      float ep = floor(uTime*(1.4 + 0.5*j) + j*7.0);\n      vec3 A = normalize(vec3(hash1(ep + j*3.1) - 0.5, hash1(ep*1.7 + j) - 0.3, hash1(ep*2.3 + j*5.0) - 0.5))*0.62;\n      vec3 B = normalize(vec3(hash1(ep*3.1 + j) - 0.5, hash1(ep*0.7 + j*2.0) - 0.4, hash1(ep*5.3 + j) - 0.5))*1.35;\n      vec3 F = vec3(uPtr.xy*vec2(uRes.x/min(uRes.x, uRes.y), uRes.y/min(uRes.x, uRes.y))*2.0, 0.3);\n      B = mix(B, F, step(0.5, uPtr.z)*step(j, 2.0));\n      float s = aSeed.x;\n      vec3 M = (A + B)*0.5 + normalize(A + B + 1e-4)*0.45;\n      P = mix(mix(A, M, s), mix(M, B, s), s);\n      float jag = sin(3.1415927*s);\n      P += vec3(snoise(vec3(s*14.0, uTime*9.0, j)), snoise(vec3(s*14.0, j, uTime*9.0)), snoise(vec3(j, s*14.0, uTime*9.0)))*0.07*jag;\n      float flick = step(0.32, hash1(floor(uTime*13.0) + j*17.0));\n      e = 3.2 * uArc * flick * (0.5 + 0.5*jag) * (0.35 + uLevel + uThink*0.5 + 0.6*step(0.5, uPtr.z));\n    } else {                                          // icosahedron energy lattice\n      float k = floor(aSeed.z*30.0);\n      vec3 A = vec3(0.0), B = vec3(0.0);\n      for (int i = 0; i < 30; i++) { if (float(i) == k) { A = uIco[i*2]; B = uIco[i*2 + 1]; } }\n      float s = aSeed.x;\n      P = mix(A, B, s)*0.62*(1.0 + 0.04*sin(uTime*1.1));\n      P.xz = rot2(P.xz, uTime*0.12);\n      P.xy = rot2(P.xy, 0.35 + uTime*0.05);\n      float pulse = pow(fract(s - uTime*1.3 + hash1(k)), 24.0);\n      e = 0.9 * uLat * (0.22 + 3.0*pulse*(0.25 + uThink + 0.4*uPulse));\n    }\n\n    // thinking: the body twists on itself in a helix\n    P.xz = rot2(P.xz, uTwist*P.y*1.3);\n    // breath + voice\n    P *= 1.0 + 0.05*uLevel + 0.03*uBass + 0.012*sin(uTime*1.3);\n    // ripple from a touch / phrase onset\n    float rr = length(P);\n    float rx = (rr - uShock*2.4)/0.14;\n    float ring = uShock > 0.0 ? exp(-rx*rx)*(1.0 - uShock) : 0.0;\n    P += P/max(rr, 1e-3)*ring*0.2;\n    e *= 1.0 + ring*1.5;\n    // birth: falls in from far away and ignites\n    float bi = 1.0 - uBirth;\n    P *= 1.0 + 2.4*bi*bi*bi;\n    e *= smoothstep(0.0, 1.0, uBirth);\n\n    // orbit\n    P.xz = rot2(P.xz, uRot.y);\n    P.yz = rot2(P.yz, uRot.x);\n    // it floats\n    P.y += uBob;\n\n    float sc = uZoom / (3.9 - P.z);\n    vec2 xy = P.xy*sc;\n    float S = min(uRes.x, uRes.y);\n    vec2 pxy = uPtr.xy*uRes/S;\n    vec2 dd = xy - pxy; float d2 = dot(dd, dd);\n    xy += dd/sqrt(d2 + 1e-4)*uPtr.z*0.10*exp(-d2/0.04);       // the finger parts the light\n    e *= 1.0 + 1.4*uPtr.z*exp(-d2/0.03);\n    gl_Position = vec4(xy*vec2(S/uRes.x, S/uRes.y) + vec2(0.0, 0.06), 0.0, 1.0);\n    gl_PointSize = uPx;\n    float depth = 0.6 + 0.4*smoothstep(-1.2, 1.2, P.z);\n    // white-hot body; fringe splats are warm (yellow-red) on one side of a fold, cool on the other\n  vec3 chc = fr < 0.5 ? vec3(1.0) : (ch < 0.0 ? vec3(1.0, 0.62, 0.1)*1.45 : vec3(0.25, 0.5, 1.0)*1.7);\n    vCol = chc * e * uE * depth * (sc*sc*4.0);\n  }"
+const FLAME_SPLAT_FS = "precision highp float;\n  varying vec3 vCol;\n  void main(){ gl_FragColor = vec4(vCol, 1.0); }"
+const FLAME_QUAD_VS = "attribute vec2 a; varying vec2 vUv; void main(){ vUv = a*0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }"
+const FLAME_DECAY_FS = "precision highp float;\n  uniform sampler2D uTex; uniform float uDecay, uFloor; varying vec2 vUv;\n  void main(){\n    vec3 c = texture2D(uTex, vUv).rgb;\n    c = max(c * uDecay - uFloor, 0.0);              // temporal average; the floor stops 8-bit ghosts\n    gl_FragColor = vec4(c, 1.0);\n  }"
+// ======================= flame layer ========================
+/* eslint-disable */
+// Plain browser script, stitched into static/flame-room.html by build.py (shares globals with the room engine).
+/* =====================================================================
+   FlameLayer: the voice-orb flame, rendered as the room's light.
+   Splats accumulate in their own square HDR buffer (temporal average),
+   then the buffer is added into the room before bloom, at the light's
+   screen position, hidden wherever something stands in front of it.
+   Silent: audio is only ever analysed.
+   ===================================================================== */
+const FLAME_OVERLAY_VS = `#version 300 es
+uniform vec2 uC;
+uniform vec2 uHalf;
+out vec2 vUv;
+const vec2 K[6] = vec2[6](vec2(-1.,-1.), vec2(1.,-1.), vec2(1.,1.), vec2(-1.,-1.), vec2(1.,1.), vec2(-1.,1.));
+void main(){ vec2 k = K[gl_VertexID]; vUv = k*.5 + .5; gl_Position = vec4(uC + k*uHalf, 0., 1.); }`;
+
+const FLAME_OVERLAY_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uFlame;
+uniform sampler2D uDist;
+uniform float uGamma, uExpo, uGain, uLightDist;
+uniform vec3 uTint;
+in vec2 vUv;
+out vec4 o;
+void main(){
+  vec3 c = texture(uFlame, vUv).rgb;
+  c = pow(max(c*uExpo, 0.), vec3(uGamma)) * uGain * uTint;      // density -> light: folds pop, veil sinks
+  float sd = texelFetch(uDist, ivec2(gl_FragCoord.xy), 0).r;    // what the room has at this pixel
+  float vis = smoothstep(uLightDist - .45, uLightDist - .05, sd); // a cube in front hides the flame
+  vec2 e = smoothstep(0., .1, vUv) * smoothstep(0., .1, 1. - vUv);
+  o = vec4(c * vis * e.x * e.y, 0.);
+}`;
+
+class FlameMeter {
+  // analyse only; never connected to speakers
+  constructor(ctx, node, pull) {
+    this.an = ctx.createAnalyser();
+    this.an.fftSize = 2048;
+    this.an.smoothingTimeConstant = 0.6;
+    node.connect(this.an);
+    this.node = node;
+    if (pull) {
+      this.sink = ctx.createGain();
+      this.sink.gain.value = 0;
+      this.an.connect(this.sink);
+      this.sink.connect(ctx.destination);
+    }
+    this.t = new Float32Array(this.an.fftSize);
+    this.f = new Uint8Array(this.an.frequencyBinCount);
+    this.peak = 0.05;
+    this.open = false;
+    this.sr = ctx.sampleRate;
+    this.d = new Float32Array(this.an.fftSize >> 1); // decimated copy for pitch
+    this.fd = new Float32Array(this.an.frequencyBinCount); // dB spectrum
+    this.f0 = 0;
+  }
+  // fundamental frequency by normalised autocorrelation on a 2x-decimated
+  // window (voice range ~70-500 Hz). Returns Hz, or 0 when unvoiced.
+  pitchHz() {
+    const t = this.t, d = this.d, n = d.length, sr = this.sr / 2;
+    for (let i = 0; i < n; i++) d[i] = (t[2 * i] + t[2 * i + 1]) * 0.5;
+    const lo = Math.floor(sr / 500), hi = Math.min(n - 2, Math.ceil(sr / 70));
+    let e0 = 0;
+    for (let i = 0; i < n; i++) e0 += d[i] * d[i];
+    if (e0 < 1e-6) return 0;
+    let best = 0, bestLag = 0;
+    for (let lag = lo; lag <= hi; lag++) {
+      let c = 0, e1 = 0;
+      for (let i = 0; i + lag < n; i++) { c += d[i] * d[i + lag]; e1 += d[i + lag] * d[i + lag]; }
+      const r = c / Math.sqrt(e0 * e1 + 1e-12);
+      if (r > best) { best = r; bestLag = lag; }
+    }
+    return best > 0.55 && bestLag ? sr / bestLag : 0;
+  }
+  read(dt) {
+    this.an.getFloatTimeDomainData(this.t);
+    let s = 0;
+    for (let i = 0; i < this.t.length; i++) s += this.t[i] * this.t[i];
+    const rms = Math.sqrt(s / this.t.length);
+    this.peak = Math.max(rms, this.peak * Math.exp(-dt / 6), 0.015); // AGC: slow-decay peak
+    const x = Math.min(1, rms / this.peak);
+    if (!this.open && x > 0.18 && rms > 0.003) this.open = true;
+    // hysteresis gate
+    else if (this.open && (x < 0.09 || rms < 0.002)) this.open = false;
+    const level = this.open ? Math.pow(x, 0.8) : 0;
+    // band energies from the linear power spectrum (dB bytes would flatten it)
+    this.an.getFloatFrequencyData(this.fd);
+    let num = 0,
+      den = 0,
+      low = 0,
+      mid = 0,
+      high = 0;
+    const bw = this.sr / this.an.fftSize;
+    for (let i = 2; i < this.fd.length; i++) {
+      const db = this.fd[i];
+      if (!(db > -140)) continue;
+      const pw = Math.pow(10, db / 10), hz = i * bw;
+      num += hz * pw;
+      den += pw;
+      if (hz < 250) low += pw;
+      else if (hz < 2000) mid += pw;
+      else if (hz < 8000) high += pw;
+    }
+    // voice pitch: autocorrelation when voiced, else the spectral centroid
+    const hz = this.open ? this.pitchHz() : 0;
+    if (hz) this.f0 = hz;
+    const centroid = Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800));
+    const f0n = hz ? Math.min(1, Math.max(0, Math.log(hz / 80) / Math.log(400 / 80))) : null;
+    return {
+      level,
+      voiced: !!hz,
+      hz,
+      pitch: f0n !== null ? f0n : centroid,
+      bass: den ? Math.min(1, (low / den) * 1.4) * level : 0,
+      mid: den ? Math.min(1, (mid / den) * 1.4) * level : 0,
+      treble: den ? Math.min(1, (high / den) * 6.0) * level : 0,
+    };
+  }
+  close() {
+    try {
+      this.node.disconnect(this.an);
+      this.an.disconnect();
+      if (this.sink) this.sink.disconnect();
+    } catch (e) {}
+  }
+}
+
+class FlameLayer {
+  constructor(room, opts = {}) {
+    const gl = (this.gl = room.gl);
+    this.room = room;
+    const mobile = /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);
+    this.S = opts.size || (mobile ? 384 : 512);
+    this.N = opts.particles || (mobile ? 90000 : 200000);
+    this.STATES = ["idle", "listening", "thinking", "speaking"];
+    this.SP = {
+      idle: {
+        tau: 0.13,
+        gamma: 1.95,
+        expo: 1.15,
+        fold: 0.17,
+        flow: 0.1,
+        disp: 0.03,
+        ring: 1.1,
+        arc: 0.45,
+        lat: 0.45,
+        twist: 0.0,
+        light: 0.85,
+        tint: [1.0, 0.95, 0.86],
+        hold: 0.0,
+        swirl: 1.0,
+      },
+      listening: {
+        tau: 0.16,
+        gamma: 1.8,
+        expo: 1.05,
+        fold: 0.23,
+        flow: 0.18,
+        disp: 0.05,
+        ring: 1.4,
+        arc: 0.7,
+        lat: 0.5,
+        twist: 0.0,
+        light: 1.0,
+        tint: [1.0, 0.97, 0.93],
+        hold: 0.22,
+        swirl: 1.2,
+      },
+      thinking: {
+        tau: 0.22,
+        gamma: 1.85,
+        expo: 1.1,
+        fold: 0.19,
+        flow: 0.13,
+        disp: 0.035,
+        ring: 2.8,
+        arc: 0.6,
+        lat: 1.25,
+        twist: 1.8,
+        light: 0.9,
+        tint: [0.8, 0.9, 1.12],
+        hold: 0.08,
+        swirl: 2.4,
+      },
+      speaking: {
+        tau: 0.18,
+        gamma: 1.7,
+        expo: 1.0,
+        fold: 0.34,
+        flow: 0.27,
+        disp: 0.07,
+        ring: 1.8,
+        arc: 1.15,
+        lat: 0.6,
+        twist: 0.15,
+        light: 1.1,
+        tint: [1.08, 0.92, 0.76],
+        hold: 0.0,
+        swirl: 1.5,
+      },
+    };
+    this.sm = JSON.parse(JSON.stringify(this.SP.idle));
+    this.wts = [1, 0, 0, 0];
+    this.target = "idle";
+    Object.assign(this, {
+      level: 0,
+      pitch: 0.4,
+      bass: 0,
+      flow: 0,
+      twist: 0,
+      pulse: 0,
+      shock: -1,
+      lastShock: -9,
+      prevLevel: 0,
+      manualLevel: 0,
+      manualAt: -9,
+      manualPitch: null,
+      rotY: 0,
+      time: 0,
+      frames: 0,
+      ptr: [0, 0, 0],
+      ctx: null,
+      mic: null,
+      out: null,
+      micStream: null,
+      demoOn: false,
+      demoT: 0,
+    });
+    this.calm = matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? 0.35
+      : 1;
+
+    const compile = (type, src, name) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+        throw new Error(name + ": " + gl.getShaderInfoLog(s));
+      return s;
+    };
+    const program = (vs, fs, name, attr) => {
+      const p = gl.createProgram();
+      gl.attachShader(p, compile(gl.VERTEX_SHADER, vs, name + " VS"));
+      gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs, name + " FS"));
+      if (attr) gl.bindAttribLocation(p, 0, attr);
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+        throw new Error(name + ": " + gl.getProgramInfoLog(p));
+      const U = {};
+      const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+      for (let i = 0; i < n; i++) {
+        const a = gl.getActiveUniform(p, i);
+        const k = a.name.replace(/\[0\]$/, "");
+        U[k] = gl.getUniformLocation(p, a.name);
+      }
+      return { p, U };
+    };
+    this.pSplat = program(
+      FLAME_SPLAT_VS,
+      FLAME_SPLAT_FS,
+      "flameSplat",
+      "aSeed"
+    );
+    this.pDecay = program(FLAME_QUAD_VS, FLAME_DECAY_FS, "flameDecay", "a");
+    this.pOver = program(FLAME_OVERLAY_VS, FLAME_OVERLAY_FS, "flameOverlay");
+
+    // icosahedron: 12 vertices, 30 edges of length 2
+    const f = (1 + Math.sqrt(5)) / 2,
+      V = [];
+    for (const a of [-1, 1])
+      for (const b of [-1, 1])
+        V.push([0, a, b * f], [a, b * f, 0], [b * f, 0, a]);
+    const E = [];
+    for (let i = 0; i < 12; i++)
+      for (let j = i + 1; j < 12; j++) {
+        const d = Math.hypot(
+          V[i][0] - V[j][0],
+          V[i][1] - V[j][1],
+          V[i][2] - V[j][2]
+        );
+        if (Math.abs(d - 2) < 1e-3) E.push(...V[i], ...V[j]);
+      }
+    this.ico = new Float32Array(E.map((x) => x / Math.hypot(1, f)));
+
+    const seeds = new Float32Array(this.N * 4);
+    for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();
+    this.vaoSeeds = gl.createVertexArray();
+    gl.bindVertexArray(this.vaoSeeds);
+    let b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, seeds, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+    this.vaoQuad = gl.createVertexArray();
+    gl.bindVertexArray(this.vaoQuad);
+    b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW
+    );
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    this.vaoNone = gl.createVertexArray();
+    gl.bindVertexArray(null);
+
+    const S = this.S;
+    this.acc = [0, 1].map(() => {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA16F,
+        S,
+        S,
+        0,
+        gl.RGBA,
+        gl.HALF_FLOAT,
+        null
+      );
+      for (const [k, v] of [
+        [gl.TEXTURE_MIN_FILTER, gl.LINEAR],
+        [gl.TEXTURE_MAG_FILTER, gl.LINEAR],
+        [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE],
+        [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+      ])
+        gl.texParameteri(gl.TEXTURE_2D, k, v);
+      const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        t,
+        0
+      );
+      gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0]);
+      return { t, fb };
+    });
+    this.cur = 0;
+    room.ext.hideBulb = true
+    room.ext.coreScale = 0.3;
+    room.ext.overlay = (c) => this.frame(c);
+  }
+
+  // ---------------------------------------------------------------- API
+  setState(s) {
+    if (this.STATES.includes(s) && s !== this.target) {
+      this.target = s;
+      if (s !== "idle") this.shock = 0.001;
+      if (s === "speaking") this.room.pulse(0.3);
+    }
+  }
+  get state() {
+    return this.target;
+  }
+  setLevel(v) {
+    this.manualLevel = Math.max(0, Math.min(1, +v || 0));
+    this.manualAt = performance.now();
+  }
+  setPitch(v) {
+    this.manualPitch = Math.max(0, Math.min(1, +v || 0));
+  }
+  setPointer(x, y, strength) {
+    this.ptr = [x, y, strength];
+    if (strength > 0) this.ptrAt = performance.now();
+  }
+  demo(on) {
+    this.demoOn = !!on;
+    this.demoT = 0;
+  }
+  ensureCtx() {
+    if (!this.ctx)
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  async useMic() {
+    if (this.mic) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const e = new Error("insecure");
+      e.name = "InsecureContext";
+      throw e;
+    }
+    this.ensureCtx();
+    if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+    this.micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+    this.mic = new FlameMeter(
+      this.ctx,
+      this.ctx.createMediaStreamSource(this.micStream),
+      true
+    );
+    return true;
+  }
+  stopMic() {
+    if (this.micStream) this.micStream.getTracks().forEach((t) => t.stop());
+    if (this.mic) this.mic.close();
+    this.mic = null;
+    this.micStream = null;
+  }
+  useOutputElement(el) {
+    this.ensureCtx();
+    const src = this.ctx.createMediaElementSource(el);
+    this.out = new FlameMeter(this.ctx, src);
+    src.connect(this.ctx.destination);
+  }
+  useOutputStream(stream) {
+    this.ensureCtx();
+    const a = new Audio();
+    a.muted = true;
+    a.srcObject = stream;
+    a.play().catch(() => {});
+    this.out = new FlameMeter(
+      this.ctx,
+      this.ctx.createMediaStreamSource(stream),
+      true
+    );
+  }
+
+  static speechEnv(t) {
+    const syl = Math.max(
+      0,
+      Math.sin(t * 7.3) * 0.6 + Math.sin(t * 3.1 + 1) * 0.4
+    );
+    return Math.min(
+      1,
+      syl * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9))) * 1.15
+    );
+  }
+
+  // ------------------------------------------------- state + room coupling
+  update(dt) {
+    const lerpTau = (cur, tgt, tau) =>
+      cur + (tgt - cur) * (1 - Math.exp(-dt / tau));
+    const now = performance.now();
+    this.time += dt;
+    this.frames++;
+    const time = this.time;
+    if (this.demoOn) {
+      const D = [
+        ["idle", 2.6],
+        ["listening", 5.0],
+        ["thinking", 3.2],
+        ["speaking", 6.0],
+      ];
+      this.demoT += dt;
+      let a = 0;
+      const tot = D.reduce((s, d) => s + d[1], 0),
+        tt = this.demoT % tot;
+      for (const [n, l] of D) {
+        if (tt < a + l) {
+          if (this.target !== n) this.setState(n);
+          break;
+        }
+        a += l;
+      }
+    }
+    let rawLevel = 0,
+      rawPitch = this.pitch,
+      rawBass = 0,
+      rawTreble = 0;
+    if (now - this.manualAt < 150) rawLevel = this.manualLevel;
+    else if (
+      this.demoOn &&
+      (this.target === "listening" || this.target === "speaking")
+    ) {
+      rawLevel = FlameLayer.speechEnv(this.demoT);
+      rawBass = rawLevel * 0.5;
+    } else if (this.target === "speaking") {
+      if (this.out) {
+        const m = this.out.read(dt);
+        rawLevel = m.level;
+        rawPitch = m.pitch;
+        rawBass = m.bass;
+      } else {
+        rawLevel = FlameLayer.speechEnv(time) * 0.85;
+        rawBass = rawLevel * 0.4;
+      }
+    } else if (
+      (this.target === "listening" || this.target === "idle") &&
+      this.mic
+    ) {
+      // the mic drives idle and listening (never speaking: no self-echo)
+      const m = this.mic.read(dt);
+      rawLevel = m.level;
+      rawPitch = m.pitch;
+      rawBass = m.bass;
+      rawTreble = m.treble;
+      this.hz = m.hz;
+    }
+    if (this.manualPitch !== null) rawPitch = this.manualPitch;
+    this.level = lerpTau(
+      this.level,
+      rawLevel,
+      rawLevel > this.level ? 0.045 : 0.22
+    );
+    this.pitch = lerpTau(this.pitch, rawPitch, 0.25);
+    this.bass = lerpTau(this.bass, rawBass, 0.18);
+    this.treble = lerpTau(this.treble || 0, rawTreble, 0.08);
+    // stillness: with no voice, no pointer and nothing to say, everything settles
+    const ptrRecent = now - (this.ptrAt || -1e9) < 1500 ? 1 : 0;
+    const alive = Math.min(1, Math.max(this.level * 1.6, this.wts[2] * 0.7 + this.wts[3], ptrRecent, this.demoOn ? 1 : 0));
+    const mTarget = 0.08 + 0.92 * alive;
+    this.motion = lerpTau(this.motion === undefined ? 1 : this.motion, mTarget, mTarget > (this.motion || 0) ? 0.35 : 2.2);
+    this.animT = (this.animT || 0) + dt * (0.12 + 0.88 * this.motion) * this.calm;
+    this.STATES.forEach((s, i) => {
+      this.wts[i] = lerpTau(this.wts[i], s === this.target ? 1 : 0, 0.35);
+    });
+    for (const k of Object.keys(this.sm)) {
+      if (Array.isArray(this.sm[k]))
+        this.sm[k] = [0, 1, 2].map((j) =>
+          this.STATES.reduce((v, s, i) => v + this.SP[s][k][j] * this.wts[i], 0)
+        );
+      else
+        this.sm[k] = this.STATES.reduce(
+          (v, s, i) => v + this.SP[s][k] * this.wts[i],
+          0
+        );
+    }
+    this.flow += dt * (this.sm.flow * this.motion + 0.3 * this.level) * this.calm;
+    this.twist = lerpTau(
+      this.twist,
+      this.sm.twist * (1 + 0.4 * Math.sin(time * 0.7)),
+      0.6
+    );
+    this.pulse = this.wts[2] * (0.5 + 0.5 * Math.sin(time * 5.2));
+    if (this.shock >= 0) {
+      this.shock += dt * 0.85;
+      if (this.shock > 1) this.shock = -1;
+    }
+    if (
+      (this.target === "listening" || this.target === "speaking") &&
+      this.level - this.prevLevel > 0.1 &&
+      this.level > 0.3 &&
+      time - this.lastShock > 0.5
+    ) {
+      this.shock = 0.001;
+      this.lastShock = time;
+      this.room.pulse(0.18); // a phrase onset breathes on the dust
+    }
+    // a bass hit (a low voice, a clap, a knock) pushes a gust through the room
+    // (onset = the fast follower jumps above a slow one: frame-rate independent)
+    this.bassSlow = lerpTau(this.bassSlow || 0, this.bass, 0.45);
+    if (this.bass - this.bassSlow > 0.15 && this.bass > 0.25 && time - (this.lastGust || -9) > 0.35) {
+      this.lastGust = time;
+      this.room.pulse(0.1 + 0.3 * this.bass);
+    }
+    this.prevLevel = this.level;
+    this.rotY += dt * 0.09 * this.calm * this.motion;
+
+    // the flame IS the room's light
+    const e = this.room.ext;
+    const voice = this.level * (this.wts[1] * 0.3 + this.wts[3] * 0.45);
+    e.lightScale = this.sm.light * (1 + voice) * Math.min(1, time / 2.5 + 0.2);
+    // high voice -> cooler, whiter light; low voice -> warmer
+    const pv = (this.pitch - 0.5) * Math.min(1, this.level * 1.5);
+    const shade = [1 - 0.12 * pv, 1, 1 + 0.16 * pv];
+    e.tint = this.sm.tint.map((x, j) => x * shade[j] * (1 + 0.15 * voice));
+    e.motion = this.motion;
+    e.autopilot = !!this.demoOn;
+    e.holdBias = this.sm.hold * (1 + this.level);
+    e.swirlScale = (this.sm.swirl + 0.6 * this.level + 0.8 * this.bass) * (0.25 + 0.75 * this.motion);
+    e.heatScale = 1 + 0.9 * this.wts[3] * this.level;
+  }
+
+  // --------------------------------------------------------------- render
+  frame(c) {
+    const gl = this.gl;
+    const dt = Math.min(c.dt, 1 / 20);
+    this.update(dt);
+    const S = this.S,
+      sm = this.sm;
+    const decay = Math.exp(-dt / sm.tau);
+    const src = this.acc[this.cur],
+      dst = this.acc[1 - this.cur];
+
+    // where the light lands on screen, and how big the flame is there
+    const vp = c.vp,
+      L = c.light;
+    const cx = vp[0] * L[0] + vp[4] * L[1] + vp[8] * L[2] + vp[12];
+    const cy = vp[1] * L[0] + vp[5] * L[1] + vp[9] * L[2] + vp[13];
+    const cw = Math.max(
+      vp[3] * L[0] + vp[7] * L[1] + vp[11] * L[2] + vp[15],
+      0.2
+    );
+    const worldHalf = 0.75; // half-width of the flame's square, world units
+    const halfPx = (worldHalf * c.focalPx) / cw;
+    const half = [halfPx / (c.W / 2), halfPx / (c.H / 2)];
+    const center = [cx / cw, cy / cw];
+    // pointer relative to the flame's own square
+    const pl = [
+      (this.ptr[0] - center[0]) / half[0],
+      (this.ptr[1] - center[1]) / half[1],
+    ];
+
+    // 1) temporal average
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
+    gl.viewport(0, 0, S, S);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(this.pDecay.p);
+    gl.bindVertexArray(this.vaoQuad);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, src.t);
+    gl.uniform1i(this.pDecay.U.uTex, 0);
+    gl.uniform1f(this.pDecay.U.uDecay, decay);
+    gl.uniform1f(this.pDecay.U.uFloor, 0.0002);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // 2) additive splats; energy ~ (1-decay)*S^2/N
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    const U = this.pSplat.U;
+    gl.useProgram(this.pSplat.p);
+    gl.bindVertexArray(this.vaoSeeds);
+    gl.uniform2f(U.uRes, S, S);
+    gl.uniform1f(U.uPx, 1);
+    gl.uniform1f(U.uE, (((1 - decay) * S * S) / this.N) * 0.055);
+    gl.uniform1f(U.uTime, this.animT);
+    gl.uniform1f(U.uFlow, this.flow);
+    gl.uniform1f(U.uTwist, this.twist);
+    gl.uniform1f(U.uFold, sm.fold * (1 + 0.9 * this.level));
+    gl.uniform1f(U.uDisp, sm.disp + 0.04 * this.level);
+    gl.uniform1f(U.uLevel, this.level);
+    gl.uniform1f(U.uPitch, this.pitch);
+    gl.uniform1f(U.uBass, this.bass);
+    gl.uniform1f(U.uListen, this.wts[1]);
+    gl.uniform1f(U.uThink, this.wts[2]);
+    gl.uniform1f(U.uSpeak, this.wts[3]);
+    gl.uniform1f(U.uBirth, this.calm < 1 ? 1 : Math.min(1, this.time / 3.0));
+    gl.uniform1f(U.uShock, this.shock);
+    gl.uniform1f(U.uZoom, 1.85);
+    gl.uniform1f(U.uBob, 0);
+    gl.uniform1f(U.uRing, sm.ring);
+    gl.uniform1f(U.uArc, sm.arc * (1 + 2.5 * this.treble));
+    gl.uniform1f(U.uLat, sm.lat);
+    gl.uniform1f(U.uPulse, this.pulse);
+    gl.uniform2f(U.uRot, 0.12, this.rotY);
+    gl.uniform3f(
+      U.uPtr,
+      pl[0],
+      pl[1],
+      this.ptr[2] * (Math.abs(pl[0]) < 1.2 && Math.abs(pl[1]) < 1.2 ? 1 : 0)
+    );
+    gl.uniform3fv(U.uIco, this.ico);
+    gl.drawArrays(gl.POINTS, 0, this.N);
+
+    // 3) add it into the room, before bloom, hidden behind whatever is in front
+    const tg = c.targets;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tg.dofFbo);
+    gl.viewport(0, 0, c.W, c.H);
+    gl.useProgram(this.pOver.p);
+    gl.bindVertexArray(this.vaoNone);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, dst.t);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, tg.distTex);
+    gl.activeTexture(gl.TEXTURE0);
+    const O = this.pOver.U;
+    gl.uniform1i(O.uFlame, 0);
+    gl.uniform1i(O.uDist, 1);
+    gl.uniform2f(O.uC, center[0], center[1]);
+    gl.uniform2f(O.uHalf, half[0], half[1]);
+    gl.uniform1f(O.uGamma, sm.gamma);
+    gl.uniform1f(O.uExpo, sm.expo);
+    gl.uniform1f(
+      O.uGain,
+      (7 * this.room.ext.lightScale) / Math.max(sm.light, 0.1)
+    );
+    gl.uniform1f(
+      O.uLightDist,
+      Math.hypot(L[0] - c.eye[0], L[1] - c.eye[1], L[2] - c.eye[2])
+    );
+    gl.uniform3f(O.uTint, 1, 1, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.cur = 1 - this.cur;
+  }
+}
+
+// ======================= agent ==============================
+/* eslint-disable */
+// Plain browser script, stitched into static/flame-room.html by build.py (shares globals with the room engine).
+/* =====================================================================
+   The agent: ears -> mind -> voice, wired to the flame and the room.
+   Ears:  claude.ai dictation, else the browser's SpeechRecognition,
+          else a typed line.
+   Mind:  your own function (flame.connect), else claude.ai sample,
+          else the Claude API with your key (kept in this browser only).
+   Voice: claude.ai tts, else the browser's speechSynthesis.
+   ===================================================================== */
+(() => {
+  const q = new URLSearchParams(location.search);
+  const canvas = document.getElementById("c");
+  const hint = document.getElementById("hint");
+  let hintT = 0;
+  const say = (msg, ms = 2800) => {
+    hint.textContent = msg;
+    hint.classList.remove("gone");
+    clearTimeout(hintT);
+    if (ms) hintT = setTimeout(() => hint.classList.add("gone"), ms);
+  };
+
+  let room, flame;
+  try {
+    const opts = {};
+    if (q.get("n")) opts.tex = parseInt(q.get("n"), 10);
+    if (q.get("scale")) {
+      opts.scale = parseFloat(q.get("scale"));
+      opts.fixedScale = true;
+    }
+    room = new LightRoom(canvas, opts);
+    flame = new FlameLayer(room, { particles: q.get("p") ? +q.get("p") : 0 });
+    room.start();
+  } catch (e) {
+    console.error(e);
+    say("This room needs WebGL2 with float render targets", 0);
+    return;
+  }
+
+  // ------------------------------------------------------------ the mind
+  const MODEL = "claude-opus-5-5";
+  const PERSONA =
+    "You are the voice of a small floating flame: an AI agent that hangs in a dark studio full of drifting dust and tumbling cubes, and talks with the person in front of it. " +
+    "Reply in one to three short spoken sentences, warm and precise. Plain text only: no markdown, no lists, no emoji. " +
+    "If asked what you are, say you are a flame made of folded light that listens, thinks and speaks.";
+  const KEY = "flame.anthropicKey";
+  const store = {
+    get() {
+      try {
+        return localStorage.getItem(KEY) || "";
+      } catch (e) {
+        return "";
+      }
+    },
+    set(v) {
+      try {
+        v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY);
+      } catch (e) {}
+    },
+  };
+  const history = [];
+  let custom = null;
+  let rt = {
+    dict: null,
+    sample: null,
+    tts: null,
+    ready: !(window.claude && window.claude.use),
+  };
+
+  async function think(text) {
+    if (custom) return String(await custom(text, history.slice()));
+    const msgs = history.slice(-12);
+    if (rt.sample) {
+      const r = await rt.sample(
+        [
+          {
+            role: "user",
+            content:
+              PERSONA +
+              "\n\nConversation so far follows. Answer the last message.",
+          },
+          { role: "assistant", content: "Understood." },
+        ].concat(msgs),
+        { modelTier: "quick", cache: false }
+      );
+      return (r && r.text) || "";
+    }
+    const key = store.get();
+    if (!key) throw Object.assign(new Error("no key"), { code: "no_key" });
+    // raw HTTP: a single HTML file has no package manager for the SDK
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "server-side-fallback-2026-07-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4000,
+        system: PERSONA,
+        output_config: { effort: "low" }, // spoken replies: fast and short
+        fallbacks: "default", // a refused turn is retried on a fallback model
+        messages: msgs,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(
+        (data.error && data.error.message) || "HTTP " + res.status
+      );
+      err.code =
+        res.status === 401
+          ? "bad_key"
+          : res.status === 429
+          ? "rate_limited"
+          : res.status >= 500
+          ? "overloaded"
+          : "bad_request";
+      throw err;
+    }
+    if (data.stop_reason === "refusal")
+      return "That is one I will not answer. Ask me something else.";
+    return (data.content || [])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join(" ")
+      .trim();
+  }
+
+  // ----------------------------------------------------------- the voice
+  let speakIv = 0,
+    speakT0 = 0,
+    posMs = 0,
+    speaking = null;
+  const wordEnv = (ms) => {
+    const t = ms / 1000;
+    return Math.min(
+      1,
+      0.25 +
+        Math.max(0, Math.sin(t * 8.1) * 0.65 + Math.sin(t * 3.3 + 1) * 0.35) *
+          0.85
+    );
+  };
+  function levelLoop(useTtsPos, estMs) {
+    clearInterval(speakIv);
+    speakT0 = performance.now();
+    posMs = 0;
+    speakIv = setInterval(() => {
+      const ms = useTtsPos ? posMs : performance.now() - speakT0;
+      flame.setLevel(wordEnv(ms));
+      if (estMs && performance.now() - speakT0 > estMs) endSpeaking();
+    }, 33);
+  }
+  function endSpeaking() {
+    clearInterval(speakIv);
+    speakIv = 0;
+    speaking = null;
+    if (flame.state === "speaking") flame.setState("idle");
+  }
+  function pickVoice() {
+    const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    const lang = (navigator.language || "en").slice(0, 2);
+    return (
+      vs.find(
+        (v) =>
+          v.lang.startsWith(lang) &&
+          /Natural|Neural|Google|Samantha|Daniel|Aria|Jenny/i.test(v.name)
+      ) ||
+      vs.find((v) => v.lang.startsWith(lang)) ||
+      null
+    );
+  }
+  async function speak(reply) {
+    flame.setState("speaking");
+    say(reply, 0);
+    if (rt.tts) {
+      levelLoop(true, 0);
+      speaking = "tts";
+      try {
+        await rt.tts.speak(reply, { voice: "glassy" });
+      } catch (e) {}
+      endSpeaking();
+      say(reply, 6000);
+      return;
+    }
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      const u = new SpeechSynthesisUtterance(reply);
+      const v = pickVoice();
+      if (v) u.voice = v;
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.onboundary = () => flame.setLevel(0.95);
+      u.onend = u.onerror = () => {
+        endSpeaking();
+        say(reply, 6000);
+      };
+      speaking = "synth";
+      levelLoop(false, 0);
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      return;
+    }
+    speaking = "none";
+    levelLoop(false, 900 + reply.length * 62); // no voice here: the flame mouths it
+  }
+  function stopVoice() {
+    if (speaking === "tts" && rt.tts) rt.tts.stop().catch(() => {});
+    if (speaking === "synth" && window.speechSynthesis)
+      speechSynthesis.cancel();
+    endSpeaking();
+  }
+
+  // ------------------------------------------------------------ the loop
+  let busy = false;
+  async function ask(text) {
+    text = (text || "").trim();
+    if (!text || busy) return;
+    busy = true;
+    flame.setState("thinking");
+    say("“" + text + "”", 0);
+    history.push({ role: "user", content: text });
+    let reply = "";
+    try {
+      reply = (await think(text)) || "I lost the thread. Ask me again?";
+    } catch (e) {
+      history.pop();
+      busy = false;
+      flame.setState("idle");
+      if (e.code === "no_key") {
+        showInput("key");
+        say("Give me a mind: paste an Anthropic API key", 0);
+        return;
+      }
+      if (e.code === "bad_key") {
+        store.set("");
+        showInput("key");
+        say("That key was refused. Paste another one", 0);
+        return;
+      }
+      reply =
+        e.code === "rate_limited"
+          ? "Too many questions at once. Give me a moment."
+          : e.code === "not_granted"
+          ? "I am not allowed to think here."
+          : "Something went dark on my side. Try again.";
+      busy = false;
+      speak(reply);
+      return;
+    }
+    history.push({ role: "assistant", content: reply });
+    busy = false;
+    speak(reply);
+  }
+
+  // ------------------------------------------------------------- the ears
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null,
+    heard = "",
+    interim = "";
+  function listenBrowser() {
+    if (!SR) return false;
+    rec = new SR();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = true;
+    rec.continuous = false;
+    heard = "";
+    interim = "";
+    rec.onresult = (e) => {
+      interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) heard += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      say((heard + " " + interim).trim(), 0);
+      flame.setLevel(0.55 + 0.4 * Math.random());
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        showInput("message");
+        say("Mic is blocked here, type instead", 4000);
+      } else if (e.error === "no-speech")
+        say("I heard nothing. Tap to try again", 2500);
+      else if (e.error !== "aborted") {
+        showInput("message");
+        say("Listening failed (" + e.error + "), type instead", 4000);
+      }
+    };
+    rec.onend = () => {
+      const h = (heard + " " + interim).trim();
+      rec = null;
+      if (h) ask(h);
+      else if (flame.state === "listening") flame.setState("idle");
+    };
+    try {
+      rec.start();
+    } catch (e) {
+      rec = null;
+      return false;
+    }
+    voiceOn(true); // the flame keeps following your voice
+    flame.setState("listening");
+    say("Listening…", 0);
+    return true;
+  }
+
+  let input = null,
+    inputMode = "";
+  function showInput(mode) {
+    inputMode = mode;
+    if (!input) {
+      input = document.createElement("input");
+      input.className = "ask";
+      input.id = "ask";
+      input.type = "text";
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      input.addEventListener("pointerdown", (e) => e.stopPropagation());
+      input.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Escape") {
+          input.blur();
+          return;
+        }
+        if (e.key !== "Enter") return;
+        const v = input.value.trim();
+        input.value = "";
+        if (!v) return;
+        if (inputMode === "key") {
+          if (!/^sk-ant-/.test(v)) {
+            say("That does not look like an Anthropic key (sk-ant-…)", 3500);
+            return;
+          }
+          store.set(v);
+          showInput("message");
+          say("Key saved in this browser. Ask me anything", 3500);
+          return;
+        }
+        ask(v);
+      });
+      document.body.appendChild(input);
+    }
+    input.type = mode === "key" ? "password" : "text";
+    input.placeholder =
+      mode === "key"
+        ? "Anthropic API key — stays in this browser"
+        : "Type to the flame and press Enter";
+    input.setAttribute("aria-label", input.placeholder);
+    input.focus();
+  }
+
+  const hasMind = () => !!(custom || rt.sample || store.get());
+  function tap() {
+    if (flame.state === "speaking") {
+      stopVoice();
+      return;
+    }
+    if (rec) {
+      rec.stop();
+      return;
+    }
+    if (rt.dict && rt.dict.active()) {
+      rt.dict.stop().catch(() => {});
+      return;
+    }
+    if (!rt.ready) {
+      say("Waking up…", 1500);
+      return;
+    }
+    if (!hasMind()) {
+      showInput("key");
+      say(
+        "Give me a mind: paste an Anthropic API key, or call flame.connect(fn)",
+        0
+      );
+      return;
+    }
+    if (rt.dict) {
+      // claude.ai dictation, started straight from the tap
+      heard = "";
+      flame.setState("listening");
+      say("Listening…", 0);
+      rt.dict.start().catch((e) => {
+        flame.setState("idle");
+        if (e && e.code === "dismissed")
+          say("Tap again when you want to talk", 3000);
+        else if (e && e.code !== "stopped") {
+          rt.dict = null;
+          showInput("message");
+          say("Dictation is off here, type instead", 4000);
+        }
+      });
+      return;
+    }
+    if (listenBrowser()) return;
+    showInput("message");
+  }
+
+  // -------------------------------------------------------------- input
+  const ndc = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return [
+      ((e.clientX - r.left) / r.width) * 2 - 1,
+      1 - ((e.clientY - r.top) / r.height) * 2,
+    ];
+  };
+  let downAt = 0,
+    holdTimer = 0,
+    holding = false,
+    isDown = false;
+  canvas.addEventListener("pointermove", (e) => {
+    const [x, y] = ndc(e);
+    room.setPointer(x, y);
+    flame.setPointer(x, y, isDown ? 1 : 0.5);
+  });
+  // the mic: analysed only (loudness, pitch, bands), never recorded or sent.
+  // It starts on the first touch, because browsers need a gesture for it.
+  let micWanted = true, micAsked = false;
+  function voiceOn(quiet) {
+    if (!micWanted) return;
+    flame
+      .useMic()
+      .then(() => { if (!quiet) say("The flame now follows your voice \u00b7 M to mute it", 3500); })
+      .catch(() => { if (!quiet) say("No mic here: the flame follows your pointer and its own voice", 3500); });
+  }
+  canvas.addEventListener("pointerdown", (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    if (!micAsked) { micAsked = true; voiceOn(false); }
+    isDown = true;
+    const [x, y] = ndc(e);
+    room.setPointer(x, y);
+    flame.setPointer(x, y, 1);
+    downAt = performance.now();
+    holding = false;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => {
+      holding = true;
+      room.setHold(true);
+    }, 350);
+  });
+  const up = () => {
+    if (!isDown) return;
+    isDown = false;
+    clearTimeout(holdTimer);
+    if (holding) {
+      room.setHold(false);
+      holding = false;
+      return;
+    } // release: the gathered dust bursts
+    if (performance.now() - downAt < 350) tap();
+  };
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", () => {
+    isDown = false;
+    clearTimeout(holdTimer);
+    if (holding) room.setHold(false);
+    holding = false;
+  });
+  canvas.addEventListener("pointerleave", () => {
+    if (!isDown) {
+      flame.setPointer(0, 0, 0);
+      room.releasePointer(); // the flame drifts home to the centre, then rests
+    }
+  });
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      room.rackFocus(e.deltaY);
+    },
+    { passive: false }
+  );
+  addEventListener("keydown", (e) => {
+    if (e.target && e.target.tagName === "INPUT") return;
+    const S = ["idle", "listening", "thinking", "speaking"];
+    if (e.key >= "1" && e.key <= "4") flame.setState(S[+e.key - 1]);
+    else if (e.code === "Space") {
+      e.preventDefault();
+      tap();
+    } else if (e.key === "t" || e.key === "T")
+      showInput(hasMind() ? "message" : "key");
+    else if (e.key === "m" || e.key === "M") {
+      micWanted = !micWanted;
+      if (micWanted) voiceOn(false);
+      else { flame.stopMic(); say("Mic off \u00b7 M to turn it back on", 2500); }
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) room.stop();
+    else room.start();
+  });
+
+  // ---------------------------------------------------------- public API
+  window.flame = {
+    room,
+    layer: flame,
+    say,
+    get state() {
+      return flame.state;
+    },
+    setState: (s) => flame.setState(s),
+    setLevel: (v) => flame.setLevel(v),
+    setPitch: (v) => flame.setPitch(v),
+    useMic: () => flame.useMic(),
+    stopMic: () => flame.stopMic(),
+    get voice() { return { level: flame.level, pitch: flame.pitch, hz: flame.hz || 0, bass: flame.bass, treble: flame.treble || 0, motion: flame.motion }; },
+    useOutputElement: (el) => flame.useOutputElement(el),
+    useOutputStream: (s) => flame.useOutputStream(s),
+    demo: (on) => flame.demo(on),
+    ask,
+    connect(fn) {
+      custom = typeof fn === "function" ? fn : null;
+    }, // your agent: async (text, history) => reply
+    forgetKey() {
+      store.set("");
+    },
+    get ready() {
+      return rt.ready;
+    },
+  };
+  window.orb = window.flame;
+  addEventListener("message", (e) => {
+    const d = e.data;
+    if (!d || d.type !== "orb") return;
+    if (d.state) flame.setState(d.state);
+    if (d.level !== undefined) flame.setLevel(d.level);
+    if (d.pitch !== undefined) flame.setPitch(d.pitch);
+    if (d.ask) ask(String(d.ask));
+  });
+  if (q.get("state")) flame.setState(q.get("state"));
+  if (q.has("demo")) flame.demo(true);
+
+  say("Tap to talk · hold to gather the dust · scroll to focus", 5000);
+  if (window.claude && window.claude.use) {
+    Promise.all(
+      ["dictation", "sample", "tts"].map((n) =>
+        window.claude.use(n).catch(() => null)
+      )
+    ).then(([d, s, t]) => {
+      rt = { dict: d, sample: s, tts: t, ready: true };
+      if (d) {
+        d.onPartial(({ text }) => {
+          if (text) {
+            say(heard + " " + text, 0);
+            flame.setLevel(0.55 + 0.35 * Math.random());
+          }
+        });
+        d.onFinal(({ text }) => {
+          heard = (heard + text).trim();
+          say(heard, 0);
+          flame.setLevel(0.8);
+        });
+        d.onState(({ state }) => {
+          if (state === "idle") {
+            const h = heard;
+            heard = "";
+            if (h) ask(h);
+            else if (flame.state === "listening") flame.setState("idle");
+          }
+        });
+      }
+      if (t) {
+        t.onPosition(({ ms }) => {
+          posMs = ms;
+        });
+        t.onState(({ state }) => {
+          if (state === "idle" && speaking === "tts") endSpeaking();
+        });
+      }
+    });
+  }
+})();
+
+</script>
+</body>
+</html>
