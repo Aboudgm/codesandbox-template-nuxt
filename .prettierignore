@@ -100,3 +100,7 @@ graphify-out
 vault
 .claude
 CLAUDE.md
+
+# standalone Flame Room page and its stitched sources (built by tools/flame-room/build.py)
+static/flame-room.html
+tools/flame-room/

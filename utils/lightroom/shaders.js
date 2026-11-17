@@ -52,10 +52,11 @@ uniform vec3 uCam;
 uniform float uFloorY;
 uniform samplerCube uShadow;
 uniform float uShK;
+uniform vec3 uTint;
 vec3 lightCol(vec3 dirFromLight){
   float c=clamp(dot(dirFromLight,uBeamDir),0.,1.);
   float cone=c*c*c;
-  return mix(vec3(1.0,.94,.84),vec3(1.0,.70,.38),cone*.85)*mix(.5,1.45,cone);
+  return mix(vec3(1.0,.94,.84),vec3(1.0,.70,.38),cone*.85)*mix(.5,1.45,cone)*uTint;
 }
 float atten(float d2){return uLightI/pow(.18+d2,1.35);}
 const vec4 EDGE_LO=vec4(0.,.8,1.8,3.2);
@@ -485,6 +486,7 @@ uniform float uAspect;
 uniform float uTime;
 uniform float uHaze;
 uniform vec2 uScaleInv;
+uniform float uCore;
 in vec2 vUv;
 out vec4 o;
 float hg(float c,float g){float g2=g*g;return (1.-g2)/(12.566*pow(1.+g2-2.*g*c,1.5));}
@@ -506,13 +508,14 @@ void main(){
     float dens=uHaze*(.35+exp(-max(P.y-uFloorY,0.)*.45))*(1.+2.2*cone);
     float ph=hg(dot(-dirL,D),.45)*12.566*.22+.35;
     float vis=occl(P,uShK*.5);
-    acc+=lc*(uLightI*ph*dens*vis/pow(.12+dl*dl,1.35))*dt;
+    // the near field thins out when something else (a flame) is the bulb
+    acc+=lc*(uLightI*ph*dens*vis/pow(.12+dl*dl,1.35))*dt*mix(uCore,1.,smoothstep(.15,.85,dl));
   }
   vec3 toL=uLight-uCam;
   float tc=dot(toL,D);
   float h=max(length(uCam+D*tc-uLight),.05);
   float core=uLightI*.0016*(atan((tmax-tc)/h)-atan(-tc/h))/(h*h+.02);
-  acc+=vec3(1.,.9,.74)*max(core,0.);
+  acc+=vec3(1.,.9,.74)*max(core,0.)*uCore;
   o=vec4(acc,1.);
 }`
 

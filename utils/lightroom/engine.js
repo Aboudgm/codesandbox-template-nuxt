@@ -208,6 +208,17 @@ export class LightRoom {
 
     this.scale = opts.scale || (coarse ? 0.7 : 1)
     this.maxPixels = coarse ? 1.4e6 : 2.6e6
+    // optional hooks for a host that drives the light (e.g. an agent's body)
+    this.ext = {
+      tint: [1, 1, 1],
+      lightScale: 1,
+      holdBias: 0,
+      swirlScale: 1,
+      heatScale: 1,
+      hideBulb: false,
+      coreScale: 1,
+      overlay: null,
+    }
     this.tune = {
       lightI: 9,
       haze: 0.011,
@@ -610,6 +621,14 @@ export class LightRoom {
   }
 
   // scroll = rack focus through the cloud (offset from the bulb)
+  // a gust from the light plus a refracting ring (0..1)
+  pulse(amount) {
+    const s = this.state
+    s.burst = Math.max(s.burst, amount)
+    s.shockT = 0
+    s.shockAmp = Math.max(s.shockAmp * Math.exp(-s.shockT), amount)
+  }
+
   rackFocus(deltaY) {
     const s = this.state
     s.focusOff = clamp(s.focusOff + deltaY * 0.0035, -3.5, 3.5)
@@ -685,8 +704,8 @@ export class LightRoom {
     p.v3('uSwirlAxis', s.swirlAxis)
     p.f('uHold', s.hold)
     p.f('uBurst', s.burst)
-    p.f('uHeat', tn.heat * s.intro)
-    p.f('uSwirl', tn.swirl)
+    p.f('uHeat', tn.heat * s.intro * this.ext.heatScale)
+    p.f('uSwirl', tn.swirl * this.ext.swirlScale)
     p.f('uVort', tn.vort)
     p.f('uNoise', tn.noise)
     p.f('uDamp', tn.airDamp)
@@ -799,7 +818,7 @@ export class LightRoom {
     s.light = v3.add(s.light, step)
     const lv = v3.scale(v3.sub(s.light, s.lightPrev), 1 / Math.max(dt, 1e-3))
     s.lightVel = s.lightVel.map((x, i) => damp(x, lv[i], 10, dt))
-    s.hold = damp(s.hold, s.holdTarget, 4, dt)
+    s.hold = damp(s.hold, Math.max(s.holdTarget, this.ext.holdBias), 4, dt)
     s.burst *= Math.exp(-dt * 6)
     s.shockT += dt
     s.intro = smoothstep(0.15, 2.4, s.t)
@@ -815,7 +834,7 @@ export class LightRoom {
     const axT = v3.norm(v3.add(base, tip))
     s.swirlAxis = v3.norm(s.swirlAxis.map((x, i) => damp(x, axT[i], 1.5, dt)))
 
-    const lightI = tn.lightI * s.intro
+    const lightI = tn.lightI * s.intro * this.ext.lightScale
     const beamDir = v3.norm(v3.sub([1.9, -1.1, -4.2], s.light))
     const focusT = Math.max(1.5, v3.len(v3.sub(s.light, eye)) + s.focusOff)
     s.focus = damp(s.focus, focusT, 2.4, dt)
@@ -905,6 +924,7 @@ export class LightRoom {
       p.f('uCocScale', cocScale)
       p.f('uMaxCoc', maxCoc)
       p.f('uAmb', tn.amb)
+      p.v3('uTint', this.ext.tint)
       gl.activeTexture(gl.TEXTURE5)
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.shadowTex)
       p.i('uShadow', 5)
@@ -965,6 +985,7 @@ export class LightRoom {
       p.f('uAspect', aspect)
       p.f('uTime', s.t)
       p.f('uHaze', tn.haze)
+      p.f('uCore', this.ext.coreScale)
       p.v2('uScaleInv', W / tg.fw, H / tg.fh)
       this.fullscreen()
     }
@@ -999,7 +1020,7 @@ export class LightRoom {
       p.f('uShutter', tn.shutter)
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.N - this.nBig)
     }
-    {
+    if (!this.ext.hideBulb) {
       const p = this.pBulb.use()
       p.m4('uVP', vp)
       setLight(p)
@@ -1010,6 +1031,24 @@ export class LightRoom {
     gl.disable(gl.BLEND)
     gl.depthMask(true)
     gl.disable(gl.DEPTH_TEST)
+    if (this.ext.overlay) {
+      this.ext.overlay({
+        gl,
+        vp,
+        eye,
+        light: s.light,
+        W,
+        H,
+        focalPx,
+        tanH,
+        targets: tg,
+        dt,
+        t: s.t,
+      })
+      gl.bindVertexArray(this.emptyVao)
+      gl.disable(gl.BLEND)
+      gl.disable(gl.DEPTH_TEST)
+    }
 
     // ---- 7. bloom chain
     {

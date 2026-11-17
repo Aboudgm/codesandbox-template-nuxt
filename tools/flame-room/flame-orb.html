@@ -1,0 +1,1524 @@
+<title>Floating Flame</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+  /* One visual world: a light hanging in a black void. Dark-only by design. */
+  :root {
+    --void: #000;
+    --whisper: rgba(255, 255, 255, 0.42);
+    --ink: #fff;
+    color-scheme: dark;
+  }
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  body {
+    background: var(--void);
+    color: var(--ink);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+  /* The only text: one faint line that fades by itself. */
+  #hint {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(7vh + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    text-align: center;
+    font: 500 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif;
+    letter-spacing: 0.05em;
+    color: var(--whisper);
+    transition: opacity 0.9s;
+    pointer-events: none;
+    max-width: 52ch;
+    margin: 0 auto;
+    text-wrap: balance;
+  }
+  #hint.gone {
+    opacity: 0;
+  }
+  /* typed fallback: created by script only when dictation is unavailable */
+  .ask {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(12vh + env(safe-area-inset-bottom, 0px));
+    width: min(420px, calc(100% - 32px));
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: var(--ink);
+    font: 400 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif;
+    outline: none;
+  }
+  .ask:focus-visible {
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  .ask::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #hint {
+      transition: none;
+    }
+  }
+</style>
+<canvas
+  id="c"
+  aria-label="Floating flame: your AI agent. Tap to talk, hold to change state."
+></canvas>
+<div id="hint" role="status" aria-live="polite">
+  Tap to talk &middot; hold to change state
+</div>
+
+<!-- ───────── particles: Monte-Carlo splats on folded membranes + tech layers ───────── -->
+<script id="pVS" type="x-shader/x-vertex">
+  precision highp float;
+  attribute vec4 aSeed;
+  uniform vec2  uRes;
+  uniform float uPx, uTime, uFlow, uTwist, uFold, uDisp, uLevel, uPitch, uBass;
+  uniform float uListen, uThink, uSpeak, uBirth, uShock, uZoom, uBob, uE;
+  uniform float uRing, uArc, uLat, uPulse;
+  uniform vec2  uRot;
+  uniform vec3  uPtr;           // pointer ndc xy, strength z
+  uniform vec3  uIco[60];       // icosahedron edge endpoints (30 edges)
+  varying vec3  vCol;
+
+  vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }
+  vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }
+  vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
+  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }
+  float snoise(vec3 v){
+    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+    vec3 i = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy;
+    vec3 x3 = x0 - 0.5;
+    i = mod289(i);
+    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+    vec3 ns = 0.142857142857 * D.wyz - D.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+    vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    m = m*m;
+    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+  }
+  float hash1(float n){ return fract(sin(n)*43758.5453); }
+  vec2 rot2(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c*p.x - s*p.y, s*p.x + c*p.y); }
+  vec3 sph(float u, float v){ float th = u*6.2831853, ph = acos(2.0*v - 1.0); return vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th)); }
+
+  // the flame body: a teardrop membrane folded by rising noise. ch = -1,0,1 (R,G,B):
+  // each channel folds with a slightly different amplitude, so folds split into RGB fringes.
+  vec3 flame(vec3 d, float ch, float wrinkle){
+    float taper = mix(1.0, 0.26, smoothstep(-0.25, 1.0, d.y));
+    vec3 P = vec3(d.x*taper, d.y*1.22 + 0.18*smoothstep(0.35, 1.0, d.y), d.z*taper);
+    vec3 q = d*1.25 + vec3(0.0, -uFlow*1.3, uFlow*0.45);
+    float n1 = snoise(q);
+    float n2 = snoise(q*2.2 + vec3(7.1, -uFlow*0.7, 3.3));
+    float fold = sin((n1*3.1 + n2*1.25) * (1.0 + 0.10*uThink)) ;
+    float amp = uFold * (1.0 + ch*uDisp);
+    P += d * fold * amp * mix(1.0, 0.55, smoothstep(0.4, 1.0, d.y));
+    P += d * snoise(q*7.5 + 11.0) * wrinkle;          // thinking: fine wrinkles
+    return P;
+  }
+
+  void main(){
+    float w  = aSeed.w;
+    float fr = step(fract(aSeed.x*13.7 + aSeed.z*5.1), 0.42);         // 42% of splats carry fringe colour
+  float ch = fr * (floor(fract(aSeed.x*7.31 + aSeed.y*3.17)*2.0)*2.0 - 1.0);
+    vec3  P  = vec3(0.0);
+    float e  = 0.0;
+
+    if (w < 0.50) {                                   // main membrane
+      vec3 d = sph(aSeed.x, aSeed.y);
+      P = flame(d, ch, 0.025*uThink);
+      e = 1.0;
+    } else if (w < 0.62) {                            // inner knot (trefoil tube) with its own folds
+      float t = aSeed.x*6.2831853, a = aSeed.y*6.2831853;
+      vec3 c  = vec3(sin(t) + 2.0*sin(2.0*t), cos(t) - 2.0*cos(2.0*t), -sin(3.0*t));
+      vec3 tg = normalize(vec3(cos(t) + 4.0*cos(2.0*t), -sin(t) + 4.0*sin(2.0*t), -3.0*cos(3.0*t)));
+      vec3 n1 = normalize(cross(tg, vec3(0.0, 0.0, 1.0)));
+      vec3 n2 = cross(tg, n1);
+      float r = 0.16 + 0.09*snoise(c*0.8 + vec3(0.0, uFlow, 0.0))*(1.0 + ch*uDisp) + 0.05*uLevel;
+      P = c*0.15 + (cos(a)*n1 + sin(a)*n2)*r*0.42;
+      P.xz = rot2(P.xz, uTime*0.35);
+      P.xy = rot2(P.xy, 0.6);
+      P.y -= 0.12;
+      e = 0.6;
+    } else if (w < 0.74) {                            // outer shell: an almost invisible veil
+      vec3 d = sph(aSeed.x, aSeed.y);
+      float n = snoise(d*0.9 + vec3(uFlow*0.25, 0.0, -uFlow*0.2));
+      P = d*(1.72 + 0.20*sin(n*3.0)*(1.0 + ch*uDisp*1.5));
+      P.y *= 1.08;
+      e = 0.35;
+    } else if (w < 0.79) {                            // stalk: thin vertical spikes, above and below
+      float s = aSeed.x;
+      float up = step(0.62, aSeed.y);
+      float wob = 0.03*sin(s*9.0 + uTime*1.7)*(1.0 + uLevel);
+      vec2 j = (vec2(aSeed.z, fract(aSeed.z*13.7)) - 0.5) * mix(0.016, 0.008, up);
+      P = mix(vec3(j.x + wob, -1.08 - s*1.9, j.y), vec3(j.x - wob*0.6, 1.42 + s*s*1.45, j.y), up);
+      e = mix(0.75*(1.0 - s), 1.05*(1.0 - s)*(1.0 - s), up) * (0.6 + 0.6*uLevel + 0.5*uSpeak);
+    } else if (w < 0.87) {                            // wisps: smoke curling off the tip
+      float s = fract(aSeed.z + uFlow*0.42);
+      vec3 b = vec3((aSeed.x - 0.5)*0.12, 1.2, (aSeed.y - 0.5)*0.12);
+      vec3 q = b*2.0 + vec3(0.0, s*2.5 - uFlow, 0.0);
+      vec3 off = vec3(snoise(q), 0.0, snoise(q + 31.0))*0.55*s*s;
+      P = b + vec3(0.0, s*1.65, 0.0) + off;
+      e = (1.0 - s)*(1.0 - s)*0.55*(0.4 + uLevel + 0.4*uSpeak);
+    } else if (w < 0.915) {                           // gyro rings
+      float k = floor(aSeed.z*3.0);
+      float a = aSeed.x*6.2831853;
+      float R = 1.38 + 0.13*k + 0.06*uLevel;
+      float spd = (0.28 + 0.17*k)*(1.0 + 3.2*uThink + 1.2*uLevel);
+      vec3 rp = vec3(cos(a)*R, (aSeed.y - 0.5)*0.012, sin(a)*R);
+      rp.yz = rot2(rp.yz, 0.5 + 1.05*k + 0.25*sin(uTime*0.21 + k));
+      rp.xy = rot2(rp.xy, -0.4 + 0.9*k + uTime*spd*0.3);
+      rp.xz = rot2(rp.xz, uTime*spd*(k == 1.0 ? -1.0 : 1.0));
+      P = rp;
+      float gate = pow(0.5 + 0.5*sin(a*2.0 - uTime*spd*3.0 + k*2.1), 6.0 + 14.0*uThink);
+      e = 1.5 * uRing * (0.18 + gate) * (1.0 + 1.5*uThink);
+    } else if (w < 0.955) {                           // plasma arcs between points on the body (or to the finger)
+      float j = floor(aSeed.z*5.0);
+      float ep = floor(uTime*(1.4 + 0.5*j) + j*7.0);
+      vec3 A = normalize(vec3(hash1(ep + j*3.1) - 0.5, hash1(ep*1.7 + j) - 0.3, hash1(ep*2.3 + j*5.0) - 0.5))*0.62;
+      vec3 B = normalize(vec3(hash1(ep*3.1 + j) - 0.5, hash1(ep*0.7 + j*2.0) - 0.4, hash1(ep*5.3 + j) - 0.5))*1.35;
+      vec3 F = vec3(uPtr.xy*vec2(uRes.x/min(uRes.x, uRes.y), uRes.y/min(uRes.x, uRes.y))*2.0, 0.3);
+      B = mix(B, F, step(0.5, uPtr.z)*step(j, 2.0));
+      float s = aSeed.x;
+      vec3 M = (A + B)*0.5 + normalize(A + B + 1e-4)*0.45;
+      P = mix(mix(A, M, s), mix(M, B, s), s);
+      float jag = sin(3.1415927*s);
+      P += vec3(snoise(vec3(s*14.0, uTime*9.0, j)), snoise(vec3(s*14.0, j, uTime*9.0)), snoise(vec3(j, s*14.0, uTime*9.0)))*0.07*jag;
+      float flick = step(0.32, hash1(floor(uTime*13.0) + j*17.0));
+      e = 3.2 * uArc * flick * (0.5 + 0.5*jag) * (0.35 + uLevel + uThink*0.5 + 0.6*step(0.5, uPtr.z));
+    } else {                                          // icosahedron energy lattice
+      float k = floor(aSeed.z*30.0);
+      vec3 A = vec3(0.0), B = vec3(0.0);
+      for (int i = 0; i < 30; i++) { if (float(i) == k) { A = uIco[i*2]; B = uIco[i*2 + 1]; } }
+      float s = aSeed.x;
+      P = mix(A, B, s)*0.62*(1.0 + 0.04*sin(uTime*1.1));
+      P.xz = rot2(P.xz, uTime*0.12);
+      P.xy = rot2(P.xy, 0.35 + uTime*0.05);
+      float pulse = pow(fract(s - uTime*1.3 + hash1(k)), 24.0);
+      e = 0.9 * uLat * (0.22 + 3.0*pulse*(0.25 + uThink + 0.4*uPulse));
+    }
+
+    // thinking: the body twists on itself in a helix
+    P.xz = rot2(P.xz, uTwist*P.y*1.3);
+    // breath + voice
+    P *= 1.0 + 0.05*uLevel + 0.03*uBass + 0.012*sin(uTime*1.3);
+    // ripple from a touch / phrase onset
+    float rr = length(P);
+    float rx = (rr - uShock*2.4)/0.14;
+    float ring = uShock > 0.0 ? exp(-rx*rx)*(1.0 - uShock) : 0.0;
+    P += P/max(rr, 1e-3)*ring*0.2;
+    e *= 1.0 + ring*1.5;
+    // birth: falls in from far away and ignites
+    float bi = 1.0 - uBirth;
+    P *= 1.0 + 2.4*bi*bi*bi;
+    e *= smoothstep(0.0, 1.0, uBirth);
+
+    // orbit
+    P.xz = rot2(P.xz, uRot.y);
+    P.yz = rot2(P.yz, uRot.x);
+    // it floats
+    P.y += uBob;
+
+    float sc = uZoom / (3.9 - P.z);
+    vec2 xy = P.xy*sc;
+    float S = min(uRes.x, uRes.y);
+    vec2 pxy = uPtr.xy*uRes/S;
+    vec2 dd = xy - pxy; float d2 = dot(dd, dd);
+    xy += dd/sqrt(d2 + 1e-4)*uPtr.z*0.10*exp(-d2/0.04);       // the finger parts the light
+    e *= 1.0 + 1.4*uPtr.z*exp(-d2/0.03);
+    gl_Position = vec4(xy*vec2(S/uRes.x, S/uRes.y) + vec2(0.0, 0.06), 0.0, 1.0);
+    gl_PointSize = uPx;
+    float depth = 0.6 + 0.4*smoothstep(-1.2, 1.2, P.z);
+    // white-hot body; fringe splats are warm (yellow-red) on one side of a fold, cool on the other
+  vec3 chc = fr < 0.5 ? vec3(1.0) : (ch < 0.0 ? vec3(1.0, 0.62, 0.1)*1.45 : vec3(0.25, 0.5, 1.0)*1.7);
+    vCol = chc * e * uE * depth * (sc*sc*4.0);
+  }
+</script>
+<script id="pFS" type="x-shader/x-fragment">
+  precision highp float;
+  varying vec3 vCol;
+  void main(){ gl_FragColor = vec4(vCol, 1.0); }
+</script>
+
+<!-- ───────── full-screen passes ───────── -->
+<script id="qVS" type="x-shader/x-vertex">
+  attribute vec2 a; varying vec2 vUv; void main(){ vUv = a*0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }
+</script>
+<script id="dFS" type="x-shader/x-fragment">
+  precision highp float;
+  uniform sampler2D uTex; uniform float uDecay, uFloor; varying vec2 vUv;
+  void main(){
+    vec3 c = texture2D(uTex, vUv).rgb;
+    c = max(c * uDecay - uFloor, 0.0);              // temporal average; the floor stops 8-bit ghosts
+    gl_FragColor = vec4(c, 1.0);
+  }
+</script>
+<script id="bdFS" type="x-shader/x-fragment">
+  precision highp float;
+  uniform sampler2D uTex; uniform vec2 uTexel; uniform float uFirst, uGamma, uExpo; varying vec2 vUv;
+  vec3 tap(vec2 uv){
+    vec3 c = texture2D(uTex, uv).rgb;
+    if (uFirst > 0.5) c = pow(max(c*uExpo, 0.0), vec3(uGamma));
+    return c;
+  }
+  void main(){                                        // dual-filter down
+    vec2 o = uTexel;
+    vec3 c = tap(vUv)*4.0 + tap(vUv + vec2(-o.x, -o.y)) + tap(vUv + vec2(o.x, -o.y)) + tap(vUv + vec2(-o.x, o.y)) + tap(vUv + vec2(o.x, o.y));
+    gl_FragColor = vec4(c/8.0, 1.0);
+  }
+</script>
+<script id="buFS" type="x-shader/x-fragment">
+  precision highp float;
+  uniform sampler2D uTex; uniform vec2 uTexel; varying vec2 vUv;
+  void main(){                                        // dual-filter up
+    vec2 o = uTexel;
+    vec3 c = texture2D(uTex, vUv + vec2(-2.0*o.x, 0.0)).rgb + texture2D(uTex, vUv + vec2(2.0*o.x, 0.0)).rgb
+           + texture2D(uTex, vUv + vec2(0.0, -2.0*o.y)).rgb + texture2D(uTex, vUv + vec2(0.0, 2.0*o.y)).rgb
+           + (texture2D(uTex, vUv + vec2(-o.x, o.y)).rgb + texture2D(uTex, vUv + vec2(o.x, o.y)).rgb
+            + texture2D(uTex, vUv + vec2(-o.x, -o.y)).rgb + texture2D(uTex, vUv + vec2(o.x, -o.y)).rgb)*2.0;
+    gl_FragColor = vec4(c/12.0, 1.0);
+  }
+</script>
+<script id="cFS" type="x-shader/x-fragment">
+  precision highp float;
+  uniform sampler2D uTex, uBloom;
+  uniform vec2  uRes, uCenter;
+  uniform float uGamma, uExpo, uAberr, uBloomK, uStreak, uShaft, uTime, uShimmer, uRefl, uFloorY, uWave;
+  varying vec2 vUv;
+  vec3 resp(vec3 c){ return pow(max(c*uExpo, 0.0), vec3(uGamma)); }      // density -> light: folds pop, veil sinks
+  vec3 aces(vec3 x){ return clamp((x*(2.51*x + 0.03))/(x*(2.43*x + 0.59) + 0.14), 0.0, 1.0); }
+  void main(){
+    vec2 uv = vUv;
+    float asp = uRes.x/uRes.y;
+    vec2 dc = (uv - uCenter)*vec2(asp, 1.0);
+    // heat shimmer in the air above the flame
+    float hot = exp(-dot(dc - vec2(0.0, 0.16), dc - vec2(0.0, 0.16))*9.0)*smoothstep(-0.02, 0.2, uv.y - uCenter.y);
+    uv += vec2(sin(uv.y*90.0 - uTime*6.5) + 0.6*sin(uv.x*55.0 + uTime*3.9), 0.6*sin(uv.x*77.0 + uTime*4.7))*0.0009*hot*uShimmer;
+    // refraction wave from a touch
+    float dl = length(dc);
+    float wv = exp(-pow((dl - uWave*0.9)*16.0, 2.0))*(1.0 - uWave)*step(0.0, uWave);
+    uv += dc/max(dl, 1e-4)/vec2(asp, 1.0)*wv*0.012;
+
+    // lateral chromatic aberration
+    vec2 cc = uv - uCenter;
+    vec3 col;
+    col.r = resp(texture2D(uTex, uv + cc*uAberr).rgb).r;
+    col.g = resp(texture2D(uTex, uv).rgb).g;
+    col.b = resp(texture2D(uTex, uv - cc*uAberr).rgb).b;
+
+    vec3 bl = texture2D(uBloom, uv).rgb;
+    col += bl*uBloomK;
+    // anamorphic streak: only values above 0.9 smear sideways
+    vec3 st = vec3(0.0);
+    for (int i = 1; i < 24; i++) {
+      float o = float(i)*0.0045, wgt = (1.0 - float(i)/24.0)*(1.0 - float(i)/24.0);
+      st += (max(texture2D(uBloom, uv + vec2(o, 0.0)).rgb - 0.9, 0.0) + max(texture2D(uBloom, uv - vec2(o, 0.0)).rgb - 0.9, 0.0))*wgt;
+    }
+    col += st*vec3(0.55, 0.72, 1.0)*0.16*uStreak;
+    // light shafts: radial smear of the hot cores away from the body
+    vec3 sh = vec3(0.0);
+    for (int i = 0; i < 12; i++) {
+      float k = float(i)/12.0;
+      sh += max(texture2D(uBloom, mix(uv, uCenter, k*0.35)).rgb - 0.35, 0.0)*(1.0 - k);
+    }
+    col += sh/12.0*uShaft;
+    // one faint ghost
+    col += texture2D(uBloom, uCenter - (uv - uCenter)*0.7).rgb*vec3(0.5, 0.75, 1.0)*0.04;
+    // it floats: a dim, soft reflection on a floor nobody can see
+    if (uv.y < uFloorY) {
+      float dy = uFloorY - uv.y;
+      vec2 ru = vec2(uv.x + 0.004*sin(uv.y*140.0 + uTime*1.3), uFloorY + dy);
+      vec3 r = texture2D(uBloom, ru).rgb*1.4 + resp(texture2D(uTex, ru).rgb)*0.35;
+      col += r*uRefl*exp(-dy*9.0);
+    }
+    col = aces(col);
+    vec2 v = vUv - 0.5;
+    col *= 1.0 - 0.5*dot(v, v);
+    float ign = fract(52.9829189*fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    col += (ign - 0.5)/255.0;
+    gl_FragColor = vec4(col, 1.0);
+  }
+</script>
+
+<script>
+  /* =====================================================================
+   Floating Flame — a silent, state-driven body for an AI agent.
+   NOTHING here makes sound: audio is only analysed, never generated.
+
+   window.orb.setState('idle'|'listening'|'thinking'|'speaking')
+   window.orb.setLevel(0..1)  window.orb.setPitch(0..1)
+   window.orb.useMic()        analyse a microphone (standalone pages)
+   window.orb.useOutputElement(audioEl) / useOutputStream(stream)
+   window.orb.demo(true)
+   postMessage({type:'orb', state, level, pitch})
+   In claude.ai it is also an agent: dictation -> Claude -> voice.
+   ===================================================================== */
+  const Flame = (() => {
+    const STATES = ["idle", "listening", "thinking", "speaking"];
+    // per-state look. tau = trail time constant (s), gamma = density response
+    const SP = {
+      idle: {
+        tau: 0.13,
+        gamma: 1.95,
+        expo: 1.15,
+        fold: 0.17,
+        flow: 0.1,
+        disp: 0.03,
+        aberr: 0.006,
+        bloom: 0.3,
+        streak: 0.5,
+        shaft: 0.25,
+        ring: 1.1,
+        arc: 0.45,
+        lat: 0.45,
+        twist: 0.0,
+      },
+      listening: {
+        tau: 0.16,
+        gamma: 1.8,
+        expo: 1.05,
+        fold: 0.23,
+        flow: 0.18,
+        disp: 0.05,
+        aberr: 0.009,
+        bloom: 0.4,
+        streak: 0.7,
+        shaft: 0.35,
+        ring: 1.4,
+        arc: 0.7,
+        lat: 0.5,
+        twist: 0.0,
+      },
+      thinking: {
+        tau: 0.22,
+        gamma: 1.85,
+        expo: 1.1,
+        fold: 0.19,
+        flow: 0.13,
+        disp: 0.035,
+        aberr: 0.008,
+        bloom: 0.35,
+        streak: 0.6,
+        shaft: 0.3,
+        ring: 2.8,
+        arc: 0.6,
+        lat: 1.25,
+        twist: 1.8,
+      },
+      speaking: {
+        tau: 0.18,
+        gamma: 1.7,
+        expo: 1.0,
+        fold: 0.34,
+        flow: 0.27,
+        disp: 0.07,
+        aberr: 0.014,
+        bloom: 0.55,
+        streak: 1.0,
+        shaft: 0.5,
+        ring: 1.8,
+        arc: 1.15,
+        lat: 0.6,
+        twist: 0.15,
+      },
+    };
+    const lerpTau = (cur, tgt, dt, tau) =>
+      cur + (tgt - cur) * (1 - Math.exp(-dt / tau));
+
+    class Meter {
+      // analyse only; never connected to speakers
+      constructor(ctx, node, pull) {
+        this.an = ctx.createAnalyser();
+        this.an.fftSize = 1024;
+        this.an.smoothingTimeConstant = 0.6;
+        node.connect(this.an);
+        this.node = node;
+        if (pull) {
+          this.sink = ctx.createGain();
+          this.sink.gain.value = 0;
+          this.an.connect(this.sink);
+          this.sink.connect(ctx.destination);
+        }
+        this.t = new Float32Array(this.an.fftSize);
+        this.f = new Uint8Array(this.an.frequencyBinCount);
+        this.peak = 0.05;
+        this.open = false;
+        this.sr = ctx.sampleRate;
+      }
+      read(dt) {
+        this.an.getFloatTimeDomainData(this.t);
+        let s = 0;
+        for (let i = 0; i < this.t.length; i++) s += this.t[i] * this.t[i];
+        const rms = Math.sqrt(s / this.t.length);
+        this.peak = Math.max(rms, this.peak * Math.exp(-dt / 6), 0.015); // AGC: slow-decay peak
+        const x = Math.min(1, rms / this.peak);
+        if (!this.open && x > 0.18 && rms > 0.003) this.open = true;
+        // hysteresis gate
+        else if (this.open && (x < 0.09 || rms < 0.002)) this.open = false;
+        const level = this.open ? Math.pow(x, 0.8) : 0;
+        this.an.getByteFrequencyData(this.f);
+        let num = 0,
+          den = 0,
+          low = 0;
+        const bw = this.sr / this.an.fftSize;
+        for (let i = 2; i < this.f.length; i++) {
+          const v = this.f[i];
+          num += i * bw * v;
+          den += v;
+          if (i * bw < 250) low += v;
+        }
+        return {
+          level,
+          pitch: Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800)),
+          bass: den ? Math.min(1, (low / den) * 2.2) * level : 0,
+        };
+      }
+      close() {
+        try {
+          this.node.disconnect(this.an);
+          this.an.disconnect();
+          if (this.sink) this.sink.disconnect();
+        } catch (e) {}
+      }
+    }
+
+    function mount(canvas, opts = {}) {
+      const q = new URLSearchParams(location.search);
+      const wantLDR = q.has("ldr");
+      let gl = canvas.getContext("webgl2", {
+        antialias: false,
+        alpha: false,
+        powerPreference: "high-performance",
+      });
+      const isGL2 = !!gl;
+      if (!gl)
+        gl =
+          canvas.getContext("webgl", { antialias: false, alpha: false }) ||
+          canvas.getContext("experimental-webgl");
+      if (!gl) return null;
+      const IS_MOBILE = /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);
+
+      // ---- HDR detection, 8-bit fallback ----
+      let fmt = {
+        internal: gl.RGBA,
+        type: gl.UNSIGNED_BYTE,
+        filter: gl.LINEAR,
+        hdr: false,
+      };
+      if (!wantLDR) {
+        if (isGL2 && gl.getExtension("EXT_color_buffer_float"))
+          fmt = {
+            internal: gl.RGBA16F,
+            type: gl.HALF_FLOAT,
+            filter: gl.LINEAR,
+            hdr: true,
+          };
+        else if (!isGL2) {
+          const hf = gl.getExtension("OES_texture_half_float");
+          if (hf && gl.getExtension("EXT_color_buffer_half_float"))
+            fmt = {
+              internal: gl.RGBA,
+              type: hf.HALF_FLOAT_OES,
+              filter: gl.getExtension("OES_texture_half_float_linear")
+                ? gl.LINEAR
+                : gl.NEAREST,
+              hdr: true,
+            };
+        }
+      }
+
+      const compile = (type, id) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, document.getElementById(id).textContent);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+          throw new Error(id + ": " + gl.getShaderInfoLog(s));
+        return s;
+      };
+      const program = (vs, fs) => {
+        const p = gl.createProgram();
+        gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+        gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+        gl.bindAttribLocation(p, 0, vs === "pVS" ? "aSeed" : "a");
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+          throw new Error(gl.getProgramInfoLog(p));
+        return p;
+      };
+      const uni = (p, names) =>
+        Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(p, n)]));
+
+      const pP = program("pVS", "pFS"),
+        pD = program("qVS", "dFS"),
+        pBD = program("qVS", "bdFS"),
+        pBU = program("qVS", "buFS"),
+        pC = program("qVS", "cFS");
+      const UP = uni(pP, [
+        "uRes",
+        "uPx",
+        "uTime",
+        "uFlow",
+        "uTwist",
+        "uFold",
+        "uDisp",
+        "uLevel",
+        "uPitch",
+        "uBass",
+        "uListen",
+        "uThink",
+        "uSpeak",
+        "uBirth",
+        "uShock",
+        "uZoom",
+        "uBob",
+        "uE",
+        "uRing",
+        "uArc",
+        "uLat",
+        "uPulse",
+        "uRot",
+        "uPtr",
+        "uIco",
+      ]);
+      const UD = uni(pD, ["uTex", "uDecay", "uFloor"]);
+      const UBD = uni(pBD, ["uTex", "uTexel", "uFirst", "uGamma", "uExpo"]);
+      const UBU = uni(pBU, ["uTex", "uTexel"]);
+      const UC = uni(pC, [
+        "uTex",
+        "uBloom",
+        "uRes",
+        "uCenter",
+        "uGamma",
+        "uExpo",
+        "uAberr",
+        "uBloomK",
+        "uStreak",
+        "uShaft",
+        "uTime",
+        "uShimmer",
+        "uRefl",
+        "uFloorY",
+        "uWave",
+      ]);
+
+      // icosahedron: 12 vertices, 30 edges of length 2
+      const ico = (() => {
+        const f = (1 + Math.sqrt(5)) / 2,
+          V = [];
+        for (const a of [-1, 1])
+          for (const b of [-1, 1]) {
+            V.push([0, a, b * f], [a, b * f, 0], [b * f, 0, a]);
+          }
+        const E = [];
+        for (let i = 0; i < 12; i++)
+          for (let j = i + 1; j < 12; j++) {
+            const d = Math.hypot(
+              V[i][0] - V[j][0],
+              V[i][1] - V[j][1],
+              V[i][2] - V[j][2]
+            );
+            if (Math.abs(d - 2) < 1e-3) E.push(...V[i], ...V[j]);
+          }
+        return new Float32Array(E.map((x) => x / Math.hypot(1, f)));
+      })();
+
+      // particles: only seeds, every position is derived in the shader
+      const MAXP = opts.particles || (IS_MOBILE ? 140000 : 280000);
+      const seeds = new Float32Array(MAXP * 4);
+      for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();
+      const pb = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, pb);
+      gl.bufferData(gl.ARRAY_BUFFER, seeds, gl.STATIC_DRAW);
+      const qb = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, qb);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        gl.STATIC_DRAW
+      );
+      let drawCount = MAXP; // adaptive quality lowers this on slow devices
+
+      // ---- render targets ----
+      const target = (w, h) => {
+        const t = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          fmt.internal,
+          w,
+          h,
+          0,
+          gl.RGBA,
+          fmt.type,
+          null
+        );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, fmt.filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, fmt.filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const f = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+        gl.framebufferTexture2D(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0,
+          gl.TEXTURE_2D,
+          t,
+          0
+        );
+        const ok =
+          gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        return { t, f, w, h, ok };
+      };
+      let acc = [],
+        blo = [],
+        fw = 0,
+        fh = 0,
+        cur = 0;
+      let dprCap = Math.min(
+        window.devicePixelRatio || 1,
+        IS_MOBILE ? 1.6 : 1.25
+      );
+      const free = (r) => {
+        gl.deleteTexture(r.t);
+        gl.deleteFramebuffer(r.f);
+      };
+      function resize(force) {
+        const w = Math.max(2, Math.floor(innerWidth * dprCap)),
+          h = Math.max(2, Math.floor(innerHeight * dprCap));
+        if (!force && canvas.width === w && canvas.height === h && acc.length)
+          return;
+        canvas.width = w;
+        canvas.height = h;
+        fw = w;
+        fh = h;
+        acc.concat(blo).forEach(free);
+        acc = [target(fw, fh), target(fw, fh)];
+        if (!acc[0].ok && fmt.hdr) {
+          fmt = {
+            internal: gl.RGBA,
+            type: gl.UNSIGNED_BYTE,
+            filter: gl.LINEAR,
+            hdr: false,
+          };
+          acc.forEach(free);
+          acc = [target(fw, fh), target(fw, fh)];
+        }
+        blo = [];
+        let bw = fw,
+          bh = fh;
+        for (let i = 0; i < 5; i++) {
+          bw = Math.max(2, bw >> 1);
+          bh = Math.max(2, bh >> 1);
+          blo.push(target(bw, bh));
+        }
+      }
+      addEventListener("resize", () => resize());
+
+      // ---- state ----
+      let target_ = "idle";
+      const wts = [1, 0, 0, 0];
+      const sm = Object.assign({}, SP.idle);
+      let level = 0,
+        pitch = 0.4,
+        bass = 0,
+        flow = 0,
+        twist = 0,
+        pulse = 0,
+        shock = -1,
+        wave = -1,
+        lastShock = -9,
+        prevLevel = 0;
+      let manualLevel = 0,
+        manualAt = -9,
+        manualPitch = null,
+        demoOn = false,
+        demoT = 0;
+      let rotX = 0.12,
+        rotY = 0,
+        vRotY = 0.07,
+        vRotX = 0,
+        zoom = 1,
+        zoomT = 1,
+        hoverX = 0,
+        hoverY = 0;
+      let ctx = null,
+        mic = null,
+        out = null,
+        micStream = null;
+      let ptrX = 0,
+        ptrY = 0,
+        ptrS = 0,
+        ptrSeen = false,
+        down = false,
+        last = performance.now(),
+        t0 = last,
+        slow = 0,
+        frames = 0;
+      const calm = matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? 0.35
+        : 1;
+      const hint = document.getElementById("hint");
+      let hintT = 0;
+      const say = (msg, ms = 2800) => {
+        hint.textContent = msg;
+        hint.classList.remove("gone");
+        clearTimeout(hintT);
+        if (ms) hintT = setTimeout(() => hint.classList.add("gone"), ms);
+      };
+
+      const speechEnv = (t) => {
+        const syl = Math.max(
+          0,
+          Math.sin(t * 7.3) * 0.6 + Math.sin(t * 3.1 + 1) * 0.4
+        );
+        return Math.min(
+          1,
+          syl * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9))) * 1.15
+        );
+      };
+      const DEMO = [
+        ["idle", 2.6],
+        ["listening", 5.0],
+        ["thinking", 3.2],
+        ["speaking", 6.0],
+      ];
+
+      const ensureCtx = () => {
+        if (!ctx)
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+      };
+      const orb = {
+        get state() {
+          return target_;
+        },
+        get frames() {
+          return frames;
+        },
+        get hdr() {
+          return fmt.hdr;
+        },
+        get count() {
+          return drawCount;
+        },
+        setState(s) {
+          if (STATES.includes(s) && s !== target_) {
+            target_ = s;
+            if (s !== "idle") {
+              shock = 0.001;
+            }
+          }
+        },
+        setLevel(v) {
+          manualLevel = Math.max(0, Math.min(1, +v || 0));
+          manualAt = performance.now();
+        },
+        setPitch(v) {
+          manualPitch = Math.max(0, Math.min(1, +v || 0));
+        },
+        demo(on) {
+          demoOn = !!on;
+          demoT = 0;
+        },
+        ripple() {
+          shock = 0.001;
+          wave = 0;
+        },
+        async useMic() {
+          if (mic) return true;
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const e = new Error("insecure");
+            e.name = "InsecureContext";
+            throw e;
+          }
+          ensureCtx();
+          if (ctx.state === "suspended") ctx.resume().catch(() => {});
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+          mic = new Meter(ctx, ctx.createMediaStreamSource(micStream), true);
+          return true;
+        },
+        stopMic() {
+          if (micStream) micStream.getTracks().forEach((t) => t.stop());
+          if (mic) mic.close();
+          mic = null;
+          micStream = null;
+        },
+        useOutputElement(el) {
+          ensureCtx();
+          const src = ctx.createMediaElementSource(el);
+          out = new Meter(ctx, src);
+          src.connect(ctx.destination);
+        },
+        useOutputStream(stream) {
+          ensureCtx();
+          const a = new Audio();
+          a.muted = true;
+          a.srcObject = stream;
+          a.play().catch(() => {});
+          out = new Meter(ctx, ctx.createMediaStreamSource(stream), true);
+        },
+        say,
+        // fixed-step rendering for reproducible reviews (snapshot tests)
+        fixedDt: q.has("fixed") ? 1 / 60 : 0,
+      };
+
+      // ---- pointer: drag orbits with inertia, hover tilts, wheel zooms with spring-back ----
+      let prev = null;
+      canvas.addEventListener("pointermove", (e) => {
+        ptrX = (e.clientX / innerWidth) * 2 - 1;
+        ptrY = 1 - (e.clientY / innerHeight) * 2;
+        ptrSeen = e.pointerType === "mouse" || down;
+        hoverX = ptrX;
+        hoverY = ptrY;
+        if (down && prev) {
+          const dx = (e.clientX - prev.x) * 0.006,
+            dy = (e.clientY - prev.y) * 0.006;
+          rotY += dx;
+          rotX = Math.max(-1.1, Math.min(1.1, rotX + dy));
+          vRotY = dx * 30;
+          vRotX = dy * 30;
+          prev = { x: e.clientX, y: e.clientY };
+        }
+      });
+      canvas.addEventListener("pointerdown", (e) => {
+        down = true;
+        ptrSeen = true;
+        prev = { x: e.clientX, y: e.clientY };
+        ptrX = (e.clientX / innerWidth) * 2 - 1;
+        ptrY = 1 - (e.clientY / innerHeight) * 2;
+        orb.ripple();
+      });
+      addEventListener("pointerup", (e) => {
+        down = false;
+        prev = null;
+        if (e.pointerType !== "mouse") ptrSeen = false;
+      });
+      addEventListener("pointercancel", () => {
+        down = false;
+        prev = null;
+        ptrSeen = false;
+      });
+      document.addEventListener("pointerleave", () => {
+        ptrSeen = false;
+        hoverX = hoverY = 0;
+      });
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          zoomT = Math.max(
+            0.55,
+            Math.min(1.9, zoomT * Math.exp(-e.deltaY * 0.0012))
+          );
+        },
+        { passive: false }
+      );
+      let pinch = null;
+      canvas.addEventListener(
+        "touchmove",
+        (e) => {
+          if (e.touches.length === 2) {
+            const d = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+            if (pinch)
+              zoomT = Math.max(0.55, Math.min(1.9, (zoomT * d) / pinch));
+            pinch = d;
+          }
+        },
+        { passive: true }
+      );
+      canvas.addEventListener("touchend", () => {
+        pinch = null;
+      });
+
+      // ---- main loop ----
+      function frame(now) {
+        requestAnimationFrame(frame);
+        let dt = Math.min(0.1, (now - last) / 1000);
+        last = now;
+        if (orb.fixedDt) dt = orb.fixedDt;
+        frames++;
+        const time = orb.fixedDt ? frames * orb.fixedDt : (now - t0) / 1000;
+        // adaptive quality: drop particles, then resolution
+        if (!orb.fixedDt) {
+          if (dt > 0.03) {
+            if (++slow > 40) {
+              slow = 0;
+              if (drawCount > 60000) drawCount = Math.floor(drawCount * 0.8);
+              else if (dprCap > 0.75) {
+                dprCap *= 0.8;
+                resize(true);
+              }
+            }
+          } else slow = Math.max(0, slow - 1);
+        }
+
+        let demoLevel = null;
+        if (demoOn) {
+          demoT += dt;
+          let a = 0;
+          const tot = DEMO.reduce((s, d) => s + d[1], 0),
+            tt = demoT % tot;
+          for (const [n, l] of DEMO) {
+            if (tt < a + l) {
+              if (target_ !== n) orb.setState(n);
+              break;
+            }
+            a += l;
+          }
+          demoLevel =
+            target_ === "listening" || target_ === "speaking"
+              ? speechEnv(demoT)
+              : 0;
+        }
+
+        let rawLevel = 0,
+          rawPitch = pitch,
+          rawBass = 0;
+        if (now - manualAt < 150) rawLevel = manualLevel;
+        else if (demoLevel !== null) {
+          rawLevel = demoLevel;
+          rawPitch = 0.4 + 0.3 * Math.sin(demoT * 0.8);
+          rawBass = rawLevel * 0.5;
+        } else if (target_ === "speaking") {
+          if (out) {
+            const m = out.read(dt);
+            rawLevel = m.level;
+            rawPitch = m.pitch;
+            rawBass = m.bass;
+          } else {
+            rawLevel = speechEnv(time) * 0.85;
+            rawBass = rawLevel * 0.4;
+          }
+        } else if (target_ === "listening" && mic) {
+          const m = mic.read(dt);
+          rawLevel = m.level;
+          rawPitch = m.pitch;
+          rawBass = m.bass;
+        }
+        if (manualPitch !== null) rawPitch = manualPitch;
+        level = lerpTau(level, rawLevel, dt, rawLevel > level ? 0.045 : 0.22);
+        pitch = lerpTau(pitch, rawPitch, dt, 0.25);
+        bass = lerpTau(bass, rawBass, dt, 0.18);
+        STATES.forEach((s, i) => {
+          wts[i] = lerpTau(wts[i], s === target_ ? 1 : 0, dt, 0.35);
+        });
+        Object.keys(SP.idle).forEach((k) => {
+          let v = 0;
+          STATES.forEach((s, i) => {
+            v += SP[s][k] * wts[i];
+          });
+          sm[k] = v;
+        });
+
+        flow += dt * (sm.flow + 0.3 * level) * calm;
+        twist = lerpTau(
+          twist,
+          sm.twist * (1 + 0.4 * Math.sin(time * 0.7)),
+          dt,
+          0.6
+        );
+        pulse = wts[2] * (0.5 + 0.5 * Math.sin(time * 5.2)); // thinking: synthetic pulse level
+        if (shock >= 0) {
+          shock += dt * 0.85;
+          if (shock > 1) shock = -1;
+        }
+        if (wave >= 0) {
+          wave += dt * 0.7;
+          if (wave > 1) wave = -1;
+        }
+        if (
+          (target_ === "listening" || target_ === "speaking") &&
+          level - prevLevel > 0.1 &&
+          level > 0.3 &&
+          time - lastShock > 0.5
+        ) {
+          shock = 0.001;
+          lastShock = time;
+        }
+        prevLevel = level;
+        // inertia, hover tilt, spring-back zoom
+        if (!down) {
+          rotY += vRotY * dt;
+          rotX += vRotX * dt;
+          vRotY = lerpTau(vRotY, 0.07 * calm, dt, 1.2);
+          vRotX = lerpTau(vRotX, 0, dt, 0.6);
+          rotX = lerpTau(rotX, 0.12, dt, 3.0);
+        }
+        zoomT = lerpTau(zoomT, 1, dt, 2.5);
+        zoom = lerpTau(zoom, zoomT, dt, 0.18);
+        ptrS = lerpTau(ptrS, ptrSeen ? 1 : 0, dt, 0.25);
+        resize();
+
+        // 1) temporal average: decay = exp(-dt/tau)
+        const decay = Math.exp(-dt / sm.tau);
+        const src = acc[cur],
+          dst = acc[1 - cur];
+        gl.bindFramebuffer(gl.FRAMEBUFFER, dst.f);
+        gl.viewport(0, 0, fw, fh);
+        gl.disable(gl.BLEND);
+        gl.useProgram(pD);
+        quad();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, src.t);
+        gl.uniform1i(UD.uTex, 0);
+        gl.uniform1f(UD.uDecay, decay);
+        gl.uniform1f(UD.uFloor, fmt.hdr ? 0.0002 : 0.0045);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        // 2) additive splats. energy ~ (1-decay)*S^2/N so brightness ignores count & resolution
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.useProgram(pP);
+        gl.bindBuffer(gl.ARRAY_BUFFER, pb);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+        const S = Math.min(fw, fh);
+        gl.uniform2f(UP.uRes, fw, fh);
+        gl.uniform1f(UP.uPx, Math.max(1, Math.round(dprCap)));
+        gl.uniform1f(
+          UP.uE,
+          ((((1 - decay) * S * S) / drawCount) * 0.055) /
+            Math.max(1, Math.round(dprCap)) ** 2
+        );
+        gl.uniform1f(UP.uTime, time * calm);
+        gl.uniform1f(UP.uFlow, flow);
+        gl.uniform1f(UP.uTwist, twist);
+        gl.uniform1f(UP.uFold, sm.fold * (1 + 0.9 * level));
+        gl.uniform1f(UP.uDisp, sm.disp + 0.04 * level);
+        gl.uniform1f(UP.uLevel, level);
+        gl.uniform1f(UP.uPitch, pitch);
+        gl.uniform1f(UP.uBass, bass);
+        gl.uniform1f(UP.uListen, wts[1]);
+        gl.uniform1f(UP.uThink, wts[2]);
+        gl.uniform1f(UP.uSpeak, wts[3]);
+        gl.uniform1f(UP.uBirth, calm < 1 ? 1 : Math.min(1, time / 3.0));
+        gl.uniform1f(UP.uShock, shock);
+        gl.uniform1f(UP.uZoom, zoom * 1.85);
+        gl.uniform1f(
+          UP.uBob,
+          0.07 * Math.sin(time * 0.8) * calm +
+            0.02 * Math.sin(time * 1.9) * calm
+        );
+        gl.uniform1f(UP.uRing, sm.ring);
+        gl.uniform1f(UP.uArc, sm.arc);
+        gl.uniform1f(UP.uLat, sm.lat);
+        gl.uniform1f(UP.uPulse, pulse);
+        gl.uniform2f(
+          UP.uRot,
+          rotX + hoverY * 0.12 * (down ? 0 : 1),
+          rotY + hoverX * 0.18 * (down ? 0 : 1)
+        );
+        gl.uniform3f(UP.uPtr, ptrX, ptrY, ptrS * (down ? 1 : 0.6));
+        gl.uniform3fv(UP.uIco, ico);
+        gl.drawArrays(gl.POINTS, 0, drawCount);
+        gl.disableVertexAttribArray(0);
+        gl.disable(gl.BLEND);
+
+        // 3) dual-filter bloom
+        let srcT = dst.t,
+          tw = fw,
+          th = fh;
+        gl.useProgram(pBD);
+        quad();
+        gl.uniform1f(UBD.uGamma, sm.gamma);
+        gl.uniform1f(UBD.uExpo, sm.expo);
+        for (let i = 0; i < blo.length; i++) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, blo[i].f);
+          gl.viewport(0, 0, blo[i].w, blo[i].h);
+          gl.bindTexture(gl.TEXTURE_2D, srcT);
+          gl.uniform1i(UBD.uTex, 0);
+          gl.uniform2f(UBD.uTexel, 0.5 / tw, 0.5 / th);
+          gl.uniform1f(UBD.uFirst, i === 0 ? 1 : 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          srcT = blo[i].t;
+          tw = blo[i].w;
+          th = blo[i].h;
+        }
+        gl.useProgram(pBU);
+        quad();
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        for (let i = blo.length - 1; i > 0; i--) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, blo[i - 1].f);
+          gl.viewport(0, 0, blo[i - 1].w, blo[i - 1].h);
+          gl.bindTexture(gl.TEXTURE_2D, blo[i].t);
+          gl.uniform1i(UBU.uTex, 0);
+          gl.uniform2f(UBU.uTexel, 0.5 / blo[i].w, 0.5 / blo[i].h);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+        gl.disable(gl.BLEND);
+
+        // 4) composite
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.useProgram(pC);
+        quad();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, dst.t);
+        gl.uniform1i(UC.uTex, 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, blo[0].t);
+        gl.uniform1i(UC.uBloom, 1);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform2f(UC.uRes, canvas.width, canvas.height);
+        gl.uniform2f(UC.uCenter, 0.5, 0.53);
+        gl.uniform1f(UC.uGamma, sm.gamma);
+        gl.uniform1f(UC.uExpo, sm.expo);
+        gl.uniform1f(UC.uAberr, sm.aberr + 0.008 * level);
+        gl.uniform1f(UC.uBloomK, sm.bloom + 0.25 * level);
+        gl.uniform1f(UC.uStreak, sm.streak);
+        gl.uniform1f(UC.uShaft, sm.shaft + 0.3 * level);
+        gl.uniform1f(UC.uTime, time);
+        gl.uniform1f(UC.uShimmer, calm);
+        gl.uniform1f(UC.uRefl, 0.22);
+        gl.uniform1f(UC.uFloorY, 0.5 - 0.36 * zoom);
+        gl.uniform1f(UC.uWave, wave);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        cur = 1 - cur;
+      }
+      function quad() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, qb);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      }
+      resize(true);
+      requestAnimationFrame(frame);
+
+      addEventListener("message", (e) => {
+        const d = e.data;
+        if (!d || d.type !== "orb") return;
+        if (d.state) orb.setState(d.state);
+        if (d.level !== undefined) orb.setLevel(d.level);
+        if (d.pitch !== undefined) orb.setPitch(d.pitch);
+      });
+      return orb;
+    }
+    return { mount };
+  })();
+
+  /* ---------------- the agent: dictation -> Claude -> voice ---------------- */
+  (() => {
+    const q = new URLSearchParams(location.search);
+    let orb;
+    try {
+      orb = Flame.mount(document.getElementById("c"), {
+        particles: q.get("p") ? +q.get("p") : 0,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    if (!orb) {
+      document.getElementById("hint").textContent =
+        "This flame needs WebGL to appear";
+      return;
+    }
+    window.orb = orb;
+    if (q.get("state")) orb.setState(q.get("state"));
+    if (q.has("demo")) orb.demo(true);
+    if (q.has("level"))
+      setInterval(() => orb.setLevel(parseFloat(q.get("level"))), 60);
+
+    const ORDER = ["idle", "listening", "thinking", "speaking"];
+    const PERSONA =
+      "You are the voice of a small floating flame: an AI agent that lives in a black void and talks with the person in front of it. " +
+      "Reply in one to three short spoken sentences, warm and precise. Plain text only: no markdown, no lists, no emoji. " +
+      "If asked what you are, say you are a flame made of folded light that listens, thinks and speaks.";
+    const history = [];
+    let dict = null,
+      sample = null,
+      tts = null,
+      heard = "",
+      busy = false,
+      input = null,
+      ttsLevelIv = 0,
+      speakingAt = 0,
+      posMs = 0;
+    const runtime = !!(window.claude && window.claude.use);
+    orb.agent = { ready: !runtime };
+
+    // speaking level follows the words being heard (tts.onPosition), never the audio
+    function wordEnv(ms) {
+      const t = ms / 1000;
+      const syl = Math.max(
+        0,
+        Math.sin(t * 8.1) * 0.65 + Math.sin(t * 3.3 + 1) * 0.35
+      );
+      return Math.min(1, 0.25 + syl * 0.85);
+    }
+    function startSpeakingLevel(text) {
+      clearInterval(ttsLevelIv);
+      speakingAt = performance.now();
+      posMs = 0;
+      const est = 600 + text.length * 62;
+      ttsLevelIv = setInterval(() => {
+        const ms = tts ? posMs : performance.now() - speakingAt;
+        orb.setLevel(wordEnv(ms));
+        if (!tts && performance.now() - speakingAt > est) stopSpeakingLevel();
+      }, 33);
+    }
+    function stopSpeakingLevel() {
+      clearInterval(ttsLevelIv);
+      ttsLevelIv = 0;
+      if (orb.state === "speaking") orb.setState("idle");
+    }
+
+    async function ask(text) {
+      text = text.trim();
+      if (!text || busy) return;
+      busy = true;
+      orb.setState("thinking");
+      orb.say("\u201c" + text + "\u201d", 0);
+      history.push({ role: "user", content: text });
+      const msgs = [
+        {
+          role: "user",
+          content:
+            PERSONA +
+            "\n\nConversation so far follows. Answer the last message.",
+        },
+        { role: "assistant", content: "Understood." },
+      ].concat(history.slice(-10));
+      let reply = "";
+      try {
+        const r = await sample(msgs, { modelTier: "quick", cache: false });
+        reply =
+          ((r && r.text) || "").trim() || "I lost the thread. Ask me again?";
+      } catch (e) {
+        reply =
+          e && e.code === "rate_limited"
+            ? "Too many questions at once. Give me a moment."
+            : e && e.code === "not_granted"
+            ? "I am not allowed to think here."
+            : "Something went dark on my side. Try again.";
+      }
+      history.push({ role: "assistant", content: reply });
+      busy = false;
+      orb.setState("speaking");
+      orb.say(reply, 0);
+      startSpeakingLevel(reply);
+      if (tts) {
+        try {
+          await tts.speak(reply, { voice: "glassy" });
+        } catch (e) {
+          /* stopped, busy or refused: the text stays on screen */
+        }
+        stopSpeakingLevel();
+        orb.say(reply, 5000);
+      }
+    }
+
+    function showTyped() {
+      if (input) {
+        input.focus();
+        return;
+      }
+      input = document.createElement("input");
+      input.className = "ask";
+      input.id = "ask";
+      input.type = "text";
+      input.autocomplete = "off";
+      input.placeholder = "Type to the flame and press Enter";
+      input.setAttribute("aria-label", "Message the flame");
+      input.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          const v = input.value;
+          input.value = "";
+          ask(v);
+        }
+      });
+      input.addEventListener("pointerdown", (e) => e.stopPropagation());
+      document.body.appendChild(input);
+      input.focus();
+    }
+
+    // tap: stop speaking / stop listening / start listening. Hold 0.6 s: cycle states.
+    function tap() {
+      if (orb.state === "speaking") {
+        if (tts) tts.stop().catch(() => {});
+        stopSpeakingLevel();
+        return;
+      }
+      if (runtime && !orb.agent.ready) {
+        orb.say("Waking up…", 1500);
+        return;
+      }
+      if (!sample) {
+        orb.say(
+          runtime
+            ? "Thinking is not available here \u00b7 keys 1-4 preview states"
+            : "Open this in Claude to talk to it \u00b7 keys 1-4 preview states",
+          4200
+        );
+        return;
+      }
+      if (!dict) {
+        showTyped();
+        orb.setState("listening");
+        return;
+      }
+      if (dict.active()) {
+        dict.stop().catch(() => {});
+        return;
+      }
+      heard = "";
+      orb.setState("listening");
+      orb.say("Listening\u2026", 0);
+      dict.start().catch((e) => {
+        // called straight from the tap
+        orb.setState("idle");
+        if (e && e.code === "not_granted") {
+          dict = null;
+          showTyped();
+          orb.say("Mic is off for this page \u00b7 type instead", 4000);
+        } else if (e && e.code === "dismissed")
+          orb.say("Tap again when you want to talk", 3000);
+        else if (e && e.code !== "stopped") {
+          orb.say("Dictation is unavailable \u00b7 type instead", 4000);
+          dict = null;
+          showTyped();
+        }
+      });
+    }
+
+    let downAt = 0,
+      held = null;
+    const cv = document.getElementById("c");
+    cv.addEventListener("pointerdown", () => {
+      if (q.has("demo")) return;
+      downAt = performance.now();
+      held = setTimeout(() => {
+        held = null;
+        downAt = -1;
+        const n = ORDER[(ORDER.indexOf(orb.state) + 1) % 4];
+        orb.setState(n);
+        orb.say(n[0].toUpperCase() + n.slice(1), 1500);
+      }, 600);
+    });
+    cv.addEventListener("pointerup", () => {
+      if (q.has("demo")) return;
+      clearTimeout(held);
+      if (held !== null && downAt > 0 && performance.now() - downAt < 600)
+        tap();
+      held = null;
+    });
+    addEventListener("keydown", (e) => {
+      if (e.target && e.target.tagName === "INPUT") return;
+      if (e.key >= "1" && e.key <= "4") orb.setState(ORDER[+e.key - 1]);
+      else if (e.code === "Space") {
+        e.preventDefault();
+        tap();
+      }
+    });
+
+    orb.say(
+      runtime
+        ? "Tap to talk \u00b7 hold to change state"
+        : "Tap to wake \u00b7 hold to change state",
+      4500
+    );
+    if (!runtime) return;
+    (async () => {
+      [dict, sample, tts] = await Promise.all(
+        [
+          window.claude.use("dictation"),
+          window.claude.use("sample"),
+          window.claude.use("tts"),
+        ].map((p) => p.catch(() => null))
+      );
+      orb.agent = {
+        ready: true,
+        dictation: !!dict,
+        sample: !!sample,
+        tts: !!tts,
+      };
+      if (dict) {
+        dict.onPartial(({ text }) => {
+          if (text) {
+            orb.say(heard + " " + text, 0);
+            orb.setLevel(0.55 + 0.35 * Math.random());
+          }
+        });
+        dict.onFinal(({ text }) => {
+          heard = (heard + text).trim();
+          orb.say(heard, 0);
+          orb.setLevel(0.8);
+        });
+        dict.onState(({ state, reason }) => {
+          if (state === "idle") {
+            const h = heard;
+            heard = "";
+            if (h) ask(h);
+            else if (orb.state === "listening") {
+              orb.setState("idle");
+              if (reason !== "stopped") orb.say("Tap to talk", 2000);
+            }
+          }
+        });
+      }
+      if (tts) {
+        tts.onPosition(({ ms }) => {
+          posMs = ms;
+        });
+        tts.onState(({ state }) => {
+          if (state === "idle" && orb.state === "speaking") stopSpeakingLevel();
+        });
+      }
+    })();
+  })();
+</script>
