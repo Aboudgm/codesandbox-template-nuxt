@@ -158,6 +158,9 @@
     float amp = uFold * (1.0 + ch*uDisp);
     P += d * fold * amp * mix(1.0, 0.55, smoothstep(0.4, 1.0, d.y));
     P += d * snoise(q*7.5 + 11.0) * wrinkle;          // thinking: fine wrinkles
+    // the voice's pitch shapes it: high = tall and thin, low = squat and wide
+    P.y  *= 1.0 + (uPitch - 0.5)*0.8*uLevel;
+    P.xz *= 1.0 + (0.5 - uPitch)*0.55*uLevel;
     return P;
   }
 

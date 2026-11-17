@@ -217,6 +217,10 @@ export class LightRoom {
       heatScale: 1,
       hideBulb: false,
       coreScale: 1,
+      // 1 = alive, 0 = still: scales air noise, flutter, camera sway
+      motion: 1,
+      // false: when the pointer rests, the light stays where it was left
+      autopilot: true,
       overlay: null,
     }
     this.tune = {
@@ -620,6 +624,14 @@ export class LightRoom {
     s.lastPointerAt = s.t
   }
 
+  // the pointer left: the light drifts home and rests there
+  releasePointer() {
+    const s = this.state
+    s.pointerTarget = null
+    s.lastPointerAt = -1e9
+    s.restTarget = [0, 0.3, 0.5]
+  }
+
   // scroll = rack focus through the cloud (offset from the bulb)
   // a gust from the light plus a refracting ring (0..1)
   pulse(amount) {
@@ -707,7 +719,7 @@ export class LightRoom {
     p.f('uHeat', tn.heat * s.intro * this.ext.heatScale)
     p.f('uSwirl', tn.swirl * this.ext.swirlScale)
     p.f('uVort', tn.vort)
-    p.f('uNoise', tn.noise)
+    p.f('uNoise', tn.noise * this.ext.motion)
     p.f('uDamp', tn.airDamp)
     this.fullscreen()
     A.cur = 1 - A.cur
@@ -771,10 +783,11 @@ export class LightRoom {
     const py = s.pointerTarget ? s.pointerTarget[1] : 0
     s.parX = damp(s.parX, px, 1.6, dt)
     s.parY = damp(s.parY, py, 1.6, dt)
-    const sway = Math.sin(s.t * 0.21) * 0.12
+    const mo = this.ext.motion
+    const sway = Math.sin(s.t * 0.21) * 0.12 * mo
     const eye = [
       s.parX * 0.55 + sway,
-      0.38 + s.parY * 0.18 + Math.sin(s.t * 0.17) * 0.04,
+      0.38 + s.parY * 0.18 + Math.sin(s.t * 0.17) * 0.04 * mo,
       7.4,
     ]
     const target = [s.parX * -0.15, -0.15, 0]
@@ -788,7 +801,9 @@ export class LightRoom {
     // ---- light motion (pointer driven, drifts on its own when idle)
     const idle = s.t - s.lastPointerAt > 3.5 || !s.pointerTarget
     let tgt
-    if (idle) {
+    if (idle && !this.ext.autopilot) {
+      tgt = (s.restTarget || [0, 0.35, 0.5]).slice()
+    } else if (idle) {
       const k = s.t
       tgt = [
         2.3 * Math.sin(k * 0.31) + 0.6 * Math.sin(k * 0.83),
@@ -808,6 +823,13 @@ export class LightRoom {
     }
     tgt[0] = clamp(tgt[0], -4.6, 4.6)
     tgt[1] = clamp(tgt[1], FLOOR_Y + 0.4, 3.4)
+    // where the light rests when the pointer does: never parked at the frame edge
+    if (!idle)
+      s.restTarget = [
+        clamp(tgt[0], -2.6, 2.6),
+        clamp(tgt[1], FLOOR_Y + 0.7, 2.0),
+        tgt[2],
+      ]
     const lk = 1 - Math.exp(-dt * 5.2)
     s.lightPrev = s.light.slice()
     // spring toward the target, but the light has weight: capped speed
@@ -868,6 +890,7 @@ export class LightRoom {
       p.f('uCycZ', CYC_Z)
       p.f('uCycR', CYC_R)
       p.f('uGrav', tn.grav)
+      p.f('uJit', 0.55 * (0.2 + 0.8 * this.ext.motion))
       this.bind2D(2, this.air.vel[this.air.cur].tex)
       p.i('uAir', 2)
       gl.viewport(0, 0, T, T)

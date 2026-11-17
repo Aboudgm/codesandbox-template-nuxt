@@ -292,7 +292,6 @@
     rec.onend = () => {
       const h = (heard + " " + interim).trim();
       rec = null;
-      flame.stopMic();
       if (h) ask(h);
       else if (flame.state === "listening") flame.setState("idle");
     };
@@ -302,7 +301,7 @@
       rec = null;
       return false;
     }
-    flame.useMic().catch(() => {}); // only for the flame's level; never recorded
+    voiceOn(true); // the flame keeps following your voice
     flame.setState("listening");
     say("Listening…", 0);
     return true;
@@ -417,8 +416,19 @@
     room.setPointer(x, y);
     flame.setPointer(x, y, isDown ? 1 : 0.5);
   });
+  // the mic: analysed only (loudness, pitch, bands), never recorded or sent.
+  // It starts on the first touch, because browsers need a gesture for it.
+  let micWanted = true, micAsked = false;
+  function voiceOn(quiet) {
+    if (!micWanted) return;
+    flame
+      .useMic()
+      .then(() => { if (!quiet) say("The flame now follows your voice \u00b7 M to mute it", 3500); })
+      .catch(() => { if (!quiet) say("No mic here: the flame follows your pointer and its own voice", 3500); });
+  }
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
+    if (!micAsked) { micAsked = true; voiceOn(false); }
     isDown = true;
     const [x, y] = ndc(e);
     room.setPointer(x, y);
@@ -450,7 +460,10 @@
     holding = false;
   });
   canvas.addEventListener("pointerleave", () => {
-    if (!isDown) flame.setPointer(0, 0, 0);
+    if (!isDown) {
+      flame.setPointer(0, 0, 0);
+      room.releasePointer(); // the flame drifts home to the centre, then rests
+    }
   });
   canvas.addEventListener(
     "wheel",
@@ -469,6 +482,11 @@
       tap();
     } else if (e.key === "t" || e.key === "T")
       showInput(hasMind() ? "message" : "key");
+    else if (e.key === "m" || e.key === "M") {
+      micWanted = !micWanted;
+      if (micWanted) voiceOn(false);
+      else { flame.stopMic(); say("Mic off \u00b7 M to turn it back on", 2500); }
+    }
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) room.stop();
@@ -487,6 +505,8 @@
     setLevel: (v) => flame.setLevel(v),
     setPitch: (v) => flame.setPitch(v),
     useMic: () => flame.useMic(),
+    stopMic: () => flame.stopMic(),
+    get voice() { return { level: flame.level, pitch: flame.pitch, hz: flame.hz || 0, bass: flame.bass, treble: flame.treble || 0, motion: flame.motion }; },
     useOutputElement: (el) => flame.useOutputElement(el),
     useOutputStream: (s) => flame.useOutputStream(s),
     demo: (on) => flame.demo(on),

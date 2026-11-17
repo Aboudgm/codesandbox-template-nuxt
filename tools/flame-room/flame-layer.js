@@ -35,7 +35,7 @@ class FlameMeter {
   // analyse only; never connected to speakers
   constructor(ctx, node, pull) {
     this.an = ctx.createAnalyser();
-    this.an.fftSize = 1024;
+    this.an.fftSize = 2048;
     this.an.smoothingTimeConstant = 0.6;
     node.connect(this.an);
     this.node = node;
@@ -50,6 +50,27 @@ class FlameMeter {
     this.peak = 0.05;
     this.open = false;
     this.sr = ctx.sampleRate;
+    this.d = new Float32Array(this.an.fftSize >> 1); // decimated copy for pitch
+    this.fd = new Float32Array(this.an.frequencyBinCount); // dB spectrum
+    this.f0 = 0;
+  }
+  // fundamental frequency by normalised autocorrelation on a 2x-decimated
+  // window (voice range ~70-500 Hz). Returns Hz, or 0 when unvoiced.
+  pitchHz() {
+    const t = this.t, d = this.d, n = d.length, sr = this.sr / 2;
+    for (let i = 0; i < n; i++) d[i] = (t[2 * i] + t[2 * i + 1]) * 0.5;
+    const lo = Math.floor(sr / 500), hi = Math.min(n - 2, Math.ceil(sr / 70));
+    let e0 = 0;
+    for (let i = 0; i < n; i++) e0 += d[i] * d[i];
+    if (e0 < 1e-6) return 0;
+    let best = 0, bestLag = 0;
+    for (let lag = lo; lag <= hi; lag++) {
+      let c = 0, e1 = 0;
+      for (let i = 0; i + lag < n; i++) { c += d[i] * d[i + lag]; e1 += d[i + lag] * d[i + lag]; }
+      const r = c / Math.sqrt(e0 * e1 + 1e-12);
+      if (r > best) { best = r; bestLag = lag; }
+    }
+    return best > 0.55 && bestLag ? sr / bestLag : 0;
   }
   read(dt) {
     this.an.getFloatTimeDomainData(this.t);
@@ -62,21 +83,37 @@ class FlameMeter {
     // hysteresis gate
     else if (this.open && (x < 0.09 || rms < 0.002)) this.open = false;
     const level = this.open ? Math.pow(x, 0.8) : 0;
-    this.an.getByteFrequencyData(this.f);
+    // band energies from the linear power spectrum (dB bytes would flatten it)
+    this.an.getFloatFrequencyData(this.fd);
     let num = 0,
       den = 0,
-      low = 0;
+      low = 0,
+      mid = 0,
+      high = 0;
     const bw = this.sr / this.an.fftSize;
-    for (let i = 2; i < this.f.length; i++) {
-      const v = this.f[i];
-      num += i * bw * v;
-      den += v;
-      if (i * bw < 250) low += v;
+    for (let i = 2; i < this.fd.length; i++) {
+      const db = this.fd[i];
+      if (!(db > -140)) continue;
+      const pw = Math.pow(10, db / 10), hz = i * bw;
+      num += hz * pw;
+      den += pw;
+      if (hz < 250) low += pw;
+      else if (hz < 2000) mid += pw;
+      else if (hz < 8000) high += pw;
     }
+    // voice pitch: autocorrelation when voiced, else the spectral centroid
+    const hz = this.open ? this.pitchHz() : 0;
+    if (hz) this.f0 = hz;
+    const centroid = Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800));
+    const f0n = hz ? Math.min(1, Math.max(0, Math.log(hz / 80) / Math.log(400 / 80))) : null;
     return {
       level,
-      pitch: Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800)),
-      bass: den ? Math.min(1, (low / den) * 2.2) * level : 0,
+      voiced: !!hz,
+      hz,
+      pitch: f0n !== null ? f0n : centroid,
+      bass: den ? Math.min(1, (low / den) * 1.4) * level : 0,
+      mid: den ? Math.min(1, (mid / den) * 1.4) * level : 0,
+      treble: den ? Math.min(1, (high / den) * 6.0) * level : 0,
     };
   }
   close() {
@@ -328,6 +365,7 @@ class FlameLayer {
   }
   setPointer(x, y, strength) {
     this.ptr = [x, y, strength];
+    if (strength > 0) this.ptrAt = performance.now();
   }
   demo(on) {
     this.demoOn = !!on;
@@ -425,7 +463,8 @@ class FlameLayer {
     }
     let rawLevel = 0,
       rawPitch = this.pitch,
-      rawBass = 0;
+      rawBass = 0,
+      rawTreble = 0;
     if (now - this.manualAt < 150) rawLevel = this.manualLevel;
     else if (
       this.demoOn &&
@@ -443,11 +482,17 @@ class FlameLayer {
         rawLevel = FlameLayer.speechEnv(time) * 0.85;
         rawBass = rawLevel * 0.4;
       }
-    } else if (this.target === "listening" && this.mic) {
+    } else if (
+      (this.target === "listening" || this.target === "idle") &&
+      this.mic
+    ) {
+      // the mic drives idle and listening (never speaking: no self-echo)
       const m = this.mic.read(dt);
       rawLevel = m.level;
       rawPitch = m.pitch;
       rawBass = m.bass;
+      rawTreble = m.treble;
+      this.hz = m.hz;
     }
     if (this.manualPitch !== null) rawPitch = this.manualPitch;
     this.level = lerpTau(
@@ -457,6 +502,13 @@ class FlameLayer {
     );
     this.pitch = lerpTau(this.pitch, rawPitch, 0.25);
     this.bass = lerpTau(this.bass, rawBass, 0.18);
+    this.treble = lerpTau(this.treble || 0, rawTreble, 0.08);
+    // stillness: with no voice, no pointer and nothing to say, everything settles
+    const ptrRecent = now - (this.ptrAt || -1e9) < 1500 ? 1 : 0;
+    const alive = Math.min(1, Math.max(this.level * 1.6, this.wts[2] * 0.7 + this.wts[3], ptrRecent, this.demoOn ? 1 : 0));
+    const mTarget = 0.08 + 0.92 * alive;
+    this.motion = lerpTau(this.motion === undefined ? 1 : this.motion, mTarget, mTarget > (this.motion || 0) ? 0.35 : 2.2);
+    this.animT = (this.animT || 0) + dt * (0.12 + 0.88 * this.motion) * this.calm;
     this.STATES.forEach((s, i) => {
       this.wts[i] = lerpTau(this.wts[i], s === this.target ? 1 : 0, 0.35);
     });
@@ -471,7 +523,7 @@ class FlameLayer {
           0
         );
     }
-    this.flow += dt * (this.sm.flow + 0.3 * this.level) * this.calm;
+    this.flow += dt * (this.sm.flow * this.motion + 0.3 * this.level) * this.calm;
     this.twist = lerpTau(
       this.twist,
       this.sm.twist * (1 + 0.4 * Math.sin(time * 0.7)),
@@ -492,16 +544,28 @@ class FlameLayer {
       this.lastShock = time;
       this.room.pulse(0.18); // a phrase onset breathes on the dust
     }
+    // a bass hit (a low voice, a clap, a knock) pushes a gust through the room
+    // (onset = the fast follower jumps above a slow one: frame-rate independent)
+    this.bassSlow = lerpTau(this.bassSlow || 0, this.bass, 0.45);
+    if (this.bass - this.bassSlow > 0.15 && this.bass > 0.25 && time - (this.lastGust || -9) > 0.35) {
+      this.lastGust = time;
+      this.room.pulse(0.1 + 0.3 * this.bass);
+    }
     this.prevLevel = this.level;
-    this.rotY += dt * 0.09 * this.calm;
+    this.rotY += dt * 0.09 * this.calm * this.motion;
 
     // the flame IS the room's light
     const e = this.room.ext;
     const voice = this.level * (this.wts[1] * 0.3 + this.wts[3] * 0.45);
     e.lightScale = this.sm.light * (1 + voice) * Math.min(1, time / 2.5 + 0.2);
-    e.tint = this.sm.tint.map((x) => x * (1 + 0.15 * voice));
+    // high voice -> cooler, whiter light; low voice -> warmer
+    const pv = (this.pitch - 0.5) * Math.min(1, this.level * 1.5);
+    const shade = [1 - 0.12 * pv, 1, 1 + 0.16 * pv];
+    e.tint = this.sm.tint.map((x, j) => x * shade[j] * (1 + 0.15 * voice));
+    e.motion = this.motion;
+    e.autopilot = !!this.demoOn;
     e.holdBias = this.sm.hold * (1 + this.level);
-    e.swirlScale = this.sm.swirl + 0.6 * this.level;
+    e.swirlScale = (this.sm.swirl + 0.6 * this.level + 0.8 * this.bass) * (0.25 + 0.75 * this.motion);
     e.heatScale = 1 + 0.9 * this.wts[3] * this.level;
   }
 
@@ -558,7 +622,7 @@ class FlameLayer {
     gl.uniform2f(U.uRes, S, S);
     gl.uniform1f(U.uPx, 1);
     gl.uniform1f(U.uE, (((1 - decay) * S * S) / this.N) * 0.055);
-    gl.uniform1f(U.uTime, this.time * this.calm);
+    gl.uniform1f(U.uTime, this.animT);
     gl.uniform1f(U.uFlow, this.flow);
     gl.uniform1f(U.uTwist, this.twist);
     gl.uniform1f(U.uFold, sm.fold * (1 + 0.9 * this.level));
@@ -574,7 +638,7 @@ class FlameLayer {
     gl.uniform1f(U.uZoom, 1.85);
     gl.uniform1f(U.uBob, 0);
     gl.uniform1f(U.uRing, sm.ring);
-    gl.uniform1f(U.uArc, sm.arc);
+    gl.uniform1f(U.uArc, sm.arc * (1 + 2.5 * this.treble));
     gl.uniform1f(U.uLat, sm.lat);
     gl.uniform1f(U.uPulse, this.pulse);
     gl.uniform2f(U.uRot, 0.12, this.rotY);

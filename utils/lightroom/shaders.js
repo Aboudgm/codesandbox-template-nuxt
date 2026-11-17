@@ -259,6 +259,7 @@ uniform float uFloorY;
 uniform float uCycZ;
 uniform float uCycR;
 uniform float uGrav;
+uniform float uJit;
 
 vec3 jitter(vec3 p,float t){
   vec3 q=p*3.1+vec3(0.,t*.4,t*.2);
@@ -295,7 +296,7 @@ void main(){
   // release burst
   a+=n*uBurst*120./(.4+r)/pow(m,.5);
   // per-body flutter (small scale, the air does the big flow)
-  a+=jitter(p+rnd(i,5)*7.,uTime)*.55/pow(m,.7);
+  a+=jitter(p+rnd(i,5)*7.,uTime)*uJit/pow(m,.7);
 
   // air drag relative to the local wind: light bodies ride the flow
   vec3 air=gSample(uAir,gOf(p)).xyz;

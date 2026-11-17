@@ -292,6 +292,7 @@ uniform float uFloorY;
 uniform float uCycZ;
 uniform float uCycR;
 uniform float uGrav;
+uniform float uJit;
 
 vec3 jitter(vec3 p,float t){
   vec3 q=p*3.1+vec3(0.,t*.4,t*.2);
@@ -328,7 +329,7 @@ void main(){
   // release burst
   a+=n*uBurst*120./(.4+r)/pow(m,.5);
   // per-body flutter (small scale, the air does the big flow)
-  a+=jitter(p+rnd(i,5)*7.,uTime)*.55/pow(m,.7);
+  a+=jitter(p+rnd(i,5)*7.,uTime)*uJit/pow(m,.7);
 
   // air drag relative to the local wind: light bodies ride the flow
   vec3 air=gSample(uAir,gOf(p)).xyz;
@@ -1010,6 +1011,10 @@ class LightRoom {
       heatScale: 1,
       hideBulb: false,
       coreScale: 1,
+      // 1 = alive, 0 = still: scales air noise, flutter, camera sway
+      motion: 1,
+      // false: when the pointer rests, the light stays where it was left
+      autopilot: true,
       overlay: null,
     }
     this.tune = {
@@ -1413,6 +1418,14 @@ class LightRoom {
     s.lastPointerAt = s.t
   }
 
+  // the pointer left: the light drifts home and rests there
+  releasePointer() {
+    const s = this.state
+    s.pointerTarget = null
+    s.lastPointerAt = -1e9
+    s.restTarget = [0, 0.3, 0.5]
+  }
+
   // scroll = rack focus through the cloud (offset from the bulb)
   // a gust from the light plus a refracting ring (0..1)
   pulse(amount) {
@@ -1500,7 +1513,7 @@ class LightRoom {
     p.f('uHeat', tn.heat * s.intro * this.ext.heatScale)
     p.f('uSwirl', tn.swirl * this.ext.swirlScale)
     p.f('uVort', tn.vort)
-    p.f('uNoise', tn.noise)
+    p.f('uNoise', tn.noise * this.ext.motion)
     p.f('uDamp', tn.airDamp)
     this.fullscreen()
     A.cur = 1 - A.cur
@@ -1564,10 +1577,11 @@ class LightRoom {
     const py = s.pointerTarget ? s.pointerTarget[1] : 0
     s.parX = damp(s.parX, px, 1.6, dt)
     s.parY = damp(s.parY, py, 1.6, dt)
-    const sway = Math.sin(s.t * 0.21) * 0.12
+    const mo = this.ext.motion
+    const sway = Math.sin(s.t * 0.21) * 0.12 * mo
     const eye = [
       s.parX * 0.55 + sway,
-      0.38 + s.parY * 0.18 + Math.sin(s.t * 0.17) * 0.04,
+      0.38 + s.parY * 0.18 + Math.sin(s.t * 0.17) * 0.04 * mo,
       7.4,
     ]
     const target = [s.parX * -0.15, -0.15, 0]
@@ -1581,7 +1595,9 @@ class LightRoom {
     // ---- light motion (pointer driven, drifts on its own when idle)
     const idle = s.t - s.lastPointerAt > 3.5 || !s.pointerTarget
     let tgt
-    if (idle) {
+    if (idle && !this.ext.autopilot) {
+      tgt = (s.restTarget || [0, 0.35, 0.5]).slice()
+    } else if (idle) {
       const k = s.t
       tgt = [
         2.3 * Math.sin(k * 0.31) + 0.6 * Math.sin(k * 0.83),
@@ -1601,6 +1617,13 @@ class LightRoom {
     }
     tgt[0] = clamp(tgt[0], -4.6, 4.6)
     tgt[1] = clamp(tgt[1], FLOOR_Y + 0.4, 3.4)
+    // where the light rests when the pointer does: never parked at the frame edge
+    if (!idle)
+      s.restTarget = [
+        clamp(tgt[0], -2.6, 2.6),
+        clamp(tgt[1], FLOOR_Y + 0.7, 2.0),
+        tgt[2],
+      ]
     const lk = 1 - Math.exp(-dt * 5.2)
     s.lightPrev = s.light.slice()
     // spring toward the target, but the light has weight: capped speed
@@ -1661,6 +1684,7 @@ class LightRoom {
       p.f('uCycZ', CYC_Z)
       p.f('uCycR', CYC_R)
       p.f('uGrav', tn.grav)
+      p.f('uJit', 0.55 * (0.2 + 0.8 * this.ext.motion))
       this.bind2D(2, this.air.vel[this.air.cur].tex)
       p.i('uAir', 2)
       gl.viewport(0, 0, T, T)
@@ -1974,7 +1998,7 @@ class LightRoom {
 }
 
 // ======================= flame shaders ======================
-const FLAME_SPLAT_VS = "precision highp float;\n  attribute vec4 aSeed;\n  uniform vec2  uRes;\n  uniform float uPx, uTime, uFlow, uTwist, uFold, uDisp, uLevel, uPitch, uBass;\n  uniform float uListen, uThink, uSpeak, uBirth, uShock, uZoom, uBob, uE;\n  uniform float uRing, uArc, uLat, uPulse;\n  uniform vec2  uRot;\n  uniform vec3  uPtr;           // pointer ndc xy, strength z\n  uniform vec3  uIco[60];       // icosahedron edge endpoints (30 edges)\n  varying vec3  vCol;\n\n  vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }\n  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }\n  float snoise(vec3 v){\n    const vec2 C = vec2(1.0/6.0, 1.0/3.0);\n    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);\n    vec3 i = floor(v + dot(v, C.yyy));\n    vec3 x0 = v - i + dot(i, C.xxx);\n    vec3 g = step(x0.yzx, x0.xyz);\n    vec3 l = 1.0 - g;\n    vec3 i1 = min(g.xyz, l.zxy);\n    vec3 i2 = max(g.xyz, l.zxy);\n    vec3 x1 = x0 - i1 + C.xxx;\n    vec3 x2 = x0 - i2 + C.yyy;\n    vec3 x3 = x0 - 0.5;\n    i = mod289(i);\n    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));\n    vec3 ns = 0.142857142857 * D.wyz - D.xzx;\n    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);\n    vec4 x_ = floor(j * ns.z);\n    vec4 y_ = floor(j - 7.0 * x_);\n    vec4 x = x_ * ns.x + ns.yyyy;\n    vec4 y = y_ * ns.x + ns.yyyy;\n    vec4 h = 1.0 - abs(x) - abs(y);\n    vec4 b0 = vec4(x.xy, y.xy);\n    vec4 b1 = vec4(x.zw, y.zw);\n    vec4 s0 = floor(b0)*2.0 + 1.0;\n    vec4 s1 = floor(b1)*2.0 + 1.0;\n    vec4 sh = -step(h, vec4(0.0));\n    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;\n    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;\n    vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y);\n    vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);\n    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));\n    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;\n    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n    m = m*m;\n    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));\n  }\n  float hash1(float n){ return fract(sin(n)*43758.5453); }\n  vec2 rot2(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c*p.x - s*p.y, s*p.x + c*p.y); }\n  vec3 sph(float u, float v){ float th = u*6.2831853, ph = acos(2.0*v - 1.0); return vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th)); }\n\n  // the flame body: a teardrop membrane folded by rising noise. ch = -1,0,1 (R,G,B):\n  // each channel folds with a slightly different amplitude, so folds split into RGB fringes.\n  vec3 flame(vec3 d, float ch, float wrinkle){\n    float taper = mix(1.0, 0.26, smoothstep(-0.25, 1.0, d.y));\n    vec3 P = vec3(d.x*taper, d.y*1.22 + 0.18*smoothstep(0.35, 1.0, d.y), d.z*taper);\n    vec3 q = d*1.25 + vec3(0.0, -uFlow*1.3, uFlow*0.45);\n    float n1 = snoise(q);\n    float n2 = snoise(q*2.2 + vec3(7.1, -uFlow*0.7, 3.3));\n    float fold = sin((n1*3.1 + n2*1.25) * (1.0 + 0.10*uThink)) ;\n    float amp = uFold * (1.0 + ch*uDisp);\n    P += d * fold * amp * mix(1.0, 0.55, smoothstep(0.4, 1.0, d.y));\n    P += d * snoise(q*7.5 + 11.0) * wrinkle;          // thinking: fine wrinkles\n    return P;\n  }\n\n  void main(){\n    float w  = aSeed.w;\n    float fr = step(fract(aSeed.x*13.7 + aSeed.z*5.1), 0.42);         // 42% of splats carry fringe colour\n  float ch = fr * (floor(fract(aSeed.x*7.31 + aSeed.y*3.17)*2.0)*2.0 - 1.0);\n    vec3  P  = vec3(0.0);\n    float e  = 0.0;\n\n    if (w < 0.50) {                                   // main membrane\n      vec3 d = sph(aSeed.x, aSeed.y);\n      P = flame(d, ch, 0.025*uThink);\n      e = 1.0;\n    } else if (w < 0.62) {                            // inner knot (trefoil tube) with its own folds\n      float t = aSeed.x*6.2831853, a = aSeed.y*6.2831853;\n      vec3 c  = vec3(sin(t) + 2.0*sin(2.0*t), cos(t) - 2.0*cos(2.0*t), -sin(3.0*t));\n      vec3 tg = normalize(vec3(cos(t) + 4.0*cos(2.0*t), -sin(t) + 4.0*sin(2.0*t), -3.0*cos(3.0*t)));\n      vec3 n1 = normalize(cross(tg, vec3(0.0, 0.0, 1.0)));\n      vec3 n2 = cross(tg, n1);\n      float r = 0.16 + 0.09*snoise(c*0.8 + vec3(0.0, uFlow, 0.0))*(1.0 + ch*uDisp) + 0.05*uLevel;\n      P = c*0.15 + (cos(a)*n1 + sin(a)*n2)*r*0.42;\n      P.xz = rot2(P.xz, uTime*0.35);\n      P.xy = rot2(P.xy, 0.6);\n      P.y -= 0.12;\n      e = 0.6;\n    } else if (w < 0.74) {                            // outer shell: an almost invisible veil\n      vec3 d = sph(aSeed.x, aSeed.y);\n      float n = snoise(d*0.9 + vec3(uFlow*0.25, 0.0, -uFlow*0.2));\n      P = d*(1.72 + 0.20*sin(n*3.0)*(1.0 + ch*uDisp*1.5));\n      P.y *= 1.08;\n      e = 0.35;\n    } else if (w < 0.79) {                            // stalk: thin vertical spikes, above and below\n      float s = aSeed.x;\n      float up = step(0.62, aSeed.y);\n      float wob = 0.03*sin(s*9.0 + uTime*1.7)*(1.0 + uLevel);\n      vec2 j = (vec2(aSeed.z, fract(aSeed.z*13.7)) - 0.5) * mix(0.016, 0.008, up);\n      P = mix(vec3(j.x + wob, -1.08 - s*1.9, j.y), vec3(j.x - wob*0.6, 1.42 + s*s*1.45, j.y), up);\n      e = mix(0.75*(1.0 - s), 1.05*(1.0 - s)*(1.0 - s), up) * (0.6 + 0.6*uLevel + 0.5*uSpeak);\n    } else if (w < 0.87) {                            // wisps: smoke curling off the tip\n      float s = fract(aSeed.z + uFlow*0.42);\n      vec3 b = vec3((aSeed.x - 0.5)*0.12, 1.2, (aSeed.y - 0.5)*0.12);\n      vec3 q = b*2.0 + vec3(0.0, s*2.5 - uFlow, 0.0);\n      vec3 off = vec3(snoise(q), 0.0, snoise(q + 31.0))*0.55*s*s;\n      P = b + vec3(0.0, s*1.65, 0.0) + off;\n      e = (1.0 - s)*(1.0 - s)*0.55*(0.4 + uLevel + 0.4*uSpeak);\n    } else if (w < 0.915) {                           // gyro rings\n      float k = floor(aSeed.z*3.0);\n      float a = aSeed.x*6.2831853;\n      float R = 1.38 + 0.13*k + 0.06*uLevel;\n      float spd = (0.28 + 0.17*k)*(1.0 + 3.2*uThink + 1.2*uLevel);\n      vec3 rp = vec3(cos(a)*R, (aSeed.y - 0.5)*0.012, sin(a)*R);\n      rp.yz = rot2(rp.yz, 0.5 + 1.05*k + 0.25*sin(uTime*0.21 + k));\n      rp.xy = rot2(rp.xy, -0.4 + 0.9*k + uTime*spd*0.3);\n      rp.xz = rot2(rp.xz, uTime*spd*(k == 1.0 ? -1.0 : 1.0));\n      P = rp;\n      float gate = pow(0.5 + 0.5*sin(a*2.0 - uTime*spd*3.0 + k*2.1), 6.0 + 14.0*uThink);\n      e = 1.5 * uRing * (0.18 + gate) * (1.0 + 1.5*uThink);\n    } else if (w < 0.955) {                           // plasma arcs between points on the body (or to the finger)\n      float j = floor(aSeed.z*5.0);\n      float ep = floor(uTime*(1.4 + 0.5*j) + j*7.0);\n      vec3 A = normalize(vec3(hash1(ep + j*3.1) - 0.5, hash1(ep*1.7 + j) - 0.3, hash1(ep*2.3 + j*5.0) - 0.5))*0.62;\n      vec3 B = normalize(vec3(hash1(ep*3.1 + j) - 0.5, hash1(ep*0.7 + j*2.0) - 0.4, hash1(ep*5.3 + j) - 0.5))*1.35;\n      vec3 F = vec3(uPtr.xy*vec2(uRes.x/min(uRes.x, uRes.y), uRes.y/min(uRes.x, uRes.y))*2.0, 0.3);\n      B = mix(B, F, step(0.5, uPtr.z)*step(j, 2.0));\n      float s = aSeed.x;\n      vec3 M = (A + B)*0.5 + normalize(A + B + 1e-4)*0.45;\n      P = mix(mix(A, M, s), mix(M, B, s), s);\n      float jag = sin(3.1415927*s);\n      P += vec3(snoise(vec3(s*14.0, uTime*9.0, j)), snoise(vec3(s*14.0, j, uTime*9.0)), snoise(vec3(j, s*14.0, uTime*9.0)))*0.07*jag;\n      float flick = step(0.32, hash1(floor(uTime*13.0) + j*17.0));\n      e = 3.2 * uArc * flick * (0.5 + 0.5*jag) * (0.35 + uLevel + uThink*0.5 + 0.6*step(0.5, uPtr.z));\n    } else {                                          // icosahedron energy lattice\n      float k = floor(aSeed.z*30.0);\n      vec3 A = vec3(0.0), B = vec3(0.0);\n      for (int i = 0; i < 30; i++) { if (float(i) == k) { A = uIco[i*2]; B = uIco[i*2 + 1]; } }\n      float s = aSeed.x;\n      P = mix(A, B, s)*0.62*(1.0 + 0.04*sin(uTime*1.1));\n      P.xz = rot2(P.xz, uTime*0.12);\n      P.xy = rot2(P.xy, 0.35 + uTime*0.05);\n      float pulse = pow(fract(s - uTime*1.3 + hash1(k)), 24.0);\n      e = 0.9 * uLat * (0.22 + 3.0*pulse*(0.25 + uThink + 0.4*uPulse));\n    }\n\n    // thinking: the body twists on itself in a helix\n    P.xz = rot2(P.xz, uTwist*P.y*1.3);\n    // breath + voice\n    P *= 1.0 + 0.05*uLevel + 0.03*uBass + 0.012*sin(uTime*1.3);\n    // ripple from a touch / phrase onset\n    float rr = length(P);\n    float rx = (rr - uShock*2.4)/0.14;\n    float ring = uShock > 0.0 ? exp(-rx*rx)*(1.0 - uShock) : 0.0;\n    P += P/max(rr, 1e-3)*ring*0.2;\n    e *= 1.0 + ring*1.5;\n    // birth: falls in from far away and ignites\n    float bi = 1.0 - uBirth;\n    P *= 1.0 + 2.4*bi*bi*bi;\n    e *= smoothstep(0.0, 1.0, uBirth);\n\n    // orbit\n    P.xz = rot2(P.xz, uRot.y);\n    P.yz = rot2(P.yz, uRot.x);\n    // it floats\n    P.y += uBob;\n\n    float sc = uZoom / (3.9 - P.z);\n    vec2 xy = P.xy*sc;\n    float S = min(uRes.x, uRes.y);\n    vec2 pxy = uPtr.xy*uRes/S;\n    vec2 dd = xy - pxy; float d2 = dot(dd, dd);\n    xy += dd/sqrt(d2 + 1e-4)*uPtr.z*0.10*exp(-d2/0.04);       // the finger parts the light\n    e *= 1.0 + 1.4*uPtr.z*exp(-d2/0.03);\n    gl_Position = vec4(xy*vec2(S/uRes.x, S/uRes.y) + vec2(0.0, 0.06), 0.0, 1.0);\n    gl_PointSize = uPx;\n    float depth = 0.6 + 0.4*smoothstep(-1.2, 1.2, P.z);\n    // white-hot body; fringe splats are warm (yellow-red) on one side of a fold, cool on the other\n  vec3 chc = fr < 0.5 ? vec3(1.0) : (ch < 0.0 ? vec3(1.0, 0.62, 0.1)*1.45 : vec3(0.25, 0.5, 1.0)*1.7);\n    vCol = chc * e * uE * depth * (sc*sc*4.0);\n  }"
+const FLAME_SPLAT_VS = "precision highp float;\n  attribute vec4 aSeed;\n  uniform vec2  uRes;\n  uniform float uPx, uTime, uFlow, uTwist, uFold, uDisp, uLevel, uPitch, uBass;\n  uniform float uListen, uThink, uSpeak, uBirth, uShock, uZoom, uBob, uE;\n  uniform float uRing, uArc, uLat, uPulse;\n  uniform vec2  uRot;\n  uniform vec3  uPtr;           // pointer ndc xy, strength z\n  uniform vec3  uIco[60];       // icosahedron edge endpoints (30 edges)\n  varying vec3  vCol;\n\n  vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }\n  vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }\n  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }\n  float snoise(vec3 v){\n    const vec2 C = vec2(1.0/6.0, 1.0/3.0);\n    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);\n    vec3 i = floor(v + dot(v, C.yyy));\n    vec3 x0 = v - i + dot(i, C.xxx);\n    vec3 g = step(x0.yzx, x0.xyz);\n    vec3 l = 1.0 - g;\n    vec3 i1 = min(g.xyz, l.zxy);\n    vec3 i2 = max(g.xyz, l.zxy);\n    vec3 x1 = x0 - i1 + C.xxx;\n    vec3 x2 = x0 - i2 + C.yyy;\n    vec3 x3 = x0 - 0.5;\n    i = mod289(i);\n    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));\n    vec3 ns = 0.142857142857 * D.wyz - D.xzx;\n    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);\n    vec4 x_ = floor(j * ns.z);\n    vec4 y_ = floor(j - 7.0 * x_);\n    vec4 x = x_ * ns.x + ns.yyyy;\n    vec4 y = y_ * ns.x + ns.yyyy;\n    vec4 h = 1.0 - abs(x) - abs(y);\n    vec4 b0 = vec4(x.xy, y.xy);\n    vec4 b1 = vec4(x.zw, y.zw);\n    vec4 s0 = floor(b0)*2.0 + 1.0;\n    vec4 s1 = floor(b1)*2.0 + 1.0;\n    vec4 sh = -step(h, vec4(0.0));\n    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;\n    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;\n    vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y);\n    vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);\n    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));\n    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;\n    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n    m = m*m;\n    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));\n  }\n  float hash1(float n){ return fract(sin(n)*43758.5453); }\n  vec2 rot2(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c*p.x - s*p.y, s*p.x + c*p.y); }\n  vec3 sph(float u, float v){ float th = u*6.2831853, ph = acos(2.0*v - 1.0); return vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th)); }\n\n  // the flame body: a teardrop membrane folded by rising noise. ch = -1,0,1 (R,G,B):\n  // each channel folds with a slightly different amplitude, so folds split into RGB fringes.\n  vec3 flame(vec3 d, float ch, float wrinkle){\n    float taper = mix(1.0, 0.26, smoothstep(-0.25, 1.0, d.y));\n    vec3 P = vec3(d.x*taper, d.y*1.22 + 0.18*smoothstep(0.35, 1.0, d.y), d.z*taper);\n    vec3 q = d*1.25 + vec3(0.0, -uFlow*1.3, uFlow*0.45);\n    float n1 = snoise(q);\n    float n2 = snoise(q*2.2 + vec3(7.1, -uFlow*0.7, 3.3));\n    float fold = sin((n1*3.1 + n2*1.25) * (1.0 + 0.10*uThink)) ;\n    float amp = uFold * (1.0 + ch*uDisp);\n    P += d * fold * amp * mix(1.0, 0.55, smoothstep(0.4, 1.0, d.y));\n    P += d * snoise(q*7.5 + 11.0) * wrinkle;          // thinking: fine wrinkles\n    // the voice's pitch shapes it: high = tall and thin, low = squat and wide\n    P.y  *= 1.0 + (uPitch - 0.5)*0.8*uLevel;\n    P.xz *= 1.0 + (0.5 - uPitch)*0.55*uLevel;\n    return P;\n  }\n\n  void main(){\n    float w  = aSeed.w;\n    float fr = step(fract(aSeed.x*13.7 + aSeed.z*5.1), 0.42);         // 42% of splats carry fringe colour\n  float ch = fr * (floor(fract(aSeed.x*7.31 + aSeed.y*3.17)*2.0)*2.0 - 1.0);\n    vec3  P  = vec3(0.0);\n    float e  = 0.0;\n\n    if (w < 0.50) {                                   // main membrane\n      vec3 d = sph(aSeed.x, aSeed.y);\n      P = flame(d, ch, 0.025*uThink);\n      e = 1.0;\n    } else if (w < 0.62) {                            // inner knot (trefoil tube) with its own folds\n      float t = aSeed.x*6.2831853, a = aSeed.y*6.2831853;\n      vec3 c  = vec3(sin(t) + 2.0*sin(2.0*t), cos(t) - 2.0*cos(2.0*t), -sin(3.0*t));\n      vec3 tg = normalize(vec3(cos(t) + 4.0*cos(2.0*t), -sin(t) + 4.0*sin(2.0*t), -3.0*cos(3.0*t)));\n      vec3 n1 = normalize(cross(tg, vec3(0.0, 0.0, 1.0)));\n      vec3 n2 = cross(tg, n1);\n      float r = 0.16 + 0.09*snoise(c*0.8 + vec3(0.0, uFlow, 0.0))*(1.0 + ch*uDisp) + 0.05*uLevel;\n      P = c*0.15 + (cos(a)*n1 + sin(a)*n2)*r*0.42;\n      P.xz = rot2(P.xz, uTime*0.35);\n      P.xy = rot2(P.xy, 0.6);\n      P.y -= 0.12;\n      e = 0.6;\n    } else if (w < 0.74) {                            // outer shell: an almost invisible veil\n      vec3 d = sph(aSeed.x, aSeed.y);\n      float n = snoise(d*0.9 + vec3(uFlow*0.25, 0.0, -uFlow*0.2));\n      P = d*(1.72 + 0.20*sin(n*3.0)*(1.0 + ch*uDisp*1.5));\n      P.y *= 1.08;\n      e = 0.35;\n    } else if (w < 0.79) {                            // stalk: thin vertical spikes, above and below\n      float s = aSeed.x;\n      float up = step(0.62, aSeed.y);\n      float wob = 0.03*sin(s*9.0 + uTime*1.7)*(1.0 + uLevel);\n      vec2 j = (vec2(aSeed.z, fract(aSeed.z*13.7)) - 0.5) * mix(0.016, 0.008, up);\n      P = mix(vec3(j.x + wob, -1.08 - s*1.9, j.y), vec3(j.x - wob*0.6, 1.42 + s*s*1.45, j.y), up);\n      e = mix(0.75*(1.0 - s), 1.05*(1.0 - s)*(1.0 - s), up) * (0.6 + 0.6*uLevel + 0.5*uSpeak);\n    } else if (w < 0.87) {                            // wisps: smoke curling off the tip\n      float s = fract(aSeed.z + uFlow*0.42);\n      vec3 b = vec3((aSeed.x - 0.5)*0.12, 1.2, (aSeed.y - 0.5)*0.12);\n      vec3 q = b*2.0 + vec3(0.0, s*2.5 - uFlow, 0.0);\n      vec3 off = vec3(snoise(q), 0.0, snoise(q + 31.0))*0.55*s*s;\n      P = b + vec3(0.0, s*1.65, 0.0) + off;\n      e = (1.0 - s)*(1.0 - s)*0.55*(0.4 + uLevel + 0.4*uSpeak);\n    } else if (w < 0.915) {                           // gyro rings\n      float k = floor(aSeed.z*3.0);\n      float a = aSeed.x*6.2831853;\n      float R = 1.38 + 0.13*k + 0.06*uLevel;\n      float spd = (0.28 + 0.17*k)*(1.0 + 3.2*uThink + 1.2*uLevel);\n      vec3 rp = vec3(cos(a)*R, (aSeed.y - 0.5)*0.012, sin(a)*R);\n      rp.yz = rot2(rp.yz, 0.5 + 1.05*k + 0.25*sin(uTime*0.21 + k));\n      rp.xy = rot2(rp.xy, -0.4 + 0.9*k + uTime*spd*0.3);\n      rp.xz = rot2(rp.xz, uTime*spd*(k == 1.0 ? -1.0 : 1.0));\n      P = rp;\n      float gate = pow(0.5 + 0.5*sin(a*2.0 - uTime*spd*3.0 + k*2.1), 6.0 + 14.0*uThink);\n      e = 1.5 * uRing * (0.18 + gate) * (1.0 + 1.5*uThink);\n    } else if (w < 0.955) {                           // plasma arcs between points on the body (or to the finger)\n      float j = floor(aSeed.z*5.0);\n      float ep = floor(uTime*(1.4 + 0.5*j) + j*7.0);\n      vec3 A = normalize(vec3(hash1(ep + j*3.1) - 0.5, hash1(ep*1.7 + j) - 0.3, hash1(ep*2.3 + j*5.0) - 0.5))*0.62;\n      vec3 B = normalize(vec3(hash1(ep*3.1 + j) - 0.5, hash1(ep*0.7 + j*2.0) - 0.4, hash1(ep*5.3 + j) - 0.5))*1.35;\n      vec3 F = vec3(uPtr.xy*vec2(uRes.x/min(uRes.x, uRes.y), uRes.y/min(uRes.x, uRes.y))*2.0, 0.3);\n      B = mix(B, F, step(0.5, uPtr.z)*step(j, 2.0));\n      float s = aSeed.x;\n      vec3 M = (A + B)*0.5 + normalize(A + B + 1e-4)*0.45;\n      P = mix(mix(A, M, s), mix(M, B, s), s);\n      float jag = sin(3.1415927*s);\n      P += vec3(snoise(vec3(s*14.0, uTime*9.0, j)), snoise(vec3(s*14.0, j, uTime*9.0)), snoise(vec3(j, s*14.0, uTime*9.0)))*0.07*jag;\n      float flick = step(0.32, hash1(floor(uTime*13.0) + j*17.0));\n      e = 3.2 * uArc * flick * (0.5 + 0.5*jag) * (0.35 + uLevel + uThink*0.5 + 0.6*step(0.5, uPtr.z));\n    } else {                                          // icosahedron energy lattice\n      float k = floor(aSeed.z*30.0);\n      vec3 A = vec3(0.0), B = vec3(0.0);\n      for (int i = 0; i < 30; i++) { if (float(i) == k) { A = uIco[i*2]; B = uIco[i*2 + 1]; } }\n      float s = aSeed.x;\n      P = mix(A, B, s)*0.62*(1.0 + 0.04*sin(uTime*1.1));\n      P.xz = rot2(P.xz, uTime*0.12);\n      P.xy = rot2(P.xy, 0.35 + uTime*0.05);\n      float pulse = pow(fract(s - uTime*1.3 + hash1(k)), 24.0);\n      e = 0.9 * uLat * (0.22 + 3.0*pulse*(0.25 + uThink + 0.4*uPulse));\n    }\n\n    // thinking: the body twists on itself in a helix\n    P.xz = rot2(P.xz, uTwist*P.y*1.3);\n    // breath + voice\n    P *= 1.0 + 0.05*uLevel + 0.03*uBass + 0.012*sin(uTime*1.3);\n    // ripple from a touch / phrase onset\n    float rr = length(P);\n    float rx = (rr - uShock*2.4)/0.14;\n    float ring = uShock > 0.0 ? exp(-rx*rx)*(1.0 - uShock) : 0.0;\n    P += P/max(rr, 1e-3)*ring*0.2;\n    e *= 1.0 + ring*1.5;\n    // birth: falls in from far away and ignites\n    float bi = 1.0 - uBirth;\n    P *= 1.0 + 2.4*bi*bi*bi;\n    e *= smoothstep(0.0, 1.0, uBirth);\n\n    // orbit\n    P.xz = rot2(P.xz, uRot.y);\n    P.yz = rot2(P.yz, uRot.x);\n    // it floats\n    P.y += uBob;\n\n    float sc = uZoom / (3.9 - P.z);\n    vec2 xy = P.xy*sc;\n    float S = min(uRes.x, uRes.y);\n    vec2 pxy = uPtr.xy*uRes/S;\n    vec2 dd = xy - pxy; float d2 = dot(dd, dd);\n    xy += dd/sqrt(d2 + 1e-4)*uPtr.z*0.10*exp(-d2/0.04);       // the finger parts the light\n    e *= 1.0 + 1.4*uPtr.z*exp(-d2/0.03);\n    gl_Position = vec4(xy*vec2(S/uRes.x, S/uRes.y) + vec2(0.0, 0.06), 0.0, 1.0);\n    gl_PointSize = uPx;\n    float depth = 0.6 + 0.4*smoothstep(-1.2, 1.2, P.z);\n    // white-hot body; fringe splats are warm (yellow-red) on one side of a fold, cool on the other\n  vec3 chc = fr < 0.5 ? vec3(1.0) : (ch < 0.0 ? vec3(1.0, 0.62, 0.1)*1.45 : vec3(0.25, 0.5, 1.0)*1.7);\n    vCol = chc * e * uE * depth * (sc*sc*4.0);\n  }"
 const FLAME_SPLAT_FS = "precision highp float;\n  varying vec3 vCol;\n  void main(){ gl_FragColor = vec4(vCol, 1.0); }"
 const FLAME_QUAD_VS = "attribute vec2 a; varying vec2 vUv; void main(){ vUv = a*0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }"
 const FLAME_DECAY_FS = "precision highp float;\n  uniform sampler2D uTex; uniform float uDecay, uFloor; varying vec2 vUv;\n  void main(){\n    vec3 c = texture2D(uTex, vUv).rgb;\n    c = max(c * uDecay - uFloor, 0.0);              // temporal average; the floor stops 8-bit ghosts\n    gl_FragColor = vec4(c, 1.0);\n  }"
@@ -2016,7 +2040,7 @@ class FlameMeter {
   // analyse only; never connected to speakers
   constructor(ctx, node, pull) {
     this.an = ctx.createAnalyser();
-    this.an.fftSize = 1024;
+    this.an.fftSize = 2048;
     this.an.smoothingTimeConstant = 0.6;
     node.connect(this.an);
     this.node = node;
@@ -2031,6 +2055,27 @@ class FlameMeter {
     this.peak = 0.05;
     this.open = false;
     this.sr = ctx.sampleRate;
+    this.d = new Float32Array(this.an.fftSize >> 1); // decimated copy for pitch
+    this.fd = new Float32Array(this.an.frequencyBinCount); // dB spectrum
+    this.f0 = 0;
+  }
+  // fundamental frequency by normalised autocorrelation on a 2x-decimated
+  // window (voice range ~70-500 Hz). Returns Hz, or 0 when unvoiced.
+  pitchHz() {
+    const t = this.t, d = this.d, n = d.length, sr = this.sr / 2;
+    for (let i = 0; i < n; i++) d[i] = (t[2 * i] + t[2 * i + 1]) * 0.5;
+    const lo = Math.floor(sr / 500), hi = Math.min(n - 2, Math.ceil(sr / 70));
+    let e0 = 0;
+    for (let i = 0; i < n; i++) e0 += d[i] * d[i];
+    if (e0 < 1e-6) return 0;
+    let best = 0, bestLag = 0;
+    for (let lag = lo; lag <= hi; lag++) {
+      let c = 0, e1 = 0;
+      for (let i = 0; i + lag < n; i++) { c += d[i] * d[i + lag]; e1 += d[i + lag] * d[i + lag]; }
+      const r = c / Math.sqrt(e0 * e1 + 1e-12);
+      if (r > best) { best = r; bestLag = lag; }
+    }
+    return best > 0.55 && bestLag ? sr / bestLag : 0;
   }
   read(dt) {
     this.an.getFloatTimeDomainData(this.t);
@@ -2043,21 +2088,37 @@ class FlameMeter {
     // hysteresis gate
     else if (this.open && (x < 0.09 || rms < 0.002)) this.open = false;
     const level = this.open ? Math.pow(x, 0.8) : 0;
-    this.an.getByteFrequencyData(this.f);
+    // band energies from the linear power spectrum (dB bytes would flatten it)
+    this.an.getFloatFrequencyData(this.fd);
     let num = 0,
       den = 0,
-      low = 0;
+      low = 0,
+      mid = 0,
+      high = 0;
     const bw = this.sr / this.an.fftSize;
-    for (let i = 2; i < this.f.length; i++) {
-      const v = this.f[i];
-      num += i * bw * v;
-      den += v;
-      if (i * bw < 250) low += v;
+    for (let i = 2; i < this.fd.length; i++) {
+      const db = this.fd[i];
+      if (!(db > -140)) continue;
+      const pw = Math.pow(10, db / 10), hz = i * bw;
+      num += hz * pw;
+      den += pw;
+      if (hz < 250) low += pw;
+      else if (hz < 2000) mid += pw;
+      else if (hz < 8000) high += pw;
     }
+    // voice pitch: autocorrelation when voiced, else the spectral centroid
+    const hz = this.open ? this.pitchHz() : 0;
+    if (hz) this.f0 = hz;
+    const centroid = Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800));
+    const f0n = hz ? Math.min(1, Math.max(0, Math.log(hz / 80) / Math.log(400 / 80))) : null;
     return {
       level,
-      pitch: Math.min(1, Math.max(0, ((den ? num / den : 0) - 200) / 2800)),
-      bass: den ? Math.min(1, (low / den) * 2.2) * level : 0,
+      voiced: !!hz,
+      hz,
+      pitch: f0n !== null ? f0n : centroid,
+      bass: den ? Math.min(1, (low / den) * 1.4) * level : 0,
+      mid: den ? Math.min(1, (mid / den) * 1.4) * level : 0,
+      treble: den ? Math.min(1, (high / den) * 6.0) * level : 0,
     };
   }
   close() {
@@ -2309,6 +2370,7 @@ class FlameLayer {
   }
   setPointer(x, y, strength) {
     this.ptr = [x, y, strength];
+    if (strength > 0) this.ptrAt = performance.now();
   }
   demo(on) {
     this.demoOn = !!on;
@@ -2406,7 +2468,8 @@ class FlameLayer {
     }
     let rawLevel = 0,
       rawPitch = this.pitch,
-      rawBass = 0;
+      rawBass = 0,
+      rawTreble = 0;
     if (now - this.manualAt < 150) rawLevel = this.manualLevel;
     else if (
       this.demoOn &&
@@ -2424,11 +2487,17 @@ class FlameLayer {
         rawLevel = FlameLayer.speechEnv(time) * 0.85;
         rawBass = rawLevel * 0.4;
       }
-    } else if (this.target === "listening" && this.mic) {
+    } else if (
+      (this.target === "listening" || this.target === "idle") &&
+      this.mic
+    ) {
+      // the mic drives idle and listening (never speaking: no self-echo)
       const m = this.mic.read(dt);
       rawLevel = m.level;
       rawPitch = m.pitch;
       rawBass = m.bass;
+      rawTreble = m.treble;
+      this.hz = m.hz;
     }
     if (this.manualPitch !== null) rawPitch = this.manualPitch;
     this.level = lerpTau(
@@ -2438,6 +2507,13 @@ class FlameLayer {
     );
     this.pitch = lerpTau(this.pitch, rawPitch, 0.25);
     this.bass = lerpTau(this.bass, rawBass, 0.18);
+    this.treble = lerpTau(this.treble || 0, rawTreble, 0.08);
+    // stillness: with no voice, no pointer and nothing to say, everything settles
+    const ptrRecent = now - (this.ptrAt || -1e9) < 1500 ? 1 : 0;
+    const alive = Math.min(1, Math.max(this.level * 1.6, this.wts[2] * 0.7 + this.wts[3], ptrRecent, this.demoOn ? 1 : 0));
+    const mTarget = 0.08 + 0.92 * alive;
+    this.motion = lerpTau(this.motion === undefined ? 1 : this.motion, mTarget, mTarget > (this.motion || 0) ? 0.35 : 2.2);
+    this.animT = (this.animT || 0) + dt * (0.12 + 0.88 * this.motion) * this.calm;
     this.STATES.forEach((s, i) => {
       this.wts[i] = lerpTau(this.wts[i], s === this.target ? 1 : 0, 0.35);
     });
@@ -2452,7 +2528,7 @@ class FlameLayer {
           0
         );
     }
-    this.flow += dt * (this.sm.flow + 0.3 * this.level) * this.calm;
+    this.flow += dt * (this.sm.flow * this.motion + 0.3 * this.level) * this.calm;
     this.twist = lerpTau(
       this.twist,
       this.sm.twist * (1 + 0.4 * Math.sin(time * 0.7)),
@@ -2473,16 +2549,28 @@ class FlameLayer {
       this.lastShock = time;
       this.room.pulse(0.18); // a phrase onset breathes on the dust
     }
+    // a bass hit (a low voice, a clap, a knock) pushes a gust through the room
+    // (onset = the fast follower jumps above a slow one: frame-rate independent)
+    this.bassSlow = lerpTau(this.bassSlow || 0, this.bass, 0.45);
+    if (this.bass - this.bassSlow > 0.15 && this.bass > 0.25 && time - (this.lastGust || -9) > 0.35) {
+      this.lastGust = time;
+      this.room.pulse(0.1 + 0.3 * this.bass);
+    }
     this.prevLevel = this.level;
-    this.rotY += dt * 0.09 * this.calm;
+    this.rotY += dt * 0.09 * this.calm * this.motion;
 
     // the flame IS the room's light
     const e = this.room.ext;
     const voice = this.level * (this.wts[1] * 0.3 + this.wts[3] * 0.45);
     e.lightScale = this.sm.light * (1 + voice) * Math.min(1, time / 2.5 + 0.2);
-    e.tint = this.sm.tint.map((x) => x * (1 + 0.15 * voice));
+    // high voice -> cooler, whiter light; low voice -> warmer
+    const pv = (this.pitch - 0.5) * Math.min(1, this.level * 1.5);
+    const shade = [1 - 0.12 * pv, 1, 1 + 0.16 * pv];
+    e.tint = this.sm.tint.map((x, j) => x * shade[j] * (1 + 0.15 * voice));
+    e.motion = this.motion;
+    e.autopilot = !!this.demoOn;
     e.holdBias = this.sm.hold * (1 + this.level);
-    e.swirlScale = this.sm.swirl + 0.6 * this.level;
+    e.swirlScale = (this.sm.swirl + 0.6 * this.level + 0.8 * this.bass) * (0.25 + 0.75 * this.motion);
     e.heatScale = 1 + 0.9 * this.wts[3] * this.level;
   }
 
@@ -2539,7 +2627,7 @@ class FlameLayer {
     gl.uniform2f(U.uRes, S, S);
     gl.uniform1f(U.uPx, 1);
     gl.uniform1f(U.uE, (((1 - decay) * S * S) / this.N) * 0.055);
-    gl.uniform1f(U.uTime, this.time * this.calm);
+    gl.uniform1f(U.uTime, this.animT);
     gl.uniform1f(U.uFlow, this.flow);
     gl.uniform1f(U.uTwist, this.twist);
     gl.uniform1f(U.uFold, sm.fold * (1 + 0.9 * this.level));
@@ -2555,7 +2643,7 @@ class FlameLayer {
     gl.uniform1f(U.uZoom, 1.85);
     gl.uniform1f(U.uBob, 0);
     gl.uniform1f(U.uRing, sm.ring);
-    gl.uniform1f(U.uArc, sm.arc);
+    gl.uniform1f(U.uArc, sm.arc * (1 + 2.5 * this.treble));
     gl.uniform1f(U.uLat, sm.lat);
     gl.uniform1f(U.uPulse, this.pulse);
     gl.uniform2f(U.uRot, 0.12, this.rotY);
@@ -2895,7 +2983,6 @@ class FlameLayer {
     rec.onend = () => {
       const h = (heard + " " + interim).trim();
       rec = null;
-      flame.stopMic();
       if (h) ask(h);
       else if (flame.state === "listening") flame.setState("idle");
     };
@@ -2905,7 +2992,7 @@ class FlameLayer {
       rec = null;
       return false;
     }
-    flame.useMic().catch(() => {}); // only for the flame's level; never recorded
+    voiceOn(true); // the flame keeps following your voice
     flame.setState("listening");
     say("Listening…", 0);
     return true;
@@ -3020,8 +3107,19 @@ class FlameLayer {
     room.setPointer(x, y);
     flame.setPointer(x, y, isDown ? 1 : 0.5);
   });
+  // the mic: analysed only (loudness, pitch, bands), never recorded or sent.
+  // It starts on the first touch, because browsers need a gesture for it.
+  let micWanted = true, micAsked = false;
+  function voiceOn(quiet) {
+    if (!micWanted) return;
+    flame
+      .useMic()
+      .then(() => { if (!quiet) say("The flame now follows your voice \u00b7 M to mute it", 3500); })
+      .catch(() => { if (!quiet) say("No mic here: the flame follows your pointer and its own voice", 3500); });
+  }
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
+    if (!micAsked) { micAsked = true; voiceOn(false); }
     isDown = true;
     const [x, y] = ndc(e);
     room.setPointer(x, y);
@@ -3053,7 +3151,10 @@ class FlameLayer {
     holding = false;
   });
   canvas.addEventListener("pointerleave", () => {
-    if (!isDown) flame.setPointer(0, 0, 0);
+    if (!isDown) {
+      flame.setPointer(0, 0, 0);
+      room.releasePointer(); // the flame drifts home to the centre, then rests
+    }
   });
   canvas.addEventListener(
     "wheel",
@@ -3072,6 +3173,11 @@ class FlameLayer {
       tap();
     } else if (e.key === "t" || e.key === "T")
       showInput(hasMind() ? "message" : "key");
+    else if (e.key === "m" || e.key === "M") {
+      micWanted = !micWanted;
+      if (micWanted) voiceOn(false);
+      else { flame.stopMic(); say("Mic off \u00b7 M to turn it back on", 2500); }
+    }
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) room.stop();
@@ -3090,6 +3196,8 @@ class FlameLayer {
     setLevel: (v) => flame.setLevel(v),
     setPitch: (v) => flame.setPitch(v),
     useMic: () => flame.useMic(),
+    stopMic: () => flame.stopMic(),
+    get voice() { return { level: flame.level, pitch: flame.pitch, hz: flame.hz || 0, bass: flame.bass, treble: flame.treble || 0, motion: flame.motion }; },
     useOutputElement: (el) => flame.useOutputElement(el),
     useOutputStream: (s) => flame.useOutputStream(s),
     demo: (on) => flame.demo(on),
