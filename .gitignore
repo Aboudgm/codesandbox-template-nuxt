@@ -91,3 +91,6 @@ sw.*
 
 # graphify (generated; rebuilt by .claude/hooks/session-start.sh)
 graphify-out/
+
+# Absurdox Lab models: license forbids re-uploading the files; keep out of the public repo
+static/models/village/*.glb

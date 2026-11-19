@@ -675,7 +675,7 @@ function playerCollide(){const cx=Math.floor(pl.x/CS)+256,cz=Math.floor(pl.z/CS)
 for(let b=0;b<a.length;b++){const j=a[b];if(py[j]+hy[j]<pl.y+.3||py[j]-hy[j]>pl.y+1.8)continue;const dx=pl.x-px[j],dz=pl.z-pz[j],R=.36+rad[j]*scl[j],d=Math.hypot(dx,dz);if(d<R&&d>1e-4){pl.x+=dx/d*(R-d);pl.z+=dz/d*(R-d)}}}
 for(const t of trees){const dx=pl.x-t.x,dz=pl.z-t.z,R=.3+.32*t.s*t.k,d=Math.hypot(dx,dz);if(d<R&&d>1e-4){pl.x+=dx/d*(R-d);pl.z+=dz/d*(R-d)}}
 for(const j of bigPieces){if(st[j]===3||py[j]-hy[j]>pl.y+1.8||py[j]+hy[j]<pl.y+.3)continue;const dx=pl.x-px[j],dz=pl.z-pz[j],ox=hx[j]+.36-Math.abs(dx),oz=hz[j]+.36-Math.abs(dz);if(ox>0&&oz>0){if(ox<oz)pl.x+=Math.sign(dx||1)*ox;else pl.z+=Math.sign(dz||1)*oz}}
-for(const t of gtrees){if(t.off)continue;const dx=pl.x-t.x,dz=pl.z-t.z,R=.3+t.r,d=Math.hypot(dx,dz);if(d<R&&d>1e-4){pl.x+=dx/d*(R-d);pl.z+=dz/d*(R-d)}}
+for(const t of gtrees){if(t.off)continue;if(t.bw){const dx=pl.x-t.x,dz=pl.z-t.z;let u=dx*t.ca-dz*t.sa,v=dx*t.sa+dz*t.ca;const pu=t.bw+.35-Math.abs(u),pv=t.bd+.35-Math.abs(v);if(pu>0&&pv>0){if(pu<pv)u=Math.sign(u||1)*(t.bw+.35);else v=Math.sign(v||1)*(t.bd+.35);pl.x=t.x+u*t.ca+v*t.sa;pl.z=t.z-u*t.sa+v*t.ca}continue}const dx=pl.x-t.x,dz=pl.z-t.z,R=.3+t.r,d=Math.hypot(dx,dz);if(d<R&&d>1e-4){pl.x+=dx/d*(R-d);pl.z+=dz/d*(R-d)}}
 {const dx=pl.x-MILL[0],dz=pl.z-MILL[1],d=Math.hypot(dx,dz);if(d<3.1){pl.x+=dx/d*(3.1-d);pl.z+=dz/d*(3.1-d)}}
 const r=Math.hypot(pl.x,pl.z);if(r>57){pl.x*=57/r;pl.z*=57/r}}
 function updPlayer(dt){let mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+jx,mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+jy;const l=Math.hypot(mx,mz);if(l>1){mx/=l;mz/=l}
@@ -716,7 +716,7 @@ const sc=new T.Scene();sc.add(g.clone(true));sc.add(new T.HemisphereLight(0xcfe3
 const cam=new T.OrthographicCamera(-half,half,half,-half,.1,200);cam.position.set(0,h/2,60);cam.lookAt(0,h/2,0);
 const oc=new T.Color(),oa=renderer.getClearAlpha();renderer.getClearColor(oc);const prev=renderer.getRenderTarget();renderer.setRenderTarget(rt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(sc,cam);renderer.setRenderTarget(prev);renderer.setClearColor(oc,oa);
 const mat=new T.MeshBasicMaterial({map:rt.texture,transparent:true,alphaTest:.35,side:T.DoubleSide});mat.color.setRGB(.82,.86,.9);return{geo:new T.PlaneGeometry(half*2,half*2),mat,h}}
-const okSpot=(x,z)=>{const far=(p,r)=>Math.hypot(x-p[0],z-p[1])>r;return far(TOWER,8)&&far(COT,9)&&far(MILL,7)&&far(RUIN,21)&&far([2,13],7)&&far(POND,POND[2]+1.5)&&pathDist(x,z)>2.8&&Math.hypot(x,z)<94};
+const okSpot=(x,z)=>{for(const p of props)if(p.big&&Math.hypot(x-p.x,z-p.z)<p.r+3.5)return false;const far=(p,r)=>Math.hypot(x-p[0],z-p[1])>r;return far(TOWER,8)&&far(COT,9)&&far(MILL,7)&&far(RUIN,21)&&far([2,13],7)&&far(POND,POND[2]+1.5)&&pathDist(x,z)>2.8&&Math.hypot(x,z)<94};
 function buildForest(){const P={};for(const[n,h]of SPECIES)if(GLB[n]){P[n]=prepGLB(GLB[n],h);P[n].userData.imp=makeImpostor(P[n])}if(GLB.bush)P.bush=prepGLB(GLB.bush,1.5,false);
 const have=Object.keys(P).filter(n=>n!=='bush');if(have.length<2)return false;
 for(const t of trees.slice())if(!t.grown){scene.remove(t.m);trees.splice(trees.indexOf(t),1)}
@@ -735,15 +735,16 @@ if(lodT<=0){lodT=.25;lodOrder.length=0;for(const t of forest){if(t.dead)continue
 const RH=MOBILE?36:52,RF=MOBILE?130:190,RB=MOBILE?26:40,NH=MOBILE?12:26,NB=MOBILE?14:30;let nh=0,nb=0;
 for(const t of lodOrder){if(t.n==='bush'){const v=t.d<RB&&nb<NB;if(v)nb++;t.hi.visible=v;continue}const hi=t.d<RH&&nh<NH;if(hi)nh++;t.hi.visible=hi;if(t.bb)t.bb.visible=!hi&&t.d<RF}}
 const cx=camera.position.x,cz=camera.position.z;for(const t of forest)if(t.bb&&t.bb.visible)t.bb.rotation.y=Math.atan2(cx-t.x,cz-t.z)}
-const PROTO={};function protoOf(n){if(!PROTO[n]&&GLB[n])PROTO[n]=prepGLB(GLB[n],1);return PROTO[n]}
+const PROTO={};function protoOf(n){if(!PROTO[n]&&GLB[n]){PROTO[n]=prepGLB(GLB[n],1);if(n.startsWith('v_'))PROTO[n].traverse(o=>{if(o.isMesh&&o.material&&o.material.color){o.material.color.offsetHSL(0,.06,-.06).multiplyScalar(.82)}})}return PROTO[n]}
 function placeProps(){const add=(n,h,x,z,ry,cr)=>{const pr=protoOf(n);if(!pr)return;const g=pr.clone(true);g.scale.setScalar(h);g.position.set(x,H(x,z),z);g.rotation.y=ry;scene.add(g);const gr=cr?{x,z,r:cr}:null;if(gr)gtrees.push(gr);props.push({kind:n,obj:g,x,z,y:H(x,z),h,r:cr||1,scenery:true,g:gr,dead:false,debris:n==='haystack'?[.9,.75,.35]:[.6,.58,.52]})};
 add('windmill',10,33,-26,-.6,2.8);add('well',2.1,24.5,-12,.5,1.1);add('barrels',1.5,21.6,-3.2,.4,.7);add('haystack',2.6,11,-14,0,1.4);
 for(let i=0,n=0;i<200&&n<(MOBILE?6:11);i++){const a=rand(TAU),r=rand(9,80),x=Math.cos(a)*r,z=Math.sin(a)*r;if(!okSpot(x,z))continue;add('rocks',rand(1.2,2.6),x,z,rand(TAU),1.1);n++}}
 function swapStaff(src){const g=prepGLB(src,1.45,false);g.updateMatrixWorld(true);let sx=0,sy=0,sz=0,n=0;const v=new T.Vector3();g.traverse(o=>{if(o.isMesh){const p=o.geometry.attributes.position;for(let i=0;i<p.count;i+=2){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.y>1.24){sx+=v.x;sy+=v.y;sz+=v.z;n++}}}});
 g.position.y=-.72;staff.add(g);staff.children[0].visible=false;orbG.visible=false;crystal.visible=false;const ox=n?sx/n:0,oy=n?sy/n-.72:.6,oz=n?sz/n:0;sGlow.position.set(ox,oy,oz);crystal.position.set(ox,oy,oz)}
-async function loadAssets(){if(!T.GLTFLoader)return;let nl=0;const bump=()=>{nl++;const e=document.getElementById('load');if(e)e.textContent=nl>=25?'World ready':'Loading 3D models '+nl+' / 25'};const L=new T.GLTFLoader(),load=u=>new Promise(res=>L.load(u,g=>{bump();res(g.scene)},undefined,()=>{bump();res(null)}));
+async function loadAssets(){if(!T.GLTFLoader)return;let nl=0;const bump=()=>{nl++;const e=document.getElementById('load');if(e)e.textContent=nl>=35?'World ready':'Loading 3D models '+nl+' / 35'};const L=new T.GLTFLoader(),load=u=>new Promise(res=>L.load(u,g=>{bump();res(g.scene)},undefined,()=>{bump();res(null)}));
 const st=await load('models/staff.glb');if(st)swapStaff(st);
 await Promise.all(['oak','maple','pine','birch','willow','cherry','ancient','cypress','bush','rocks','well','barrels','haystack','windmill','sunflower','chest','bench','fire','bed','torch','door','lantern','sign'].map(async n=>{const o=await load('models/'+n+'.glb');if(o)GLB[n]=o}));
+await Promise.all(Object.keys(VIL).map(async k=>{const o=await load('models/village/'+VIL[k][0]+'.glb');if(o)GLB[k]=o}));try{placeVillage()}catch(e){console.warn('village failed',e)}
 if(GLB.sunflower)GLB.sunflower=prepGLB(GLB.sunflower,7);
 try{if(buildForest())forestReady=true;placeProps()}catch(e){console.warn('asset build failed',e)}}
 /* ---------- game systems: modes, inventory, crafting, build / break / interact ---------- */
@@ -843,7 +844,10 @@ function pieceItem(i){if(gridOf[i]!==undefined)return['cobble','plank','brick','
 function cellFree(c){if(grid.has(bkey(c[0],c[1],c[2]))||c[1]<0||c[1]>58||Math.abs(c[0])>56||Math.abs(c[2])>56)return false;if(c[0]+1>pl.x-.4&&c[0]<pl.x+.4&&c[2]+1>pl.z-.4&&c[2]<pl.z+.4&&c[1]+1>pl.y&&c[1]<pl.y+1.8)return false;return true}
 function dustAt(x,y,z,n,c){for(let k=0;k<(n||8);k++)PSm.spawn(x+rand(-.4,.4),y+rand(0,.6),z+rand(-.4,.4),rand(-1,1),rand(.4,1.6),rand(-1,1),rand(.6,1.2),.3,rand(1,1.6),c||[.6,.55,.45],[.8,.78,.72],.35,-.1,1.4)}
 /* props */
-const PROPH={door:2,torch:1.3,chest:.85,bench:1,fire:.8,bed:.9,lantern:.7,sign:1.8},PROPR={door:.55,torch:.2,chest:.55,bench:.75,fire:.5,bed:1,lantern:.25,sign:.25},LIGHTP={torch:1,lantern:1,fire:1};
+const VIL={v_inn:['inn',10.4,9.6,9.6,'Seaside Inn'],v_forge:['forge',8.6,8.2,5.7,'Forge'],v_observatory:['observatory',7.9,15.3,8.3,'Observatory'],v_station_house:['station_house',6.7,6.5,5.5,'Sea-watch House'],v_station_tower:['station_tower',5.5,12.1,5.3,'Weather Mast'],v_village_hut:['village_hut',9,7.3,8.5,'Fisher Hut'],v_village_shed:['village_shed',6.2,5.7,4.8,'Boat Shelter'],v_rope_workshop:['rope_workshop',11.5,5.8,6.3,'Rope Workshop'],v_hut_bungalow:['hut_bungalow',9.2,9.5,7.5,"Keeper's Hut"],v_well:['well',3.9,4.7,3.4,'Village Well']};
+for(const k in VIL)ITEMS[k]={n:VIL[k][4],prop:k,c:'#d98c4a'};inv.v_well=1;inv.v_station_house=1;
+RECIPES.push({o:'v_well',n:1,need:{stone:12,plank:4}},{o:'v_village_shed',n:1,need:{plank:16,fiber:6}},{o:'v_station_house',n:1,need:{plank:20,brick:10}},{o:'v_station_tower',n:1,need:{plank:24,log:8}},{o:'v_village_hut',n:1,need:{plank:30,log:6}},{o:'v_rope_workshop',n:1,need:{plank:30,fiber:12}},{o:'v_forge',n:1,need:{brick:30,stone:20,log:6}},{o:'v_hut_bungalow',n:1,need:{plank:36,log:10,thatch:12}},{o:'v_inn',n:1,need:{plank:40,brick:20,thatch:10}},{o:'v_observatory',n:1,need:{brick:60,stone:30}});
+const PROPH={door:2,torch:1.3,chest:.85,bench:1,fire:.8,bed:.9,lantern:.7,sign:1.8},PROPR={door:.55,torch:.2,chest:.55,bench:.75,fire:.5,bed:1,lantern:.25,sign:.25},LIGHTP={torch:1,lantern:1,fire:1};for(const k in VIL){PROPH[k]=VIL[k][2];PROPR[k]=Math.max(VIL[k][1],VIL[k][3])*.45}
 const bxm=(w,h,d,c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshLambertMaterial({color:c}));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;return m};
 function fallbackProp(k){const g=new T.Group();
 if(k==='door')g.add(bxm(.95,2,.12,0x8a5a2a,0,1,0),bxm(.12,.12,.16,0xd9b24a,.3,1,0));
@@ -857,17 +861,25 @@ else g.add(bxm(.1,1.8,.1,0x6b4a22,0,.9,0),bxm(.9,.28,.06,0xb07c44,.3,1.5,0),bxm(
 function makeProp(k){const pr=protoOf(k);if(pr){if(k==='door'){pr.updateMatrixWorld(true);const sz=new T.Box3().setFromObject(pr).getSize(new T.Vector3()),side=sz.z>sz.x,w=side?sz.z:sz.x,inner=pr.clone(true),g=new T.Group();if(side)inner.rotation.y=PI/2;g.add(inner);g.scale.set(.96/w,2,1.4);return g}const g=pr.clone(true);g.scale.setScalar(PROPH[k]);return g}const g=fallbackProp(k);return g}
 function placeProp(k,ix,iy,iz,rotY){const x=ix+.5,z=iz+.5,y=iy,obj=makeProp(k),wrap=new T.Group();let pivot=wrap;
 if(k==='door'){obj.position.x=.5;wrap.add(obj);wrap.position.set(x-.5*Math.cos(rotY),y,z+.5*Math.sin(rotY))}else{wrap.add(obj);wrap.position.set(x,y,z)}wrap.rotation.y=rotY;scene.add(wrap);
-const gr={x,z,r:PROPR[k]};gtrees.push(gr);const p={kind:k,obj:wrap,x,z,y,h:PROPH[k],r:PROPR[k],rot:rotY,g:gr,dead:false,open:false,light:!!LIGHTP[k],debris:[.55,.38,.2]};props.push(p);return p}
-const INTER={door:'Open / close',chest:'Open chest',bench:'Craft',fire:'Warm up',bed:'Sleep',sign:'Read'};
-function nearestInteract(){let best=null,bd=3.6;const fx=-Math.sin(pl.yaw),fz=-Math.cos(pl.yaw);for(const p of props){if(p.dead||!INTER[p.kind])continue;const dx=p.x-pl.x,dz=p.z-pl.z,d=Math.hypot(dx,dz);if(d<bd&&(dx*fx+dz*fz)/(d||1)>.3){bd=d;best=p}}return best}
+const V=VIL[k],gr=V?{x,z,r:PROPR[k],bw:V[1]*.42,bd:V[3]*.42,ca:Math.cos(rotY),sa:Math.sin(rotY)}:{x,z,r:PROPR[k]};gtrees.push(gr);const p={kind:k,obj:wrap,x,z,y,h:PROPH[k],r:PROPR[k],rot:rotY,g:gr,dead:false,open:false,big:!!V,light:!!LIGHTP[k],debris:V?[.85,.55,.42]:[.55,.38,.2]};props.push(p);return p}
+const INTER={v_inn:'Rest at the inn',v_hut_bungalow:'Rest',v_village_hut:'Rest',v_forge:'Smelt stone into brick',v_rope_workshop:'Weave fiber into thatch',v_observatory:'Stargaze',v_station_tower:'Spin the weather vane',v_station_house:'Read the barometer',v_well:'Draw water',v_village_shed:'Search the boat',door:'Open / close',chest:'Open chest',bench:'Craft',fire:'Warm up',bed:'Sleep',sign:'Read'};
+function nearestInteract(){let best=null,bd=3.6;const fx=-Math.sin(pl.yaw),fz=-Math.cos(pl.yaw);for(const p of props){if(p.dead||!INTER[p.kind])continue;const dx=p.x-pl.x,dz=p.z-pl.z,dr=Math.hypot(dx,dz),d=dr-(p.big?p.r*.85:0);if(d<bd&&(dx*fx+dz*fz)/(dr||1)>.3){bd=d;best=p}}return best}
 function interact(){const p=nearestInteract();if(!p)return;SND.step();
 if(p.kind==='door'){p.open=!p.open;p.obj.rotation.y=p.rot+(p.open?-PI/2:0);p.g.off=p.open;toast(p.open?'Door opened':'Door closed')}
 else if(p.kind==='chest'){if(p.looted)return toast('Empty');p.looted=true;const L=[['plank',rand(3,7)|0],['stone',rand(2,6)|0],['fiber',rand(2,5)|0],['flower',rand(2,6)|0],['torch',rand(1,3)|0]];for(const[k,n]of L)give(k,n);toast('Chest: planks, stone, fiber, petals and torches!')}
 else if(p.kind==='bench'){if(!craftOpen)toggleCraft()}
 else if(p.kind==='fire')toast('Warm and cozy');
 else if(p.kind==='bed'){sunsetUntil=now+16;toast('You rest... the day turns to dusk')}
+else if(p.kind==='v_inn'||p.kind==='v_hut_bungalow'||p.kind==='v_village_hut'){sunsetUntil=now+16;toast('You rest a while... the sky turns golden')}
+else if(p.kind==='v_forge'){if(inv.stone>=2){inv.stone-=2;give('brick',3);toast('Forged 3 Brick');for(let i=0;i<20;i++)PA.spawn(p.x+rand(-1,1),p.y+1.5,p.z+rand(-1,1),rand(-1,1),rand(2,5),rand(-1,1),rand(.5,1),.12,.02,[1,.8,.3],[1,.3,0],1,6,.4)}else toast('The forge needs 2 Stone')}
+else if(p.kind==='v_rope_workshop'){if(inv.fiber>=3){inv.fiber-=3;give('thatch',4);toast('Woven 4 Thatch')}else toast('The workshop needs 3 Fiber')}
+else if(p.kind==='v_observatory'){sunsetUntil=now+22;toast('Stargazing until dusk...')}
+else if(p.kind==='v_station_tower'){stormUntil=now+10;toast('The vane spins wildly... a storm rolls in')}
+else if(p.kind==='v_station_house')toast('Barometer: '+(storm>.3?'stormy':'fair weather'))
+else if(p.kind==='v_well'){heal(p.x,p.z,16);give('fiber',1);toast('Fresh water: the land nearby recovers')}
+else if(p.kind==='v_village_shed'){if(p.looted)return toast('Nothing left');p.looted=true;give('log',3);give('fiber',3);toast('Driftwood and old nets: +3 Log, +3 Fiber')}
 else if(p.kind==='sign')toast(['Welcome to the meadow','Build something wonderful','Beware of falling towers'][Math.floor(Math.random()*3)])}
-function destroyProp(p,quiet){if(p.dead)return;p.dead=true;p.obj.visible=false;if(p.g)p.g.off=true;const sz=Math.max(.25,p.h*.18);debris(p.x,p.y+p.h*.4,p.z,10+Math.floor(p.h*4),p.debris||[.55,.38,.2],sz,4+p.h,1);dustAt(p.x,p.y+.3,p.z,12);if(!quiet){if(ITEMS[p.kind]&&!p.scenery)dropItem(p.kind,1,p.x,p.y+.6,p.z);else for(let k=0;k<2;k++)dropItem(p.kind==='haystack'?'fiber':'stone',1,p.x,p.y+.6,p.z)}}
+function destroyProp(p,quiet){if(p.dead)return;p.dead=true;p.obj.visible=false;if(p.g)p.g.off=true;const sz=Math.max(.25,p.h*.18);debris(p.x,p.y+p.h*.4,p.z,10+Math.floor(p.h*4),p.debris||[.55,.38,.2],sz,4+p.h,1);dustAt(p.x,p.y+.3,p.z,12);if(!quiet){if(ITEMS[p.kind]&&!p.scenery)dropItem(p.kind,1,p.x,p.y+.6,p.z);else if(p.big){for(let k=0;k<4;k++)dropItem('plank',1,p.x+rand(-2,2),p.y+1,p.z+rand(-2,2));for(let k=0;k<3;k++)dropItem('brick',1,p.x+rand(-2,2),p.y+1,p.z+rand(-2,2))}else for(let k=0;k<2;k++)dropItem(p.kind==='haystack'?'fiber':'stone',1,p.x,p.y+.6,p.z)}}
 function pickupProp(p){destroyProp(p,true);if(ITEMS[p.kind]&&!p.scenery)dropItem(p.kind,1,p.x,p.y+.6,p.z);else for(let k=0;k<2;k++)dropItem('stone',1,p.x,p.y+.6,p.z)}
 /* kits */
 function kitCells(kind){const C=[],add=(u,v,y,t)=>C.push([u,v,y,t]);let W,D,door=[0,0];
@@ -948,6 +960,8 @@ function smashTree(t){if(t.dead)return;t.dead=true;t.hi.visible=false;if(t.bb)t.
 debris(t.x,t.y+1,t.z,5+Math.floor(sc*3),[.55,.36,.2],.32*sc,5,1);debris(t.x,t.y+t.h*sc*.6,t.z,14+Math.floor(sc*10),col,.3*sc,6,3);dustAt(t.x,t.y+1,t.z,14,[.5,.45,.3]);
 const n=2+Math.floor(sc*2);for(let k=0;k<n;k++)dropItem('log',1,t.x+rand(-.8,.8),t.y+1+rand(0,1.5),t.z+rand(-.8,.8));if(Math.random()<.5)dropItem('fiber',2,t.x,t.y+1.5,t.z);SND.thud&&SND.thud(.8)}
 function smashNear(x,y,z,R){for(const t of forest){if(t.dead||t.n==='bush')continue;if(Math.hypot(t.x-x,t.z-z)<R+t.s*.8)smashTree(t)}for(const p of props){if(!p.dead&&Math.hypot(p.x-x,p.z-z)<R+p.r)destroyProp(p)}}
+function placeVillage(){const C=[36,18],L=[['v_inn',34,8],['v_forge',25,23],['v_village_hut',46,22],['v_rope_workshop',36,33],['v_station_house',24,36],['v_station_tower',48,8],['v_well',33,19],['v_observatory',47,-8],['v_hut_bungalow',-43,-16],['v_village_shed',-22,-22]];
+for(const[k,x,z]of L){if(!GLB[k])continue;const rot=Math.atan2((k==='v_hut_bungalow'||k==='v_village_shed'?POND[0]:C[0])-x,(k==='v_hut_bungalow'||k==='v_village_shed'?POND[1]:C[1])-z);const p=placeProp(k,x-.5,H(x,z),z-.5,rot);p.scenery=true;stamp(x,z,Math.max(VIL[k][1],VIL[k][3])*.7,1,.35)}}
 function resetExtras(){for(const f of forest){if(f.dead){f.dead=false;if(f.g)f.g.off=false}if(f.rf){if(f.g)f.g.r/=f.rf;f.s/=f.rf;f.rf=1;f.hi.scale.setScalar(f.s);if(f.bb)f.bb.scale.setScalar(f.s)}}
 for(let k=props.length-1;k>=0;k--){const p=props[k];if(!p.scenery){scene.remove(p.obj);if(p.g){const gi=gtrees.indexOf(p.g);if(gi>=0)gtrees.splice(gi,1)}props.splice(k,1)}else{p.dead=false;p.obj.visible=true;if(p.g)p.g.off=false;if(p.rf){p.obj.scale.multiplyScalar(1/p.rf);p.h/=p.rf;p.r/=p.rf;if(p.g)p.g.r/=p.rf;p.rf=1}}}
 for(const d of drops)scene.remove(d.mesh);drops.length=0;bigPieces.clear();rsc.clear();sizeSel=null;sizeRing.visible=false;refreshUI()}
