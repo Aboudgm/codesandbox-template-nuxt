@@ -16,6 +16,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 #side{position:fixed;right:calc(8px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;z-index:5}
 #side button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:400 18px var(--ui);cursor:pointer}
 #name{position:fixed;top:calc(68px + env(safe-area-inset-top,0px));left:calc(14px + env(safe-area-inset-left,0px));font:400 11px Georgia,'Times New Roman',serif;letter-spacing:.32em;text-transform:uppercase;color:var(--ink);text-shadow:0 1px 6px rgba(0,0,0,.8);pointer-events:none;z-index:4;white-space:nowrap}
+#book{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));width:min(150px,30vw);transform:rotate(-3deg);transform-origin:bottom left;transition:transform .3s;pointer-events:none;z-index:4;filter:drop-shadow(0 4px 8px rgba(0,0,0,.55))}#book.hide{transform:translateY(125%) rotate(-3deg)}#book canvas{width:100%;display:block;border-radius:4px}
 #joy{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid var(--line);background:rgba(13,19,38,.25);pointer-events:none;z-index:4}
 #joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:rgba(243,236,216,.55)}
 #hint{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:8px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font:400 13px/1.4 var(--ui);color:var(--ink);text-align:center;pointer-events:none;z-index:4;transition:opacity 1.2s;max-width:calc(100vw - 48px)}
@@ -25,7 +26,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 <div id="flash"></div>
 <div id="bar"></div>
 <div id="name"></div>
-<div id="side"><button id="bReset" title="Rebuild the world">&#8634;</button><button id="bFull" title="Fullscreen">&#9974;</button></div>
+<div id="side"><button id="bReset" title="Rebuild the world">&#8634;</button><button id="bBook" title="Spellbook (Q)">Q</button><button id="bFull" title="Fullscreen">&#9974;</button></div>
+<div id="book"><canvas id="bookc" width="300" height="360"></canvas></div>
 <div id="joy" hidden><i></i></div>
 <div id="hint"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -506,7 +508,13 @@ else if(i===4){const gr=g.createLinearGradient(0,-40,0,40);gr.addColorStop(0,'#f
 else if(i===5){g.strokeStyle=col;g.lineWidth=6;for(const[y,w,r]of[[-20,30,9],[2,38,11],[24,24,8]]){g.beginPath();g.moveTo(-38,y);g.lineTo(w-10,y);g.arc(w-10,y-r,r,PI/2,-PI*.75,true);g.stroke()}}
 else{g.strokeStyle='#3fbf4a';g.lineWidth=6;g.beginPath();g.moveTo(0,40);g.quadraticCurveTo(-4,10,0,-8);g.stroke();g.fillStyle=col;for(const s of[-1,1]){g.beginPath();g.moveTo(0,18);g.quadraticCurveTo(s*30,14,s*34,-8);g.quadraticCurveTo(s*8,-4,0,18);g.fill()}g.fillStyle='#ff6fa8';for(let k=0;k<5;k++){const a=k/5*TAU-PI/2;g.beginPath();g.arc(Math.cos(a)*11,-20+Math.sin(a)*11,8,0,TAU);g.fill()}g.fillStyle='#ffd84a';g.beginPath();g.arc(0,-20,6,0,TAU);g.fill()}
 return c}
-function pick(i){cur=i;btns.forEach((b,k)=>b.classList.toggle('on',k===i));document.documentElement.style.setProperty('--spell',SP[i].css);nameEl.textContent=SP[i].name;crystal.material.color.setRGB(...SP[i].c).lerp(new T.Color(1,1,1),.35);sGlow.material.color.setRGB(...SP[i].c);orbG.material.color.setRGB(...SP[i].c).lerp(new T.Color(1,1,1),.4);if(AC)tn({f0:SP[i].f,f1:SP[i].f*1.5,d:.12,g:.05})}
+const book=document.getElementById('book'),bx=document.getElementById('bookc').getContext('2d'),DESC=['Blast that flattens towers and scorches the grass.','Pulls everything in, crushes it, then bursts outward.','A burning funnel that lifts and spins debris.','Freezes grass and stones in place.','A sky bolt that shatters what it strikes.','A gust that bends grass and shoves pieces.','Flowers and a full tree from bare ground.'];
+function drawBook(i){const w=300,h=360,g=bx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#e9d9b0');g.addColorStop(1,'#cdb27d');bx.globalAlpha=1;bx.fillStyle=g;bx.fillRect(0,0,w,h);bx.strokeStyle='#6b4a22';bx.lineWidth=6;bx.strokeRect(3,3,w-6,h-6);
+const t=cv(256),tg=t.getContext('2d');tg.drawImage(runeT[i].image,0,0,256,256);tg.globalCompositeOperation='source-in';tg.fillStyle='#4a3418';tg.fillRect(0,0,256,256);bx.globalAlpha=.9;bx.drawImage(t,22,14,256,256);bx.globalAlpha=1;
+bx.fillStyle=SP[i].css;bx.beginPath();bx.arc(150,136,9,0,TAU);bx.fill();bx.textAlign='center';bx.fillStyle='#3a2a14';bx.font='700 22px Georgia,serif';bx.fillText(SP[i].name.toUpperCase(),150,296);bx.font='15px Georgia,serif';
+let line='',y=320;for(const wd of DESC[i].split(' ')){if((line+wd).length>30){bx.fillText(line.trim(),150,y);y+=18;line=''}line+=wd+' '}bx.fillText(line.trim(),150,y)}
+document.getElementById('bBook').addEventListener('click',()=>book.classList.toggle('hide'));
+function pick(i){cur=i;drawBook(i);btns.forEach((b,k)=>b.classList.toggle('on',k===i));document.documentElement.style.setProperty('--spell',SP[i].css);nameEl.textContent=SP[i].name;crystal.material.color.setRGB(...SP[i].c).lerp(new T.Color(1,1,1),.35);sGlow.material.color.setRGB(...SP[i].c);orbG.material.color.setRGB(...SP[i].c).lerp(new T.Color(1,1,1),.4);if(AC)tn({f0:SP[i].f,f1:SP[i].f*1.5,d:.12,g:.05})}
 SP.forEach((s,i)=>{const b=document.createElement('button');b.id='spell'+(i+1);b.title=s.name+' ('+(i+1)+')';b.setAttribute('aria-label',s.name);b.appendChild(icon(i));const n=document.createElement('b');n.textContent=i+1;b.appendChild(n);b.addEventListener('pointerdown',e=>{e.stopPropagation();audio();pick(i)});bar.appendChild(b);btns.push(b)});
 hint.textContent=MOBILE?'Left thumb moves. Drag to look. Tap anywhere to cast.':'WASD to walk, drag to look, click to cast, 1 to 7 to switch spells.';
 setTimeout(()=>hint.style.opacity=0,9000);
@@ -518,7 +526,7 @@ fN=fN0;for(let k=0;k<4;k++){fCnt[k]=fCnt0[k];flowerMesh[k].count=fCnt[k]}fAnim.c
 
 /* ---------- player + input ---------- */
 const pl={x:2,z:13,y:0,vy:0,yaw:.12,pitch:-.02,bob:0,amp:0,ground:true};const keys={};let cdUntil=0,lastStep=0,swayX=0,swayY=0;
-addEventListener('keydown',e=>{keys[e.code]=true;if(e.code.startsWith('Digit')){const n=+e.code.slice(5);if(n>=1&&n<=7){audio();pick(n-1)}}if(e.code==='KeyR')resetWorld();if(e.code==='Space')e.preventDefault()});
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code.startsWith('Digit')){const n=+e.code.slice(5);if(n>=1&&n<=7){audio();pick(n-1)}}if(e.code==='KeyR')resetWorld();if(e.code==='KeyQ')book.classList.toggle('hide');if(e.code==='Space')e.preventDefault()});
 addEventListener('keyup',e=>{keys[e.code]=false});addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
 const ptr=new Map(),joyEl=document.getElementById('joy'),knob=joyEl.firstElementChild;let joyId=-1,jx=0,jy=0,jsx=0,jsy=0;
 canvas.addEventListener('pointerdown',e=>{audio();try{canvas.setPointerCapture(e.pointerId)}catch(_){}hint.style.opacity=0;
