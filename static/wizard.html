@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Meadow Mage</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>
@@ -309,7 +310,7 @@ for(let t=0;t<4;t++)for(let y=0;y<S;y++)for(let x=0;x<S;x++){const gi=y*W+t*S+x,
 ag.putImageData(ai,0,0);ng.putImageData(ni,0,0);return[tex(ac,{encoding:T.sRGBEncoding,anisotropy:4}),tex(nc,{anisotropy:4})]})();
 const pieceMat=new T.MeshPhongMaterial({map:atlasTex,normalMap:atlasNorm,normalScale:new T.Vector2(1.1,1.1),shininess:10,specular:0x1a1a1a});
 pieceMat.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aTile;').replace('#include <uv_vertex>','#include <uv_vertex>\nvUv.x=vUv.x*.25+aTile*.25;')};
-const pieceMesh=new T.InstancedMesh(roundBox(.07,2),pieceMat,MAXP);pieceMesh.geometry.setAttribute('aTile',new T.InstancedBufferAttribute(tileArr,1));pieceMesh.castShadow=pieceMesh.receiveShadow=true;pieceMesh.frustumCulled=false;scene.add(pieceMesh);
+const pieceMesh=new T.InstancedMesh(roundBox(.07,2),pieceMat,MAXP);pieceMesh.geometry.setAttribute('aTile',new T.InstancedBufferAttribute(tileArr,1));pieceMesh.instanceColor=new T.InstancedBufferAttribute(new Float32Array(MAXP*3).fill(1),3);pieceMesh.castShadow=pieceMesh.receiveShadow=true;pieceMesh.frustumCulled=false;scene.add(pieceMesh);
 function addPiece(x,y,z,sx,sy,sz,ry,c,rx,rz){if(NP>=MAXP)return;const i=NP++;px[i]=x;py[i]=y;pz[i]=z;hx[i]=sx/2;hy[i]=sy/2;hz[i]=sz/2;_e.set(rx||0,ry||0,rz||0,'YXZ');_q.setFromEuler(_e);qx[i]=_q.x;qy[i]=_q.y;qz[i]=_q.z;qw[i]=_q.w;
 rad[i]=Math.max(.12,Math.min(sx,sy,sz)*.4+Math.cbrt(sx*sy*sz)*.1);mass[i]=sx*sy*sz;scl[i]=1;cr[i]=c[0];cg[i]=c[1];cb[i]=c[2];sup.push([])}
 function setMat(i){const s=st[i]===3?0:scl[i]*2;_m4.compose(_p.set(px[i],py[i],pz[i]),_q.set(qx[i],qy[i],qz[i],qw[i]),_s.set(hx[i]*s,hy[i]*s,hz[i]*s));pieceMesh.setMatrixAt(i,_m4);matDirty=true}
@@ -781,8 +782,8 @@ const css=document.createElement('style');css.textContent=`
 `;document.head.appendChild(css);
 const mk=(t,id,html)=>{const e=document.createElement(t);if(id)e.id=id;if(html)e.innerHTML=html;document.body.appendChild(e);return e};
 const modesEl=mk('div','modes'),hotEl=mk('div','hotbar'),sizeEl=mk('div','sizebar'),toastEl=mk('div','toast'),crossEl=mk('div','cross'),promptEl=mk('div','prompt'),craftEl=mk('div','craft');
-const sideEl=document.getElementById('side'),mkSide=(id,txt,title,fn)=>{const b=document.createElement('button');b.id=id;b.textContent=txt;b.title=title;b.addEventListener('click',fn);sideEl.appendChild(b);return b};
-const bBreak=mkSide('bBreak','⛏','Place / Break (B)',()=>{breakMode=!breakMode;refreshUI()}),bCraft=mkSide('bCraft','⚒','Craft (C)',()=>toggleCraft()),bAct=mkSide('bAct','E','Interact (E)',()=>interact());
+const sideEl=document.getElementById('side'),mkSide=(id,txt,title,fn)=>{const b=document.createElement('button');b.id=id;b.textContent=txt;b.title=title;b.style.font='700 10px Georgia,serif';b.addEventListener('click',fn);sideEl.appendChild(b);return b};
+const bBreak=mkSide('bBreak','Mine','Place / Break (B)',()=>{breakMode=!breakMode;refreshUI()}),bCraft=mkSide('bCraft','Craft','Craft (C)',()=>toggleCraft()),bAct=mkSide('bAct','E','Interact (E)',()=>interact());
 let toastTimer=0;function toast(m){toastEl.textContent=m;toastEl.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.style.opacity=0,1800)}
 const MODES=[['magic','Magic'],['build','Build'],['size','Size']];
 modesEl.innerHTML=MODES.map(m=>`<div class="mode" data-m="${m[0]}">${m[1]}</div>`).join('');
@@ -934,6 +935,6 @@ const fx=-Math.sin(pl.yaw),fz=-Math.cos(pl.yaw),tx0=pl.x+fx*20,tz0=pl.z+fz*20,te
 storm+=((now<stormUntil?1:0)-storm)*Math.min(1,1.2*dt);sunset+=((now<sunsetUntil?1:0)-sunset)*Math.min(1,.9*dt);{const u=sky.material.uniforms,sw=sunset*(1-storm);FOGC.copy(FOGBASE).lerp(STORMC,storm).lerp(SUNSETC,sw);scene.fog.color.copy(FOGC);scene.fog.density=.0082*(1+.7*storm+.25*sw);u.uT.value.copy(TOPBASE).lerp(STORMT,storm).lerp(SUNSETT,sw);u.uK.value=(1-.85*storm)*(1+1.4*sw);sun.intensity=1.85*(1-.6*storm)*(1+.15*sw);sun.color.setRGB(1,lerp(.88,.6,sw),lerp(.68,.38,sw));hemi.intensity=.8*(1-.2*storm);if(post)post.setSunset(sw)}
 if(post)post.setHor(.5-.5*Math.tan(pl.pitch)/Math.tan(camera.fov*PI/360));post?post.render():renderer.render(scene,camera)}
 pick(0);requestAnimationFrame(frame);loadAssets();
-window.G={cast:(i,x,y,z,j)=>{cur=i;cur2=j===undefined?-1:j;cdUntil=0;cast(0,0,new T.Vector3(x,y,z))},pl,sys:{get inv(){return inv},setMode,tap,placeKit,smashNear,forest,props,selectAt,resizeSel,rayAll,placeProp,toggleCraft,groundAt,grid,placeBlock,breakAt,placeAt,get sizeSel(){return sizeSel}},stats:()=>({pieces:NP,awake:act.length,pending:pend.length,ema,PR,flowers:fN,trees:trees.length})};
+window.G={cast:(i,x,y,z,j)=>{cur=i;cur2=j===undefined?-1:j;cdUntil=0;cast(0,0,new T.Vector3(x,y,z))},pl,dbg:{pieceMesh,tileArr,cr,hx,st,get NP(){return NP},get NP0(){return NP0}},sys:{get inv(){return inv},setMode,tap,placeKit,smashNear,forest,props,selectAt,resizeSel,rayAll,placeProp,toggleCraft,groundAt,grid,placeBlock,breakAt,placeAt,get sizeSel(){return sizeSel}},stats:()=>({pieces:NP,awake:act.length,pending:pend.length,ema,PR,flowers:fN,trees:trees.length})};
 })();
 </script>
