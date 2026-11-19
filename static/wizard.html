@@ -127,8 +127,9 @@ function burn(x,z,r){stamp(x,z,r,0,1);for(let i=0;i<5;i++){const a=rand(TAU),d=r
 for(let y=0;y<S;y++)for(let x=0;x<S;x++){const n=vnoise(x*.018,y*.018)*.55+vnoise(x*.07,y*.07)*.3+Math.random()*.15,v=128+(n-.5)*90,o=(y*S+x)*4,dry=vnoise(x*.006+9,y*.006+4);
 d[o]=v*(1+sstep(.55,.8,dry)*.5);d[o+1]=v;d[o+2]=v*(1-sstep(.55,.8,dry)*.2);d[o+3]=255}
 g.putImageData(im,0,0);const P=(x,z)=>[(x/AREA+.5)*S,(z/AREA+.5)*S];g.lineCap=g.lineJoin='round';
-for(const pass of[[20,.35],[11,.8]]){g.strokeStyle=`rgba(255,96,170,${pass[1]})`;g.lineWidth=pass[0];for(const p of PATHS){g.beginPath();p.forEach((q,i)=>{const[a,b]=P(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}}
-g.fillStyle='rgba(255,100,170,.55)';for(const[q,r]of[[TOWER,5],[COT,5.5],[MILL,4.2]]){const[a,b]=P(q[0],q[1]);g.beginPath();g.arc(a,b,r/AREA*S,0,TAU);g.fill()}
+for(const pass of[[20,.35],[11,.8]]){g.strokeStyle=`rgba(255,96,60,${pass[1]})`;g.lineWidth=pass[0];for(const p of PATHS){g.beginPath();p.forEach((q,i)=>{const[a,b]=P(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}}
+for(const p of PATHS)for(let i=0;i<p.length-1;i++){const[ax,ay]=P(p[i][0],p[i][1]),[bx,by]=P(p[i+1][0],p[i+1][1]),L=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/L,ny=(bx-ax)/L,n=Math.floor(L*1.1);for(let k=0;k<n;k++){const u=Math.random(),o=(Math.random()-.5)*9;g.fillStyle=`rgb(255,96,${rand(130,255)|0})`;g.beginPath();g.ellipse(ax+(bx-ax)*u+nx*o,ay+(by-ay)*u+ny*o,rand(1.5,2.6),rand(1.3,2.1),rand(3),0,TAU);g.fill()}}
+g.fillStyle='rgba(255,100,60,.55)';for(const[q,r]of[[TOWER,5],[COT,5.5],[MILL,4.2]]){const[a,b]=P(q[0],q[1]);g.beginPath();g.arc(a,b,r/AREA*S,0,TAU);g.fill()}
 U.det.value=tex(c,{flipY:false,anisotropy:4})}
 {const g=new T.PlaneGeometry(520,520,150,150);g.rotateX(-PI/2);const p=g.attributes.position,col=new Float32Array(p.count*3);
 for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),h=H(x,z);p.setY(i,h);const n=vnoise(x*.03+5,z*.03),k=sstep(0,22,h);
@@ -139,7 +140,7 @@ m.onBeforeCompile=sh=>{sh.uniforms.uFx=U.fx;sh.uniforms.uDet=U.det;
 sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvW=position.xz;');
 sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vW;uniform sampler2D uFx;uniform sampler2D uDet;').replace('#include <color_fragment>',`#include <color_fragment>
 vec2 guv=vW/120.+.5;vec4 fx=texture2D(uFx,guv);float inA=smoothstep(60.,53.,max(abs(vW.x),abs(vW.y)));
-diffuseColor.rgb*=mix(vec3(1.),texture2D(uDet,guv).rgb*2.,inA);
+vec3 dt=texture2D(uDet,guv).rgb;float pth=smoothstep(.8,.95,dt.r)*(1.-smoothstep(.3,.45,dt.g))*inA;diffuseColor.rgb*=mix(vec3(1.),dt*2.,inA*(1.-pth));diffuseColor.rgb=mix(diffuseColor.rgb,mix(vec3(.12,.10,.08),vec3(.33,.30,.25),smoothstep(.25,.7,dt.b)),pth*.95);
 diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.028,.022,.018),fx.r*(1.-fx.g)*.94*inA);
 diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.85,1.3,.7),fx.g*.5*inA);
 diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.72,.88,1.),fx.b*.8*inA);`)};
@@ -284,7 +285,8 @@ function ring(cx,cz,R,N,C,bh,th,col,skip){const bw=TAU*R/N*.985;for(let c=0;c<C;
 function buildTower(cx,cz){const R=3.3,N=20,bh=.6,C=26;
 const bw=ring(cx,cz,R,N,C,bh,.78,c=>c<3&&sr()<.5?MOSS():STONE(),(c,k,a)=>(c<4&&Math.abs((a+PI/2)%TAU-PI)<.3)||(c>8&&(c%8===5||c%8===6)&&k%5===1));
 const pw=(2*R+.7)/10;for(let k=0;k<10;k++){const zo=-R-.35+(k+.5)*pw,ch=Math.sqrt(Math.max(.2,(R+.5)**2-zo*zo));addPiece(cx,C*bh+.06,cz+zo,2*ch,.12,pw*.97,0,WOOD())}
-for(let k=0;k<N;k+=2){const a=k/N*TAU;addPiece(cx+Math.cos(a)*R,C*bh+.12+.36,cz+Math.sin(a)*R,bw*.9,.7,.78,PI/2-a,STONE())}}
+for(let k=0;k<N;k+=2){const a=k/N*TAU;addPiece(cx+Math.cos(a)*R,C*bh+.12+.36,cz+Math.sin(a)*R,bw*.9,.7,.78,PI/2-a,STONE())}
+addPiece(cx,C*bh+.12+.85,cz,.07,1.7,.07,0,WOOD());addPiece(cx+.45,C*bh+.12+1.3,cz,.85,.5,.03,0,[.75,.08,.06])}
 function buildCottage(cx,cz){const W=7,D=5.6,th=.42,bh=.42,C=7,wh=C*bh,zf=cz+D/2-th/2,zb=cz-D/2+th/2;
 wall(cx-W/2,zf,cx+W/2,zf,C,bh,th,.7,CREAM,(c,t,L)=>(c<5&&Math.abs(t-L/2)<.56)||(c>=2&&c<=4&&(Math.abs(t-L*.2)<.45||Math.abs(t-L*.8)<.45)));
 wall(cx-W/2,zb,cx+W/2,zb,C,bh,th,.7,CREAM,(c,t,L)=>c>=2&&c<=4&&Math.abs(t-L*.3)<.45);
@@ -295,6 +297,7 @@ for(const s of[-1,1]){for(let r=0;r<rows;r++)for(let k=0;k<cols;k++){const u=(r+
 for(let k=0;k<5;k++){const u=sl/2;addPiece(cx-3+k*1.5,wh-.1+u*Math.sin(ang),cz+s*(run-u*Math.cos(ang)),.14,.14,sl*.98,0,WOOD(),s*ang)}}
 addPiece(cx,wh+rise+.12,cz,W+.7,.18,.18,0,WOOD());for(let k=0;k<4;k++)addPiece(cx-2.4+k*1.6,wh+.08,cz,.16,.16,D,0,WOOD());
 for(let k=0;k<3;k++){const d=.18+.36*k;addPiece(cx-.55+.45*d,1,zf+.25+.89*d,.35,2,.07,-1.1,WOOD())}
+const GL=[2.6,1.7,.75];addPiece(cx-W/2+.2*W,1.47,zf,.8,1.1,.05,0,GL);addPiece(cx-W/2+.8*W,1.47,zf,.8,1.1,.05,0,GL);addPiece(cx-W/2+.3*W,1.47,zb,.8,1.1,.05,0,GL);addPiece(cx+W/2-th/2,1.47,cz,.05,1.1,.7,0,GL);
 for(let k=0;k<15;k++)addPiece(cx+2.2,.21+k*.42,cz-D/2-.42,.82,.41,.82,(k&1)*.06,STONE())}
 function buildRuins(rx,rz){
 ring(rx-6,rz-3,4.2,22,9,.55,.75,OLD,(c,k,a)=>c>=1.5+6.5*vnoise(k*.42+3,7.1)||(c<4&&Math.abs((a+PI/2)%TAU-PI)<.33));
@@ -479,7 +482,8 @@ for(let i=0;i<64;i++){const a=rand(TAU),r=1.2+rand(6.5)*Math.sqrt(Math.random())
 const tr=addTree(x,z,rand(1.3,1.75),true);for(const t of trees)if(t!==tr&&t.m.material!==vcMat&&Math.hypot(t.x-x,t.z-z)<8){t.m.material.dispose();t.m.material=vcMat}
 shock(x,g+.15,z,[.35,1,.4],11,.9);flash('#c8ffc0',.28);lightAt(x,g+3,z,[.3,1,.4],4,1.5);SND.grow(v);buzz(30);let t=0;
 addFx(dt=>{t+=dt;if(t>4.5)return true;const k=1-t/4.5;for(let i=0;i<3;i++)if(Math.random()<k){const a=rand(TAU),r=rand(7);PA.spawn(x+Math.cos(a)*r,g+rand(.1,1),z+Math.sin(a)*r,rand(-.4,.4),rand(.6,2.4),rand(-.4,.4),rand(2,4.5),rand(.1,.26),.03,Math.random()<.5?GRN:GLD,GLD,.9,-.1,.4)}
-if(t<1.8)for(let i=0;i<2;i++){const a=t*7+i*PI;PA.spawn(x+Math.cos(a)*1.4,g+t*3.5,z+Math.sin(a)*1.4,0,.6,0,rand(1,2),.4,.05,GRN,GLD,.9,0,0)}})}
+if(t<1.8)for(let i=0;i<2;i++){const a=t*7+i*PI;PA.spawn(x+Math.cos(a)*1.4,g+t*3.5,z+Math.sin(a)*1.4,0,.6,0,rand(1,2),.4,.05,GRN,GLD,.9,0,0)}
+for(let i=0;i<3;i++)if(Math.random()<k){const a=rand(TAU),r=rand(6),pk=Math.random()<.6;PA.spawn(x+Math.cos(a)*r,g+rand(.3,1.5),z+Math.sin(a)*r,rand(1,3),rand(1,3.5),rand(-2,2),rand(2.5,4.5),.22,.18,pk?[1,.62,.78]:[1,.97,.9],pk?[1,.5,.7]:[1,.9,.8],.95,.35,.4)}})}
 
 /* ---------- staff ---------- */
 const staff=new T.Group();camera.add(staff);let crystal,sGlow,orbG,swing=0;
