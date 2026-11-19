@@ -208,21 +208,44 @@ const glintTex=(()=>{const c=cv(256),g=c.getContext('2d');for(let i=0;i<70;i++){
 const water=new T.Mesh(new T.CircleGeometry(POND[2]+.8,56).rotateX(-PI/2),new T.MeshBasicMaterial({map:waterTex,transparent:true,depthWrite:false}));water.position.set(POND[0],.07,POND[1]);scene.add(water);
 const glint=new T.Mesh(new T.CircleGeometry(POND[2],40).rotateX(-PI/2),new T.MeshBasicMaterial({map:glintTex,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:.7}));glint.position.set(POND[0],.1,POND[1]);scene.add(glint);
 /* ---------- trees, rocks, clouds, windmill ---------- */
-const treeGeos=[];for(let v=0;v<4;v++){const th=srr(2.2,3.1),hue=srr(-.03,.05),lo=v===3?[.28,.06,.05]:v===1?[.16,.26,.04]:[.13+hue,.36,.06],hi=v===3?[.75,.24,.1]:v===1?[.66,.78,.16]:[.48+hue*2,.74,.18],gs=[part(new T.CylinderGeometry(.17,.3,th,7),[.2,.115,.06],0,th/2,0)];
-gs.push(part(blob(1.75,v*3.1,lo,hi),0,0,th+1.05,0));const nb=3+(v&1);for(let k=0;k<nb;k++){const a=k/nb*TAU+v,d=srr(1,1.45);gs.push(part(blob(srr(1.05,1.35),v*7+k,lo,hi),0,Math.cos(a)*d,th+srr(.3,1.1),Math.sin(a)*d))}treeGeos.push(merge(gs))}
-for(let v=0;v<2;v++){const th=srr(1.2,1.8),gs=[part(new T.CylinderGeometry(.14,.26,th+1,6),[.2,.115,.06],0,(th+1)/2,0)];for(let k=0;k<6;k++){const f=k/5,r=lerp(1.8,.5,f)*(1+v*.1);gs.push(part(blob(r,v*5+k,[.04,.2,.12],[.12+f*.1,.5,.24],1),0,0,th+k*.95,0,0,k*.9,0,1,1.25,1))}treeGeos.push(merge(gs))}
+const leafTex=(()=>{const c=cv(256),g=c.getContext('2d');for(let i=0;i<18;i++){const x=rand(40,216),y=rand(40,216),a=rand(TAU),L=rand(36,58),W=L*.42,v=rand(.75,1)*255|0;g.save();g.translate(x,y);g.rotate(a);const gr=g.createLinearGradient(-L/2,0,L/2,0);gr.addColorStop(0,`rgb(${v*.82|0},${v},${v*.6|0})`);gr.addColorStop(1,`rgb(${Math.min(255,v+10)},${v},${v*.72|0})`);g.fillStyle=gr;g.beginPath();g.moveTo(-L/2,0);g.quadraticCurveTo(-L*.1,-W,L/2,0);g.quadraticCurveTo(-L*.1,W,-L/2,0);g.fill();g.strokeStyle='rgba(30,50,10,.5)';g.lineWidth=1.2;g.stroke();g.strokeStyle='rgba(255,255,225,.6)';g.lineWidth=1.3;g.beginPath();g.moveTo(-L/2,0);g.lineTo(L*.42,0);g.stroke();g.restore()}return tex(c,{encoding:T.sRGBEncoding,anisotropy:4})})();
+const needleTex=(()=>{const c=cv(256),g=c.getContext('2d');g.lineCap='round';for(let sp=0;sp<3;sp++){const ox=70+sp*58+rand(-10,10),lean=rand(-.25,.25);for(let j=0;j<26;j++){const f=j/26,y=244-f*226,x=ox+lean*(244-y),len=lerp(44,10,f)*rand(.8,1.1),v=rand(.7,1)*255|0;g.strokeStyle=`rgb(${v*.8|0},${v},${v*.75|0})`;g.lineWidth=2.4;for(const sd of[-1,1]){g.beginPath();g.moveTo(x,y);g.lineTo(x+sd*len,y-len*.45);g.stroke()}}g.strokeStyle='rgb(120,100,70)';g.lineWidth=2;g.beginPath();g.moveTo(ox,248);g.lineTo(ox+lean*230,14);g.stroke()}return tex(c,{encoding:T.sRGBEncoding,anisotropy:4})})();
+const leafPatch=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_begin>',T.ShaderChunk.normal_fragment_begin.replace('float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;','float faceDirection = 1.0;'))};
+const mkLeaf=map=>{const m=new T.MeshPhongMaterial({map,alphaTest:.42,vertexColors:true,side:T.DoubleSide,specular:0x000000,shininess:1});m.onBeforeCompile=leafPatch;return m};
+const leafMat=mkLeaf(leafTex),pineMat=mkLeaf(needleTex),leafDepth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:leafTex,alphaTest:.42,side:T.DoubleSide}),pineDepth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:needleTex,alphaTest:.42,side:T.DoubleSide});
+const cloneLeaf=m=>{const c=m.clone();c.onBeforeCompile=leafPatch;return c};
+function crownGeo(lobes,N,s0,s1,lo,hi){const pos=new Float32Array(N*18),nor=new Float32Array(N*18),col=new Float32Array(N*18),uv=new Float32Array(N*12);let tw=0;for(const l of lobes)tw+=l.w;
+const n=new T.Vector3(),cn=new T.Vector3(),t=new T.Vector3(),b=new T.Vector3(),up=new T.Vector3(0,1,0),sn=new T.Vector3();const QX=[-1,1,1,-1,1,-1],QY=[-1,-1,1,-1,1,1],QU=[0,1,1,0,1,0],QV=[0,0,1,0,1,1];
+for(let k=0;k<N;k++){let pk=sr()*tw,l=lobes[0];for(const q of lobes){if(pk<q.w){l=q;break}pk-=q.w}
+const u=srr(-.25,1),a=sr()*TAU,rr=Math.sqrt(1-u*u),depth=.5+.5*Math.pow(sr(),.6);n.set(Math.cos(a)*rr,u,Math.sin(a)*rr);
+const cx=l.x+n.x*l.rx*depth,cy=l.y+n.y*l.ry*depth,cz=l.z+n.z*l.rz*depth,s=srr(s0,s1);
+cn.set(n.x+srr(-.35,.35),n.y*.8+.35+srr(-.3,.3),n.z+srr(-.35,.35)).normalize();t.crossVectors(up,cn);if(t.lengthSq()<1e-4)t.set(1,0,0);t.normalize();b.crossVectors(cn,t);
+const ang=sr()*TAU,ca=Math.cos(ang),sa=Math.sin(ang),tx=t.x*ca+b.x*sa,ty=t.y*ca+b.y*sa,tz=t.z*ca+b.z*sa,bx=-t.x*sa+b.x*ca,by=-t.y*sa+b.y*ca,bz=-t.z*sa+b.z*ca;
+sn.copy(cn).multiplyScalar(.4).addScaledVector(n,.6).normalize();const hf=clamp(.5+.5*n.y*depth+srr(-.12,.12),0,1),ao=.5+.5*depth,jv=srr(.9,1.1);
+for(let v=0;v<6;v++){const o=k*18+v*3,hs=s*.5,qx=QX[v]*hs,qy=QY[v]*hs;pos[o]=cx+tx*qx+bx*qy;pos[o+1]=cy+ty*qx+by*qy;pos[o+2]=cz+tz*qx+bz*qy;nor[o]=sn.x;nor[o+1]=sn.y;nor[o+2]=sn.z;
+col[o]=lerp(lo[0],hi[0],hf)*ao*jv;col[o+1]=lerp(lo[1],hi[1],hf)*ao*jv;col[o+2]=lerp(lo[2],hi[2],hf)*ao*jv;uv[k*12+v*2]=QU[v];uv[k*12+v*2+1]=QV[v]}}
+const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(pos,3));g.setAttribute('normal',new T.BufferAttribute(nor,3));g.setAttribute('color',new T.BufferAttribute(col,3));g.setAttribute('uv',new T.BufferAttribute(uv,2));return g}
+const treeGeos=[],BARK=[.24,.15,.09],NC=MOBILE?300:480;
+for(let v=0;v<4;v++){const th=srr(2.2,3.1),lo=[[.10,.30,.06],[.16,.26,.05],[.06,.22,.08],[.30,.07,.05]][v],hi=[[.46,.74,.18],[.68,.80,.16],[.30,.62,.20],[.82,.30,.10]][v];
+const lobes=[{x:0,y:th+1.2,z:0,rx:1.9,ry:1.55,rz:1.9,w:3}];for(let k=0;k<3;k++){const a=k/3*TAU+v;lobes.push({x:Math.cos(a)*1.3,y:th+.5+srr(0,.7),z:Math.sin(a)*1.3,rx:1.15,ry:1,rz:1.15,w:1.2})}
+const gs=[part(new T.CylinderGeometry(.14,.3,th+.7,10,3),BARK,0,(th+.7)/2,0),part(new T.CylinderGeometry(.3,.46,.35,10,1),BARK,0,.17,0)];
+for(let k=0;k<3;k++){const a=k/3*TAU+v;gs.push(part(new T.CylinderGeometry(.05,.1,1.5,6,1),BARK,Math.cos(a)*.45,th+.35,Math.sin(a)*.45,Math.sin(a)*.65,0,-Math.cos(a)*.65))}
+treeGeos.push({crown:crownGeo(lobes,NC,MOBILE?1.2:1.0,MOBILE?1.9:1.6,lo,hi),trunk:merge(gs)})}
+for(let v=0;v<2;v++){const th=srr(1.2,1.8),lobes=[];for(let k=0;k<7;k++){const f=k/6;lobes.push({x:0,y:th+.5+k*.85,z:0,rx:lerp(1.9,.45,f)*(1+v*.1),ry:.55,rz:lerp(1.9,.45,f)*(1+v*.1),w:lerp(2.2,1,f)})}
+treeGeos.push({pine:true,crown:crownGeo(lobes,NC+60,MOBILE?1.4:1.1,MOBILE?2.1:1.7,[.03,.14,.10],[.10,.38,.22]),trunk:merge([part(new T.CylinderGeometry(.12,.26,th+1.4,8,3),BARK,0,(th+1.4)/2,0)])})}
 const trees=[];
-function addTree(x,z,s,grow){const m=new T.Mesh(treeGeos[Math.floor(Math.random()*treeGeos.length)],vcMat);m.position.set(x,H(x,z)-.05,z);m.rotation.y=Math.random()*TAU;m.castShadow=m.receiveShadow=true;const t={m,x,z,s,k:grow?0:1,grown:!!grow};m.scale.setScalar(grow?.001:s);scene.add(m);trees.push(t);return t}
+function addTree(x,z,s,grow){const tg=treeGeos[Math.floor(Math.random()*treeGeos.length)],m=new T.Mesh(tg.crown,tg.pine?pineMat:leafMat);m.userData.base=m.material;m.customDepthMaterial=tg.pine?pineDepth:leafDepth;{const tr=new T.Mesh(tg.trunk,vcMat);tr.castShadow=tr.receiveShadow=true;m.add(tr)}m.position.set(x,H(x,z)-.05,z);m.rotation.y=Math.random()*TAU;m.castShadow=m.receiveShadow=true;const t={m,x,z,s,k:grow?0:1,grown:!!grow};m.scale.setScalar(grow?.001:s);scene.add(m);trees.push(t);return t}
 {const far=(x,z,p,r)=>Math.hypot(x-p[0],z-p[1])>r;let n=0,tries=0;while(n<(MOBILE?30:46)&&tries++<4000){const a=sr()*TAU,r=srr(9,96),x=Math.cos(a)*r,z=Math.sin(a)*r;
 if(!far(x,z,TOWER,8)||!far(x,z,COT,8.5)||!far(x,z,MILL,7)||!far(x,z,RUIN,20)||!far(x,z,[2,13],7)||!far(x,z,POND,POND[2]+2.5)||pathDist(x,z)<2.6)continue;if(trees.some(t=>Math.hypot(t.x-x,t.z-z)<5))continue;
 const save=Math.random;Math.random=sr;addTree(x,z,srr(.85,1.5));Math.random=save;n++}}
-{const gs=[];for(let i=0;i<22;i++){const a=sr()*TAU,r=srr(8,58),x=Math.cos(a)*r,z=Math.sin(a)*r;if(inStruct(x,z)||pathDist(x,z)<1.5)continue;const s=srr(.3,.9),v=srr(.3,.42);gs.push(part(blob(s,i*2.3,[v*.7,v*.7,v*.66],[v*1.2,v*1.18,v*1.1],1),0,x,s*.3,z,0,sr()*6,0,1,.75,1))}
+{const gs=[];for(let i=0;i<22;i++){const a=sr()*TAU,r=srr(8,58),x=Math.cos(a)*r,z=Math.sin(a)*r;if(inStruct(x,z)||pathDist(x,z)<1.5)continue;const s=srr(.3,.9),v=srr(.3,.42);gs.push(part(blob(s,i*2.3,[v*.7,v*.7,v*.66],[v*1.2,v*1.18,v*1.1],3),0,x,s*.3,z,0,sr()*6,0,1,.75,1))}
 const m=new T.Mesh(merge(gs),vcMat);m.castShadow=m.receiveShadow=true;scene.add(m)}
-const clouds=[];{const cm=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:.93});for(let i=0;i<9;i++){const gs=[];const n=4+Math.floor(sr()*4);for(let k=0;k<n;k++)gs.push(part(blob(srr(7,13),i*5+k,[.74,.8,.9],[1,1,1],1),0,(k-n/2)*9+srr(-3,3),srr(-2,3),srr(-5,5),0,0,0,1.3,.6,1));
-const m=new T.Mesh(merge(gs),cm);const a=i/9*TAU+srr(0,.5),r=srr(210,420);m.position.set(Math.cos(a)*r,srr(85,140),Math.sin(a)*r);m.scale.setScalar(srr(1,2));scene.add(m);clouds.push(m)}}
+const clouds=[];{const mkCloud=()=>{const c=cv(512),g=c.getContext('2d');for(let i=0;i<46;i++){const t=i/46,x=60+t*392+rand(-24,24),r=rand(34,70)*(1-Math.abs(t-.5)*.9),y=300-Math.sin(t*PI)*rand(30,80)+rand(-18,18),gr=g.createRadialGradient(x-r*.2,y-r*.3,r*.1,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.95)');gr.addColorStop(.6,'rgba(244,246,255,.7)');gr.addColorStop(1,'rgba(235,240,255,0)');g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,TAU);g.fill()}
+g.globalCompositeOperation='source-atop';const sh=g.createLinearGradient(0,150,0,360);sh.addColorStop(0,'rgba(180,195,230,0)');sh.addColorStop(1,'rgba(140,160,205,.6)');g.fillStyle=sh;g.fillRect(0,0,512,512);return tex(c,{encoding:T.sRGBEncoding})};
+const cts=[mkCloud(),mkCloud(),mkCloud()];for(let i=0;i<13;i++){const m=new T.Sprite(new T.SpriteMaterial({map:cts[i%3],transparent:true,opacity:.95,fog:false,depthWrite:false})),a=i/13*TAU+srr(0,.4),r=srr(260,430),sc=srr(140,230);m.position.set(Math.cos(a)*r,srr(90,150),Math.sin(a)*r);m.scale.set(sc,sc*.6,1);scene.add(m);clouds.push(m)}}
 let millSpin=.55;const millBlades=new T.Group();
 {const g=new T.Group(),cr=[.74,.69,.58],wd=[.3,.18,.09];
-const body=merge([part(new T.CylinderGeometry(1.75,2.8,8.2,12),cr,0,4.1,0),part(new T.ConeGeometry(2.25,2.4,12),[.42,.16,.1],0,9.4,0),part(new T.BoxGeometry(1.1,2,.3),wd,0,1,2.62,-.12),
+const body=merge([part(new T.CylinderGeometry(1.75,2.8,8.2,40,4),cr,0,4.1,0),part(new T.ConeGeometry(2.25,2.4,40),[.42,.16,.1],0,9.4,0),part(new T.BoxGeometry(1.1,2,.3),wd,0,1,2.62,-.12),
 part(new T.BoxGeometry(.6,.8,.3),[.08,.07,.07],0,5.2,2.1,-.12),part(new T.CylinderGeometry(.16,.16,1.4,8),wd,0,7.3,2.2,PI/2)]);
 const bm=new T.Mesh(body,vcMat);bm.castShadow=bm.receiveShadow=true;g.add(bm);
 const bl=[];for(let k=0;k<4;k++){const a=k/4*TAU;const one=merge([part(new T.BoxGeometry(.16,5.6,.12),wd,0,2.9,0),part(new T.BoxGeometry(1.25,4.3,.05),[.86,.82,.7],.7,3.4,-.03),part(new T.BoxGeometry(1.3,.07,.09),wd,.7,1.3,0),part(new T.BoxGeometry(1.3,.07,.09),wd,.7,3.4,0),part(new T.BoxGeometry(1.3,.07,.09),wd,.7,5.5,0)]);one.applyMatrix4(new T.Matrix4().makeRotationZ(a));bl.push(one)}
@@ -262,7 +285,17 @@ const st=new Uint8Array(MAXP),nsup=new Uint8Array(MAXP),lost=new Uint8Array(MAXP
 const act=[],pend=[],sgrid=new Map(),dgrid=new Map(),dkeys=[];
 const blockTex=(()=>{const c=cv(128),g=c.getContext('2d');g.fillStyle='#d6d6d6';g.fillRect(0,0,128,128);for(let i=0;i<900;i++){const v=Math.floor(rand(150,255));g.fillStyle=`rgba(${v},${v},${v},.2)`;g.fillRect(rand(128),rand(128),rand(1,5),rand(1,4))}
 for(const[x0,y0,x1,y1]of[[0,0,14,0],[128,0,114,0],[0,0,0,14],[0,128,0,114]]){const gr=g.createLinearGradient(x0,y0,x1,y1);gr.addColorStop(0,'rgba(0,0,0,.38)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,128,128)}return tex(c,{encoding:T.sRGBEncoding})})();
-const pieceMesh=new T.InstancedMesh(new T.BoxGeometry(1,1,1),new T.MeshLambertMaterial({map:blockTex}),MAXP);pieceMesh.castShadow=pieceMesh.receiveShadow=true;pieceMesh.frustumCulled=false;scene.add(pieceMesh);
+function roundBox(r,seg){const g=new T.BoxGeometry(1,1,1,seg,seg,seg),p=g.attributes.position,nn=g.attributes.normal,v=new T.Vector3(),inn=new T.Vector3(),d=new T.Vector3(),h=.5-r;
+for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);inn.set(clamp(v.x,-h,h),clamp(v.y,-h,h),clamp(v.z,-h,h));d.subVectors(v,inn);const l=d.length();if(l>1e-6){d.divideScalar(l);v.copy(inn).addScaledVector(d,r);nn.setXYZ(i,d.x,d.y,d.z)}p.setXYZ(i,v.x,v.y,v.z)}return g}
+const[stoneTex,stoneNorm]=(()=>{const S=256,hgt=new Float32Array(S*S);
+for(let y=0;y<S;y++)for(let x=0;x<S;x++){let h=vnoise(x*.035,y*.035)*.5+vnoise(x*.12,y*.12)*.3+vnoise(x*.45,y*.45)*.2;const e=Math.min(x,y,S-1-x,S-1-y);h*=.75+.25*sstep(0,14,e);hgt[y*S+x]=h}
+const cc=cv(S),cg=cc.getContext('2d');cg.fillStyle='#000';cg.fillRect(0,0,S,S);cg.strokeStyle='#fff';cg.lineWidth=1.3;for(let i=0;i<9;i++){let x=rand(S),y=rand(S),a=rand(TAU);cg.beginPath();cg.moveTo(x,y);for(let k=0;k<24;k++){a+=rand(-.7,.7);x+=Math.cos(a)*rand(3,8);y+=Math.sin(a)*rand(3,8);cg.lineTo(x,y)}cg.stroke()}
+const cd=cg.getImageData(0,0,S,S).data;for(let i=0;i<S*S;i++)hgt[i]-=cd[i*4]/255*.28;
+const ac=cv(S),ag=ac.getContext('2d'),ai=ag.createImageData(S,S),ad=ai.data,nc=cv(S),ng=nc.getContext('2d'),ni=ng.createImageData(S,S),nd=ni.data;
+for(let y=0;y<S;y++)for(let x=0;x<S;x++){const i=y*S+x,h=hgt[i],o=i*4,moss=sstep(.62,.8,vnoise(x*.03+40,y*.03+9))*(.6+.4*(y/S)),crk=cd[o]/255;let r=235*(.78+.4*h),g=r*.97,b=r*.9;r=lerp(r,95,moss*.6);g=lerp(g,150,moss*.6);b=lerp(b,60,moss*.6);const k=1-crk*.55;ad[o]=r*k;ad[o+1]=g*k;ad[o+2]=b*k;ad[o+3]=255;
+const hl=hgt[y*S+(x+S-1)%S],hr=hgt[y*S+(x+1)%S],hu=hgt[((y+S-1)%S)*S+x],hd=hgt[((y+1)%S)*S+x],dx=(hl-hr)*3.2,dy=(hu-hd)*3.2,l=Math.hypot(dx,dy,1);nd[o]=(dx/l*.5+.5)*255;nd[o+1]=(dy/l*.5+.5)*255;nd[o+2]=(1/l*.5+.5)*255;nd[o+3]=255}
+ag.putImageData(ai,0,0);ng.putImageData(ni,0,0);return[tex(ac,{encoding:T.sRGBEncoding,anisotropy:4}),tex(nc,{anisotropy:4})]})();
+const pieceMesh=new T.InstancedMesh(roundBox(.07,2),new T.MeshPhongMaterial({map:stoneTex,normalMap:stoneNorm,normalScale:new T.Vector2(1.1,1.1),shininess:10,specular:0x1a1a1a}),MAXP);pieceMesh.castShadow=pieceMesh.receiveShadow=true;pieceMesh.frustumCulled=false;scene.add(pieceMesh);
 function addPiece(x,y,z,sx,sy,sz,ry,c,rx,rz){if(NP>=MAXP)return;const i=NP++;px[i]=x;py[i]=y;pz[i]=z;hx[i]=sx/2;hy[i]=sy/2;hz[i]=sz/2;_e.set(rx||0,ry||0,rz||0,'YXZ');_q.setFromEuler(_e);qx[i]=_q.x;qy[i]=_q.y;qz[i]=_q.z;qw[i]=_q.w;
 rad[i]=Math.max(.12,Math.min(sx,sy,sz)*.4+Math.cbrt(sx*sy*sz)*.1);mass[i]=sx*sy*sz;scl[i]=1;cr[i]=c[0];cg[i]=c[1];cb[i]=c[2];sup.push([])}
 function setMat(i){const s=st[i]===3?0:scl[i]*2;_m4.compose(_p.set(px[i],py[i],pz[i]),_q.set(qx[i],qy[i],qz[i],qw[i]),_s.set(hx[i]*s,hy[i]*s,hz[i]*s));pieceMesh.setMatrixAt(i,_m4);matDirty=true}
@@ -314,7 +347,7 @@ vx[i]+=ux*p;vy[i]+=uy*p;vz[i]+=uz*p;wx[i]+=rand(-9,9)*k;wy[i]+=rand(-9,9)*k;wz[i
 
 /* builders */
 const STONE=()=>{const v=srr(.72,1.08);return[.64*v,.57*v,.46*v]},MOSS=()=>{const v=srr(.7,1);return[.30*v,.46*v,.22*v]},OLD=()=>sr()<.3?MOSS():(()=>{const v=srr(.6,1);return[.62*v,.56*v,.46*v]})(),
-WOOD=()=>{const v=srr(.7,1.1);return[.34*v,.2*v,.1*v]},TILE=()=>{const v=srr(.7,1.15);return[.66*v,.11*v,.07*v]},CREAM=()=>{const v=srr(.8,1.05);return[.74*v,.67*v,.52*v]};
+WOOD=()=>{const v=srr(.7,1.1);return[.34*v,.2*v,.1*v]},TILE=()=>{const v=srr(.7,1.15);return[.46*v,.085*v,.06*v]},CREAM=()=>{const v=srr(.8,1.05);return[.74*v,.67*v,.52*v]};
 function wall(x0,z0,x1,z1,courses,bh,th,bl,col,skip){const L=Math.hypot(x1-x0,z1-z0),ux=(x1-x0)/L,uz=(z1-z0)/L,n=Math.max(1,Math.round(L/bl)),w=L/n,ry=Math.atan2(-uz,ux);
 for(let c=0;c<courses;c++){const segs=[];if(c&1){segs.push([0,w/2]);for(let k=0;k<n-1;k++)segs.push([w/2+k*w,w]);segs.push([L-w/2,w/2])}else for(let k=0;k<n;k++)segs.push([k*w,w]);
 for(const[s,len]of segs){const t=s+len/2;if(skip&&skip(c,t,L))continue;addPiece(x0+ux*t,bh*(c+.5),z0+uz*t,len*.985,bh*.97,th,ry,col())}}}
@@ -438,7 +471,7 @@ addFx(dt=>{t+=dt;const end=dur+.7;if(t>=end){scene.remove(g);g.traverse(o=>{if(o
 const s=size*eback(t/.28),op=t<dur?1:1-(t-dur)/.7;g.scale.set(s,1,s);a.rotation.z+=dt*1.6;b.rotation.z-=dt*3;b.position.y=.25+Math.sin(t*6)*.08;a.material.opacity=b.material.opacity=op;bm.scale.y=2.5+3*Math.min(1,t/dur);bm.position.y=bm.scale.y/2;bm.material.opacity=op*.45;
 if(t<dur)for(let k=0;k<2;k++){const an=rand(TAU),r=size*.47;PA.spawn(x+Math.cos(an)*r,y,z+Math.sin(an)*r,0,rand(1.5,4),0,rand(.5,1.1),.22,.02,SP[i].c,SP[i].c,.9,0,.5)}})}
 function charPieces(x,y,z,r,c,k){for(let i=0;i<NP;i++)if(st[i]!==3&&(px[i]-x)**2+(py[i]-y)**2+(pz[i]-z)**2<r*r)tint(i,c[0],c[1],c[2],k)}
-function treeFx(x,z,r,mul){for(const t of trees)if(Math.hypot(t.x-x,t.z-z)<r){if(t.m.material===vcMat)t.m.material=vcMat.clone();t.m.material.color.setRGB(mul[0],mul[1],mul[2])}}
+function treeFx(x,z,r,mul){for(const t of trees)if(Math.hypot(t.x-x,t.z-z)<r){if(t.m.material===t.m.userData.base)t.m.material=cloneLeaf(t.m.userData.base);t.m.material.color.setRGB(mul[0],mul[1],mul[2])}}
 
 function fireball(h){const x=h.x,y=h.y,z=h.z,g=H(x,z),v=vol(h),HOT=[1,.86,.42],RED=[.9,.12,0];
 for(let i=0;i<80;i++){const a=rand(TAU),u=rand(-.15,1),r=Math.sqrt(1-u*u),sp=rand(3,14);PA.spawn(x,y+.5,z,Math.cos(a)*r*sp,u*sp+3,Math.sin(a)*r*sp,rand(.6,1.5),rand(2,4),rand(5,9),HOT,RED,.85,-2.5,2.6)}
@@ -533,7 +566,7 @@ let t=0;addFx(dt=>{t+=dt;U.gustT.value=t/1.1;U.gustA.value=Math.max(0,1-t/1.5);i
 
 function growth(h){const x=h.x,z=h.z,g=H(x,z),v=vol(h),GRN=[.4,1,.4],GLD=[1,.9,.4];stamp(x,z,8,1,1);for(let i=0;i<4;i++){const a=rand(TAU);stamp(x+Math.cos(a)*5,z+Math.sin(a)*5,4,1,.9)}
 for(let i=0;i<64;i++){const a=rand(TAU),r=1.2+rand(6.5)*Math.sqrt(Math.random());addFlower(x+Math.cos(a)*r,z+Math.sin(a)*r,Math.floor(Math.random()*4),rand(.9,1.6),.2+r/7.5*1.3+rand(.3))}
-const tr=addTree(x,z,rand(1.3,1.75),true);for(const t of trees)if(t!==tr&&t.m.material!==vcMat&&Math.hypot(t.x-x,t.z-z)<8){t.m.material.dispose();t.m.material=vcMat}
+const tr=addTree(x,z,rand(1.3,1.75),true);for(const t of trees)if(t!==tr&&t.m.material!==t.m.userData.base&&Math.hypot(t.x-x,t.z-z)<8){t.m.material.dispose();t.m.material=t.m.userData.base}
 shock(x,g+.15,z,[.35,1,.4],11,.9);flash('#c8ffc0',.28);lightAt(x,g+3,z,[.3,1,.4],4,1.5);SND.grow(v);buzz(30);let t=0;
 addFx(dt=>{t+=dt;if(t>4.5)return true;const k=1-t/4.5;for(let i=0;i<3;i++)if(Math.random()<k){const a=rand(TAU),r=rand(7);PA.spawn(x+Math.cos(a)*r,g+rand(.1,1),z+Math.sin(a)*r,rand(-.4,.4),rand(.6,2.4),rand(-.4,.4),rand(2,4.5),rand(.1,.26),.03,Math.random()<.5?GRN:GLD,GLD,.9,-.1,.4)}
 if(t<1.8)for(let i=0;i<2;i++){const a=t*7+i*PI;PA.spawn(x+Math.cos(a)*1.4,g+t*3.5,z+Math.sin(a)*1.4,0,.6,0,rand(1,2),.4,.05,GRN,GLD,.9,0,0)}
@@ -579,7 +612,7 @@ setTimeout(()=>hint.style.opacity=0,9000);
 document.getElementById('bFull').addEventListener('click',()=>{try{const d=document;if(d.fullscreenElement)d.exitFullscreen();else{const p=d.documentElement.requestFullscreen();if(p&&p.catch)p.catch(()=>{})}}catch(e){}});
 document.getElementById('bReset').addEventListener('click',resetWorld);
 function resetWorld(){resetPieces();fctx.globalCompositeOperation='source-over';fctx.fillStyle='#000';fctx.fillRect(0,0,FS,FS);fxTex.needsUpdate=true;
-for(let k=trees.length-1;k>=0;k--){const t=trees[k];if(t.grown){scene.remove(t.m);trees.splice(k,1)}else if(t.m.material!==vcMat){t.m.material.dispose();t.m.material=vcMat}}
+for(let k=trees.length-1;k>=0;k--){const t=trees[k];if(t.grown){scene.remove(t.m);trees.splice(k,1)}else if(t.m.material!==t.m.userData.base){t.m.material.dispose();t.m.material=t.m.userData.base}}
 fN=fN0;for(let k=0;k<4;k++){fCnt[k]=fCnt0[k];flowerMesh[k].count=fCnt[k]}fAnim.clear();for(let f=0;f<fN;f++){if(fT[f]===0){fT[f]=1;fD[f]=now+Math.random();fAnim.add(f)}}}
 
 /* ---------- player + input ---------- */
